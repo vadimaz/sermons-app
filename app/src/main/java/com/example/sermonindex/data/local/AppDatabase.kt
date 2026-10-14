@@ -1,0 +1,318 @@
+package com.example.sermonindex.data.local
+
+import android.content.ContentValues
+import android.content.Context
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import com.example.sermonindex.data.local.dao.FavoritesDao
+import com.example.sermonindex.data.local.dao.HistoryDao
+import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
+import com.example.sermonindex.data.local.entities.HistoryEntity
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+
+class AppDatabase private constructor(context: Context) {
+
+    private val dbHelper = DatabaseHelper(context.applicationContext)
+    private val favoritesChangeSignal = MutableStateFlow(0L)
+    private val historyChangeSignal = MutableStateFlow(0L)
+
+    val favoritesDao: FavoritesDao = object : FavoritesDao {
+        override fun getAllFavorites(): Flow<List<FavoriteSermonEntity>> {
+            return favoritesChangeSignal.asStateFlow().map {
+                queryFavorites()
+            }
+        }
+
+        override fun isFavorite(id: String): Flow<Boolean> {
+            return favoritesChangeSignal.asStateFlow().map {
+                checkIsFavorite(id)
+            }
+        }
+
+        override suspend fun insertFavorite(entity: FavoriteSermonEntity) = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            val values = ContentValues().apply {
+                put("id", entity.id)
+                put("title", entity.title)
+                put("speaker", entity.speaker)
+                put("speaker_image", entity.speakerImage)
+                put("duration", entity.duration)
+                put("added_at", entity.addedAt)
+            }
+            db.insertWithOnConflict("favorites", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+            favoritesChangeSignal.value = System.currentTimeMillis()
+        }
+
+        override suspend fun deleteFavorite(id: String) = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            db.delete("favorites", "id = ?", arrayOf(id))
+            favoritesChangeSignal.value = System.currentTimeMillis()
+        }
+    }
+
+    val historyDao: HistoryDao = object : HistoryDao {
+        override fun getRecentHistory(limit: Int): Flow<List<HistoryEntity>> {
+            return historyChangeSignal.asStateFlow().map {
+                queryHistory(limit)
+            }
+        }
+
+        override suspend fun getHistory(sermonId: String): HistoryEntity? = withContext(Dispatchers.IO) {
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery(
+                "SELECT sermon_id, title, speaker, speaker_image, last_position_ms, duration_ms, updated_at, completed FROM history WHERE sermon_id = ?",
+                arrayOf(sermonId)
+            )
+            cursor.use {
+                if (it.moveToFirst()) {
+                    HistoryEntity(
+                        sermonId = it.getString(0),
+                        title = it.getString(1),
+                        speaker = it.getString(2),
+                        speakerImage = it.getString(3),
+                        lastPositionMs = it.getLong(4),
+                        durationMs = it.getLong(5),
+                        updatedAt = it.getLong(6),
+                        completed = it.getInt(7) == 1
+                    )
+                } else null
+            }
+        }
+
+        override suspend fun upsertHistory(entity: HistoryEntity) = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            val values = ContentValues().apply {
+                put("sermon_id", entity.sermonId)
+                put("title", entity.title)
+                put("speaker", entity.speaker)
+                put("speaker_image", entity.speakerImage)
+                put("last_position_ms", entity.lastPositionMs)
+                put("duration_ms", entity.durationMs)
+                put("updated_at", entity.updatedAt)
+                put("completed", if (entity.completed) 1 else 0)
+            }
+            db.insertWithOnConflict("history", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+            historyChangeSignal.value = System.currentTimeMillis()
+        }
+
+        override suspend fun deleteHistory(sermonId: String) = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            db.delete("history", "sermon_id = ?", arrayOf(sermonId))
+            historyChangeSignal.value = System.currentTimeMillis()
+        }
+
+        override suspend fun clearHistory() = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            db.delete("history", null, null)
+            historyChangeSignal.value = System.currentTimeMillis()
+        }
+    }
+
+    private suspend fun queryFavorites(): List<FavoriteSermonEntity> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<FavoriteSermonEntity>()
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT id, title, speaker, speaker_image, duration, added_at FROM favorites ORDER BY added_at DESC",
+            null
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    FavoriteSermonEntity(
+                        id = it.getString(0),
+                        title = it.getString(1),
+                        speaker = it.getString(2),
+                        speakerImage = it.getString(3),
+                        duration = it.getString(4),
+                        addedAt = it.getLong(5)
+                    )
+                )
+            }
+        }
+        list
+    }
+
+    private suspend fun checkIsFavorite(id: String): Boolean = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT 1 FROM favorites WHERE id = ? LIMIT 1", arrayOf(id))
+        cursor.use { it.moveToFirst() }
+    }
+
+    private suspend fun queryHistory(limit: Int): List<HistoryEntity> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<HistoryEntity>()
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT sermon_id, title, speaker, speaker_image, last_position_ms, duration_ms, updated_at, completed FROM history ORDER BY updated_at DESC LIMIT ?",
+            arrayOf(limit.toString())
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    HistoryEntity(
+                        sermonId = it.getString(0),
+                        title = it.getString(1),
+                        speaker = it.getString(2),
+                        speakerImage = it.getString(3),
+                        lastPositionMs = it.getLong(4),
+                        durationMs = it.getLong(5),
+                        updatedAt = it.getLong(6),
+                        completed = it.getInt(7) == 1
+                    )
+                )
+            }
+        }
+        list
+    }
+
+    private class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "sermonindex.db", null, 1) {
+        override fun onCreate(db: SQLiteDatabase) {
+            db.execSQL(
+                """
+                CREATE TABLE favorites (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    title TEXT NOT NULL,
+                    speaker TEXT NOT NULL,
+                    speaker_image TEXT NOT NULL,
+                    duration TEXT NOT NULL,
+                    added_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TABLE history (
+                    sermon_id TEXT PRIMARY KEY NOT NULL,
+                    title TEXT NOT NULL,
+                    speaker TEXT NOT NULL,
+                    speaker_image TEXT NOT NULL,
+                    last_position_ms INTEGER NOT NULL,
+                    duration_ms INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    completed INTEGER NOT NULL DEFAULT 0
+                )
+                """.trimIndent()
+            )
+
+            // FTS virtual table for Phase 4 offline search
+            db.execSQL(
+                """
+                CREATE VIRTUAL TABLE IF NOT EXISTS sermon_fts USING fts4(
+                    id TEXT,
+                    title TEXT,
+                    speaker TEXT,
+                    summary TEXT
+                )
+                """.trimIndent()
+            )
+        }
+
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
+            // Future schema migrations
+        }
+    }
+
+    private val ftsChangeSignal = MutableStateFlow(0L)
+
+    fun getFtsCountFlow(): Flow<Int> = ftsChangeSignal.asStateFlow().map {
+        getFtsCount()
+    }
+
+    suspend fun getFtsCount(): Int = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM sermon_fts", null)
+        cursor.use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
+    }
+
+    suspend fun clearFts() = withContext(Dispatchers.IO) {
+        val db = dbHelper.writableDatabase
+        db.delete("sermon_fts", null, null)
+        ftsChangeSignal.value = System.currentTimeMillis()
+    }
+
+    suspend fun insertFtsBatch(items: List<com.example.sermonindex.data.local.entities.FtsSermonResult>) = withContext(Dispatchers.IO) {
+        val db = dbHelper.writableDatabase
+        db.beginTransaction()
+        try {
+            val statement = db.compileStatement("INSERT INTO sermon_fts (id, title, speaker, summary) VALUES (?, ?, ?, ?)")
+            for (item in items) {
+                statement.bindString(1, item.id)
+                statement.bindString(2, item.title)
+                statement.bindString(3, item.speaker)
+                statement.bindString(4, item.summary)
+                statement.executeInsert()
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+        ftsChangeSignal.value = System.currentTimeMillis()
+    }
+
+    suspend fun searchFts(query: String, limit: Int = 60): List<com.example.sermonindex.data.local.entities.FtsSermonResult> = withContext(Dispatchers.IO) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return@withContext emptyList()
+
+        val list = mutableListOf<com.example.sermonindex.data.local.entities.FtsSermonResult>()
+        val db = dbHelper.readableDatabase
+
+        // Try FTS prefix search first
+        val sanitizedQuery = trimmed.replace("\"", "").replace("'", "") + "*"
+        try {
+            val cursor = db.rawQuery(
+                "SELECT id, title, speaker, summary FROM sermon_fts WHERE sermon_fts MATCH ? LIMIT ?",
+                arrayOf(sanitizedQuery, limit.toString())
+            )
+            cursor.use {
+                while (it.moveToNext()) {
+                    list.add(
+                        com.example.sermonindex.data.local.entities.FtsSermonResult(
+                            id = it.getString(0) ?: "",
+                            title = it.getString(1) ?: "",
+                            speaker = it.getString(2) ?: "",
+                            summary = it.getString(3) ?: ""
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) {
+            // Fallback to LIKE if FTS syntax had issues
+            val likePattern = "%$trimmed%"
+            val cursor = db.rawQuery(
+                "SELECT id, title, speaker, summary FROM sermon_fts WHERE title LIKE ? OR speaker LIKE ? LIMIT ?",
+                arrayOf(likePattern, likePattern, limit.toString())
+            )
+            cursor.use {
+                while (it.moveToNext()) {
+                    list.add(
+                        com.example.sermonindex.data.local.entities.FtsSermonResult(
+                            id = it.getString(0) ?: "",
+                            title = it.getString(1) ?: "",
+                            speaker = it.getString(2) ?: "",
+                            summary = it.getString(3) ?: ""
+                        )
+                    )
+                }
+            }
+        }
+        list
+    }
+
+    companion object {
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getInstance(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: AppDatabase(context).also { INSTANCE = it }
+            }
+        }
+    }
+}
