@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -103,9 +104,7 @@ fun SermonDetailScreen(
     val detail = sermonDetail ?: return
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 96.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // Top App Bar
         Surface(
@@ -122,6 +121,17 @@ fun SermonDetailScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
+
+                Text(
+                    text = "Sermon Details",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                )
 
                 IconButton(
                     onClick = {

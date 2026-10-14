@@ -149,9 +149,7 @@ fun ScriptureScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 96.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // Scripture Breadcrumb Header
         Surface(

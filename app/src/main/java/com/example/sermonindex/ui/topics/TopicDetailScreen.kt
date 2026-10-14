@@ -96,9 +96,7 @@ fun TopicDetailScreen(
     val detail = topicDetail ?: return
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 96.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // App bar
         Surface(

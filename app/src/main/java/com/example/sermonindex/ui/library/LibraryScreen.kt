@@ -103,9 +103,7 @@ fun LibraryScreen(
     val syncCount = activeWorkInfo?.progress?.getInt(CatalogSyncWorker.KEY_COUNT, 0) ?: 0
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 96.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         PrimaryTabRow(
             selectedTabIndex = selectedTab,

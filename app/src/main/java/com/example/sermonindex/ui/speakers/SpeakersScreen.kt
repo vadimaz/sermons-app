@@ -104,9 +104,7 @@ fun SpeakersScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 96.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // Search bar
         Box(modifier = Modifier.padding(16.dp)) {

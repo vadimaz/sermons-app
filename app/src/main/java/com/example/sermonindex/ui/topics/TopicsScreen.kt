@@ -91,9 +91,7 @@ fun TopicsScreen(
     }
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 96.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         Box(modifier = Modifier.padding(16.dp)) {
             SearchTextField(

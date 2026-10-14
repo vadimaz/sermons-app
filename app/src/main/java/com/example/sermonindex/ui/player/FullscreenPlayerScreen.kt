@@ -10,8 +10,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -40,6 +42,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
@@ -342,15 +345,18 @@ fun FullscreenPlayerScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             // Tabs: Overview, Outline, Transcript, Notes
-            PrimaryTabRow(
+            ScrollableTabRow(
                 selectedTabIndex = selectedTab,
+                edgePadding = 12.dp,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.clip(RoundedCornerShape(14.dp))
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
             ) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Overview") })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Outline") })
-                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Transcript") })
-                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Notes & FAQ") })
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Overview", maxLines = 1, softWrap = false) })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Outline", maxLines = 1, softWrap = false) })
+                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Transcript", maxLines = 1, softWrap = false) })
+                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Notes", maxLines = 1, softWrap = false) })
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -370,6 +376,8 @@ fun FullscreenPlayerScreen(
                     points = detail?.applicationPoints ?: emptyList()
                 )
             }
+
+            Spacer(modifier = Modifier.navigationBarsPadding().height(24.dp))
         }
     }
 }

@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +43,7 @@ fun MiniPlayer(
     playbackState: PlaybackState,
     onTogglePlayPause: () -> Unit,
     onExpandClick: () -> Unit,
+    onCloseClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val sermon = playbackState.currentSermon ?: return
@@ -148,6 +151,17 @@ fun MiniPlayer(
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
+                }
+
+                IconButton(
+                    onClick = onCloseClick,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Close player",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }

@@ -61,7 +61,8 @@ fun MainNavigation() {
                         MiniPlayer(
                             playbackState = playbackState,
                             onTogglePlayPause = { playbackManager.togglePlayPause() },
-                            onExpandClick = { backStack.add(PlayerRoute) }
+                            onExpandClick = { backStack.add(PlayerRoute) },
+                            onCloseClick = { playbackManager.stop() }
                         )
                     }
 

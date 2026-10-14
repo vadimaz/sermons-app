@@ -150,9 +150,7 @@ fun SpeakerDetailScreen(
     val currentSpeaker = speaker ?: return
 
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(bottom = 96.dp)
+        modifier = modifier.fillMaxSize()
     ) {
         // App bar
         Surface(
