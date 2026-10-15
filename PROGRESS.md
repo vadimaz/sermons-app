@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.0.1` | **Version Code:** `2`
+> **Current Version:** `1.0.2` | **Version Code:** `3`
 
 ---
 
