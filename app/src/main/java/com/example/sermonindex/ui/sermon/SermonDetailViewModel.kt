@@ -1,0 +1,108 @@
+package com.example.sermonindex.ui.sermon
+
+import androidx.compose.runtime.Immutable
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.sermonindex.domain.model.SermonDetail
+import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
+import com.example.sermonindex.domain.usecase.IsFavoriteUseCase
+import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
+import com.example.sermonindex.playback.PlaybackManager
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+
+@Immutable
+data class SermonDetailUiState(
+    val detail: SermonDetail? = null,
+    val isFavorite: Boolean = false,
+    val isLoading: Boolean = true,
+    val errorMessage: String? = null
+)
+
+sealed interface SermonDetailUiEvent {
+    data object Retry : SermonDetailUiEvent
+    data object Play : SermonDetailUiEvent
+    data object ToggleFavorite : SermonDetailUiEvent
+    data class ClickSpeaker(val slug: String) : SermonDetailUiEvent
+}
+
+@HiltViewModel(assistedFactory = SermonDetailViewModel.Factory::class)
+class SermonDetailViewModel @AssistedInject constructor(
+    @Assisted private val sermonId: String,
+    private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
+    private val isFavoriteUseCase: IsFavoriteUseCase,
+    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val playbackManager: PlaybackManager
+) : ViewModel() {
+
+    @AssistedFactory
+    interface Factory {
+        fun create(sermonId: String): SermonDetailViewModel
+    }
+
+    private val _uiState = MutableStateFlow(SermonDetailUiState())
+    val uiState: StateFlow<SermonDetailUiState> = _uiState.asStateFlow()
+
+    init {
+        observeFavorite()
+        loadDetails()
+    }
+
+    private fun observeFavorite() {
+        viewModelScope.launch {
+            isFavoriteUseCase(sermonId).collect { isFav ->
+                _uiState.update { it.copy(isFavorite = isFav) }
+            }
+        }
+    }
+
+    fun onEvent(event: SermonDetailUiEvent) {
+        when (event) {
+            is SermonDetailUiEvent.Retry -> loadDetails()
+            is SermonDetailUiEvent.Play -> {
+                _uiState.value.detail?.let { detail ->
+                    playbackManager.playSermon(detail.toSermon())
+                }
+            }
+            is SermonDetailUiEvent.ToggleFavorite -> {
+                _uiState.value.detail?.let { detail ->
+                    viewModelScope.launch {
+                        toggleFavoriteUseCase(detail.toSermon())
+                    }
+                }
+            }
+            is SermonDetailUiEvent.ClickSpeaker -> Unit
+        }
+    }
+
+    private fun loadDetails() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            getSermonDetailsUseCase(sermonId)
+                .onSuccess { detail ->
+                    _uiState.update {
+                        it.copy(
+                            detail = detail,
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                    }
+                }
+                .onFailure { error ->
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            errorMessage = error.localizedMessage ?: "Failed to load sermon details."
+                        )
+                    }
+                }
+        }
+    }
+}

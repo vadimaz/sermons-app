@@ -21,7 +21,8 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.example.sermonindex.MainActivity
-import com.example.sermonindex.SermonApp
+import com.example.sermonindex.domain.repository.SermonRepository
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -29,9 +30,14 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
+@AndroidEntryPoint
 @OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
+
+    @Inject
+    lateinit var sermonRepository: SermonRepository
 
     private var mediaSession: MediaSession? = null
     private lateinit var player: ExoPlayer
@@ -132,7 +138,7 @@ class PlaybackService : MediaSessionService() {
                         val pos = player.currentPosition
                         val duration = player.duration.coerceAtLeast(0L)
                         runCatching {
-                            SermonApp.instance.repository.updateHistory(
+                            sermonRepository.updateHistory(
                                 sermonId = sermonId,
                                 title = currentTitle,
                                 speaker = currentSpeaker,

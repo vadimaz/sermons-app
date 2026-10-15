@@ -1,9 +1,9 @@
 package com.example.sermonindex.playback
 
-import com.example.sermonindex.data.model.SermonDto
+import com.example.sermonindex.domain.model.Sermon
 
 data class PlaybackState(
-    val currentSermon: SermonDto? = null,
+    val currentSermon: Sermon? = null,
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
     val currentPositionMs: Long = 0L,

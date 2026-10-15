@@ -1,4 +1,4 @@
-package com.example.sermonindex.ui.home
+﻿package com.example.sermonindex.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -30,15 +30,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,14 +43,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.local.entities.HistoryEntity
-import com.example.sermonindex.data.model.SermonDto
+import com.example.sermonindex.domain.model.ListeningHistory
+import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
-import kotlinx.coroutines.launch
 
 private val QUICK_TOPICS = listOf(
     "Prayer" to "prayer",
@@ -68,53 +61,52 @@ private val QUICK_TOPICS = listOf(
     "Evangelism" to "evangelism"
 )
 
+/**
+ * Stateful entry point for HomeScreen.
+ * Collects state from [HomeViewModel] and routes user interactions via [HomeUiEvent].
+ */
 @Composable
 fun HomeScreen(
-    onSermonSelect: (SermonDto) -> Unit,
+    onSermonSelect: (Sermon) -> Unit,
     onTopicSelect: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
+    val viewModel: HomeViewModel = hiltViewModel()
 
-    var popularSermons by remember { mutableStateOf<List<SermonDto>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val historyItems by repository.history.collectAsStateWithLifecycle(initialValue = emptyList())
-    val favorites by repository.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
-    val favoriteIds = remember(favorites) { favorites.map { it.id }.toSet() }
+    HomeContent(
+        state = state,
+        onEvent = { event ->
+            when (event) {
+                is HomeUiEvent.SelectSermon -> onSermonSelect(event.sermon)
+                is HomeUiEvent.SelectTopic -> onTopicSelect(event.slug)
+                else -> viewModel.onEvent(event)
+            }
+        },
+        modifier = modifier
+    )
+}
 
-    fun loadData() {
-        scope.launch {
-            isLoading = true
-            errorMessage = null
-            repository.getPopularSermons()
-                .onSuccess {
-                    popularSermons = it
-                    isLoading = false
-                }
-                .onFailure {
-                    errorMessage = it.localizedMessage ?: "Failed to load popular sermons."
-                    isLoading = false
-                }
-        }
-    }
-
-    LaunchedEffect(Unit) {
-        loadData()
-    }
-
-    if (isLoading) {
+/**
+ * Stateless UI content component adhering to Google MAD and Clean Architecture.
+ * Allows pure Compose previews and easy instrumented UI testing.
+ */
+@Composable
+fun HomeContent(
+    state: HomeUiState,
+    onEvent: (HomeUiEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (state.isLoading) {
         LoadingView(modifier = modifier, text = "Loading classic sermons...")
         return
     }
 
-    if (errorMessage != null && popularSermons.isEmpty()) {
+    if (state.errorMessage != null && state.popularSermons.isEmpty()) {
         ErrorView(
-            message = errorMessage ?: "Unknown error",
-            onRetry = { loadData() },
+            message = state.errorMessage,
+            onRetry = { onEvent(HomeUiEvent.Refresh) },
             modifier = modifier
         )
         return
@@ -125,7 +117,7 @@ fun HomeScreen(
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {
         // Hero Carousel
-        if (popularSermons.isNotEmpty()) {
+        if (state.popularSermons.isNotEmpty()) {
             item {
                 Text(
                     text = "Featured Sermons",
@@ -135,9 +127,9 @@ fun HomeScreen(
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                 )
                 HeroCarousel(
-                    sermons = popularSermons.take(6),
-                    onPlayClick = { playbackManager.playSermon(it) },
-                    onSermonClick = onSermonSelect
+                    sermons = state.popularSermons.take(6),
+                    onPlayClick = { onEvent(HomeUiEvent.PlaySermon(it)) },
+                    onSermonClick = { onEvent(HomeUiEvent.SelectSermon(it)) }
                 )
             }
         }
@@ -159,7 +151,7 @@ fun HomeScreen(
                 items(QUICK_TOPICS) { (name, slug) ->
                     FilterChip(
                         selected = false,
-                        onClick = { onTopicSelect(slug) },
+                        onClick = { onEvent(HomeUiEvent.SelectTopic(slug)) },
                         label = { Text(name) },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -169,8 +161,8 @@ fun HomeScreen(
             }
         }
 
-        // Continue Listening
-        if (historyItems.isNotEmpty()) {
+        // Continue Listening Shelf
+        if (state.history.isNotEmpty()) {
             item {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -181,34 +173,13 @@ fun HomeScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
                 ContinueListeningShelf(
-                    history = historyItems.take(5),
-                    onPlayHistory = { history ->
-                        val matching = popularSermons.find { it.id == history.sermonId }
-                        if (matching != null) {
-                            playbackManager.playSermon(matching, startPositionMs = history.lastPositionMs)
-                        } else {
-                            scope.launch {
-                                repository.getSermonDetails(history.sermonId).onSuccess { detail ->
-                                    val sermonDto = SermonDto(
-                                        id = detail.id,
-                                        title = detail.title,
-                                        speaker = detail.speaker,
-                                        speakerImage = detail.speakerImage,
-                                        mp3Url = detail.mp3Url,
-                                        cdnMp3Url = detail.cdnMp3Url,
-                                        hasAudio = detail.hasAudio,
-                                        duration = detail.duration
-                                    )
-                                    playbackManager.playSermon(sermonDto, startPositionMs = history.lastPositionMs)
-                                }
-                            }
-                        }
-                    }
+                    history = state.history.take(5),
+                    onPlayHistory = { onEvent(HomeUiEvent.ResumeHistory(it)) }
                 )
             }
         }
 
-        // Popular Sermons List
+        // Most Listened Sermons List
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -220,13 +191,13 @@ fun HomeScreen(
             )
         }
 
-        items(popularSermons.drop(6)) { sermon ->
+        items(state.popularSermons.drop(6)) { sermon ->
             SermonListItem(
                 sermon = sermon,
-                onPlayClick = { playbackManager.playSermon(sermon) },
-                onItemClick = { onSermonSelect(sermon) },
-                onFavoriteToggle = { scope.launch { repository.toggleFavorite(sermon) } },
-                isFavorite = favoriteIds.contains(sermon.id),
+                onPlayClick = { onEvent(HomeUiEvent.PlaySermon(sermon)) },
+                onItemClick = { onEvent(HomeUiEvent.SelectSermon(sermon)) },
+                onFavoriteToggle = { onEvent(HomeUiEvent.ToggleFavorite(sermon)) },
+                isFavorite = state.favoriteIds.contains(sermon.id),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
@@ -235,9 +206,9 @@ fun HomeScreen(
 
 @Composable
 private fun HeroCarousel(
-    sermons: List<SermonDto>,
-    onPlayClick: (SermonDto) -> Unit,
-    onSermonClick: (SermonDto) -> Unit,
+    sermons: List<Sermon>,
+    onPlayClick: (Sermon) -> Unit,
+    onSermonClick: (Sermon) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
@@ -257,7 +228,7 @@ private fun HeroCarousel(
 
 @Composable
 private fun HeroCard(
-    sermon: SermonDto,
+    sermon: Sermon,
     onPlayClick: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -356,8 +327,8 @@ private fun HeroCard(
 
 @Composable
 private fun ContinueListeningShelf(
-    history: List<HistoryEntity>,
-    onPlayHistory: (HistoryEntity) -> Unit,
+    history: List<ListeningHistory>,
+    onPlayHistory: (ListeningHistory) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
@@ -393,11 +364,8 @@ private fun ContinueListeningShelf(
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    val progress = if (item.durationMs > 0) {
-                        (item.lastPositionMs.toFloat() / item.durationMs.toFloat()).coerceIn(0f, 1f)
-                    } else 0f
                     LinearProgressIndicator(
-                        progress = { progress },
+                        progress = { item.progressFraction },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(4.dp)

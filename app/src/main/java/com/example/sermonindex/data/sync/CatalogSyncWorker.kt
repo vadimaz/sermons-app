@@ -5,8 +5,12 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.example.sermonindex.SermonApp
+import com.example.sermonindex.data.local.AppDatabase
 import com.example.sermonindex.data.local.entities.FtsSermonResult
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.android.EntryPointAccessors
+import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -16,13 +20,23 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.zip.GZIPInputStream
 
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface CatalogSyncWorkerEntryPoint {
+    fun getAppDatabase(): AppDatabase
+}
+
 class CatalogSyncWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        val database = SermonApp.instance.database
+        val entryPoint = EntryPointAccessors.fromApplication(
+            applicationContext,
+            CatalogSyncWorkerEntryPoint::class.java
+        )
+        val database = entryPoint.getAppDatabase()
         val catalogUrl = "https://api.sermonindex.net/downloads/sermons.json.gz"
         Log.i(TAG, "Starting full catalog sync from: $catalogUrl")
 

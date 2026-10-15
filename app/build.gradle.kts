@@ -2,6 +2,8 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.ksp)
+  alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -105,4 +107,9 @@ dependencies {
 
   // WorkManager
   implementation(libs.androidx.work.runtime.ktx)
+
+  // Hilt Dependency Injection
+  implementation(libs.hilt.android)
+  ksp(libs.hilt.compiler)
+  implementation(libs.androidx.hilt.navigation.compose)
 }

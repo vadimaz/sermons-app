@@ -1,6 +1,5 @@
-package com.example.sermonindex.ui.speakers
+﻿package com.example.sermonindex.ui.speakers
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,7 +17,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
@@ -34,120 +32,93 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.model.SermonDto
-import com.example.sermonindex.data.model.SpeakerDto
+import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
-import kotlinx.coroutines.launch
 
+/**
+ * Stateful entry point for SpeakerDetailScreen.
+ */
 @Composable
 fun SpeakerDetailScreen(
     slug: String,
     onBack: () -> Unit,
-    onSermonClick: (SermonDto) -> Unit,
+    onSermonClick: (Sermon) -> Unit,
     onTopicClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
-
-    var speaker by remember { mutableStateOf<SpeakerDto?>(null) }
-    var sermons by remember { mutableStateOf<List<SermonDto>>(emptyList()) }
-    var isLoadingSpeaker by remember { mutableStateOf(true) }
-    var isLoadingMore by remember { mutableStateOf(false) }
-    var currentPage by remember { mutableIntStateOf(1) }
-    var totalPages by remember { mutableIntStateOf(1) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    val favorites by repository.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
-    val favoriteIds = remember(favorites) { favorites.map { it.id }.toSet() }
-
-    val listState = rememberLazyListState()
-
-    // Load initial speaker data & page 1 sermons
-    LaunchedEffect(slug) {
-        isLoadingSpeaker = true
-        errorMessage = null
-        repository.getSpeakerDetails(slug)
-            .onSuccess { sp ->
-                speaker = sp
-                totalPages = sp.totalPages.coerceAtLeast(1)
-                // Also fetch page 1 sermons
-                repository.getSpeakerSermonsPage(slug, 1)
-                    .onSuccess { paged ->
-                        sermons = paged.sermons
-                        totalPages = paged.totalPages
-                        currentPage = 1
-                        isLoadingSpeaker = false
-                    }
-                    .onFailure {
-                        isLoadingSpeaker = false
-                    }
-            }
-            .onFailure {
-                errorMessage = it.localizedMessage ?: "Failed to load preacher details."
-                isLoadingSpeaker = false
-            }
+    val viewModel: SpeakerDetailViewModel = hiltViewModel(key = "speaker_$slug") { factory: SpeakerDetailViewModel.Factory ->
+        factory.create(slug)
     }
 
-    // Infinite scroll detection: when user scrolls near the end, load next page
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    SpeakerDetailContent(
+        state = state,
+        onEvent = { event ->
+            when (event) {
+                is SpeakerDetailUiEvent.ClickSermon -> onSermonClick(event.sermon)
+                is SpeakerDetailUiEvent.ClickTopic -> onTopicClick(event.slug)
+                else -> viewModel.onEvent(event)
+            }
+        },
+        onBack = onBack,
+        modifier = modifier
+    )
+}
+
+/**
+ * Stateless SpeakerDetailContent adhering to Clean Architecture.
+ */
+@Composable
+fun SpeakerDetailContent(
+    state: SpeakerDetailUiState,
+    onEvent: (SpeakerDetailUiEvent) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val listState = rememberLazyListState()
+
     val shouldLoadMore by remember {
         derivedStateOf {
             val totalItemCount = listState.layoutInfo.totalItemsCount
             val lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItemCount > 0 && lastVisibleItemIndex >= totalItemCount - 3 && !isLoadingMore && currentPage < totalPages
+            totalItemCount > 0 && lastVisibleItemIndex >= totalItemCount - 3 && !state.isLoadingMore && state.currentPage < state.totalPages
         }
     }
 
     LaunchedEffect(shouldLoadMore) {
         if (shouldLoadMore) {
-            isLoadingMore = true
-            val nextPage = currentPage + 1
-            repository.getSpeakerSermonsPage(slug, nextPage)
-                .onSuccess { paged ->
-                    sermons = sermons + paged.sermons
-                    currentPage = nextPage
-                    isLoadingMore = false
-                }
-                .onFailure {
-                    isLoadingMore = false
-                }
+            onEvent(SpeakerDetailUiEvent.LoadMore)
         }
     }
 
-    if (isLoadingSpeaker) {
+    if (state.isLoadingSpeaker) {
         LoadingView(modifier = modifier, text = "Loading preacher profile...")
         return
     }
 
-    if (errorMessage != null && speaker == null) {
+    if (state.errorMessage != null && state.speaker == null) {
         ErrorView(
-            message = errorMessage ?: "Failed to load speaker",
-            onRetry = {
-                // Retry loading
-            },
+            message = state.errorMessage,
+            onRetry = { onEvent(SpeakerDetailUiEvent.Retry) },
             modifier = modifier
         )
         return
     }
 
-    val currentSpeaker = speaker ?: return
+    val currentSpeaker = state.speaker ?: return
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -221,7 +192,7 @@ fun SpeakerDetailScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${currentSpeaker.sermonCount} Sermons • ${currentSpeaker.audioCount} Audio Available",
+                        text = "${currentSpeaker.sermonCount} Sermons â€¢ ${currentSpeaker.audioCount} Audio Available",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -254,7 +225,7 @@ fun SpeakerDetailScreen(
                         items(currentSpeaker.topTopics) { topic ->
                             FilterChip(
                                 selected = false,
-                                onClick = { onTopicClick(topic.slug) },
+                                onClick = { onEvent(SpeakerDetailUiEvent.ClickTopic(topic.slug)) },
                                 label = { Text("${topic.name} (${topic.count})") },
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -269,7 +240,7 @@ fun SpeakerDetailScreen(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Sermons (${sermons.size}${if (currentPage < totalPages) "+" else ""})",
+                    text = "Sermons (${state.sermons.size}${if (state.currentPage < state.totalPages) "+" else ""})",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -277,18 +248,18 @@ fun SpeakerDetailScreen(
             }
 
             // Sermon list items
-            items(sermons) { sermon ->
+            items(state.sermons, key = { it.id }) { sermon ->
                 SermonListItem(
                     sermon = sermon,
-                    onPlayClick = { playbackManager.playSermon(sermon) },
-                    onItemClick = { onSermonClick(sermon) },
-                    onFavoriteToggle = { scope.launch { repository.toggleFavorite(sermon) } },
-                    isFavorite = favoriteIds.contains(sermon.id)
+                    onPlayClick = { onEvent(SpeakerDetailUiEvent.PlaySermon(sermon)) },
+                    onItemClick = { onEvent(SpeakerDetailUiEvent.ClickSermon(sermon)) },
+                    onFavoriteToggle = { onEvent(SpeakerDetailUiEvent.ToggleFavorite(sermon)) },
+                    isFavorite = state.favoriteIds.contains(sermon.id)
                 )
             }
 
             // Loading more footer
-            if (isLoadingMore) {
+            if (state.isLoadingMore) {
                 item {
                     Box(
                         modifier = Modifier

@@ -1,6 +1,5 @@
-package com.example.sermonindex.ui.scripture
+﻿package com.example.sermonindex.ui.scripture
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,16 +19,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,116 +34,55 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.model.ScriptureBookDto
-import com.example.sermonindex.data.model.ScriptureChapterDto
-import com.example.sermonindex.data.model.SermonDto
-import com.example.sermonindex.data.model.VerseCountDto
+import com.example.sermonindex.domain.model.BibleBook
+import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Stateful entry point for ScriptureScreen.
+ */
 @Composable
 fun ScriptureScreen(
-    onSermonClick: (SermonDto) -> Unit,
+    onSermonClick: (Sermon) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
+    val viewModel: ScriptureViewModel = hiltViewModel()
 
-    var books by remember { mutableStateOf<List<ScriptureBookDto>>(emptyList()) }
-    var isLoadingBooks by remember { mutableStateOf(true) }
-    var booksError by remember { mutableStateOf<String?>(null) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Navigation state within Scripture Explorer:
-    // Level 1: selectedBook == null
-    // Level 2: selectedBook != null && selectedChapter == null
-    // Level 3: selectedBook != null && selectedChapter != null
-    var selectedBook by remember { mutableStateOf<ScriptureBookDto?>(null) }
-    var selectedChapter by remember { mutableStateOf<Int?>(null) }
-    var selectedVerse by remember { mutableStateOf<Int?>(null) }
-
-    var chapterData by remember { mutableStateOf<ScriptureChapterDto?>(null) }
-    var isLoadingChapter by remember { mutableStateOf(false) }
-
-    var verseSermons by remember { mutableStateOf<List<SermonDto>>(emptyList()) }
-    var isLoadingVerseSermons by remember { mutableStateOf(false) }
-
-    var testamentTabIndex by remember { mutableIntStateOf(0) } // 0: All, 1: OT, 2: NT
-
-    val favorites by repository.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
-    val favoriteIds = remember(favorites) { favorites.map { it.id }.toSet() }
-
-    LaunchedEffect(Unit) {
-        isLoadingBooks = true
-        repository.getScriptureBooks()
-            .onSuccess {
-                books = it
-                isLoadingBooks = false
+    ScriptureContent(
+        state = state,
+        onEvent = { event ->
+            when (event) {
+                is ScriptureUiEvent.ClickSermon -> onSermonClick(event.sermon)
+                else -> viewModel.onEvent(event)
             }
-            .onFailure {
-                booksError = it.localizedMessage ?: "Failed to load scripture books."
-                isLoadingBooks = false
-            }
-    }
+        },
+        modifier = modifier
+    )
+}
 
-    // Load chapter details (verses heat map)
-    LaunchedEffect(selectedBook, selectedChapter) {
-        val book = selectedBook
-        val chapter = selectedChapter
-        if (book != null && chapter != null) {
-            isLoadingChapter = true
-            repository.getScriptureChapter(book.bookId, chapter)
-                .onSuccess {
-                    chapterData = it
-                    isLoadingChapter = false
-                }
-                .onFailure {
-                    chapterData = ScriptureChapterDto(bookId = book.bookId, chapter = chapter)
-                    isLoadingChapter = false
-                }
-        }
-    }
-
-    // Load sermons for selected verse
-    LaunchedEffect(selectedBook, selectedChapter, selectedVerse) {
-        val book = selectedBook
-        val chapter = selectedChapter
-        val verse = selectedVerse
-        if (book != null && chapter != null && verse != null) {
-            isLoadingVerseSermons = true
-            repository.getScriptureVerse(book.bookId, chapter, verse)
-                .onSuccess {
-                    verseSermons = it
-                    isLoadingVerseSermons = false
-                }
-                .onFailure {
-                    verseSermons = emptyList()
-                    isLoadingVerseSermons = false
-                }
-        }
-    }
-
+/**
+ * Stateless ScriptureContent.
+ */
+@Composable
+fun ScriptureContent(
+    state: ScriptureUiState,
+    onEvent: (ScriptureUiEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier.fillMaxSize()
     ) {
@@ -162,16 +97,15 @@ fun ScriptureScreen(
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (selectedBook != null) {
+                if (state.selectedBook != null) {
                     IconButton(
                         onClick = {
-                            if (selectedVerse != null) {
-                                selectedVerse = null
-                            } else if (selectedChapter != null) {
-                                selectedChapter = null
-                                chapterData = null
+                            if (state.selectedVerse != null) {
+                                onEvent(ScriptureUiEvent.ClearVerse)
+                            } else if (state.selectedChapter != null) {
+                                onEvent(ScriptureUiEvent.ClearChapter)
                             } else {
-                                selectedBook = null
+                                onEvent(ScriptureUiEvent.ClearBook)
                             }
                         }
                     ) {
@@ -188,12 +122,12 @@ fun ScriptureScreen(
                 }
 
                 val titleText = when {
-                    selectedBook != null && selectedChapter != null && selectedVerse != null ->
-                        "${selectedBook?.name} $selectedChapter:$selectedVerse"
-                    selectedBook != null && selectedChapter != null ->
-                        "${selectedBook?.name} Chapter $selectedChapter"
-                    selectedBook != null ->
-                        "${selectedBook?.name} (${selectedBook?.bookId})"
+                    state.selectedBook != null && state.selectedChapter != null && state.selectedVerse != null ->
+                        "${state.selectedBook.name} ${state.selectedChapter}:${state.selectedVerse}"
+                    state.selectedBook != null && state.selectedChapter != null ->
+                        "${state.selectedBook.name} Chapter ${state.selectedChapter}"
+                    state.selectedBook != null ->
+                        "${state.selectedBook.name} (${state.selectedBook.id})"
                     else -> "Scripture Explorer"
                 }
 
@@ -209,10 +143,10 @@ fun ScriptureScreen(
         }
 
         // LEVEL 4: Sermons for selected verse
-        if (selectedBook != null && selectedChapter != null && selectedVerse != null) {
-            if (isLoadingVerseSermons) {
-                LoadingView(text = "Loading sermons for ${selectedBook?.name} $selectedChapter:$selectedVerse...")
-            } else if (verseSermons.isEmpty()) {
+        if (state.selectedBook != null && state.selectedChapter != null && state.selectedVerse != null) {
+            if (state.isLoadingVerseSermons) {
+                LoadingView(text = "Loading sermons for ${state.selectedBook.name} ${state.selectedChapter}:${state.selectedVerse}...")
+            } else if (state.verseSermons.isEmpty()) {
                 EmptyStateView(
                     title = "No sermons found",
                     subtitle = "There are no indexed sermons specifically referencing this verse."
@@ -224,19 +158,19 @@ fun ScriptureScreen(
                 ) {
                     item {
                         Text(
-                            text = "${verseSermons.size} Sermons referencing ${selectedBook?.name} $selectedChapter:$selectedVerse",
+                            text = "${state.verseSermons.size} Sermons referencing ${state.selectedBook.name} ${state.selectedChapter}:${state.selectedVerse}",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
-                    items(verseSermons) { sermon ->
+                    items(state.verseSermons, key = { it.id }) { sermon ->
                         SermonListItem(
                             sermon = sermon,
-                            onPlayClick = { playbackManager.playSermon(sermon) },
-                            onItemClick = { onSermonClick(sermon) },
-                            onFavoriteToggle = { scope.launch { repository.toggleFavorite(sermon) } },
-                            isFavorite = favoriteIds.contains(sermon.id)
+                            onPlayClick = { onEvent(ScriptureUiEvent.PlaySermon(sermon)) },
+                            onItemClick = { onEvent(ScriptureUiEvent.ClickSermon(sermon)) },
+                            onFavoriteToggle = { onEvent(ScriptureUiEvent.ToggleFavorite(sermon)) },
+                            isFavorite = state.favoriteIds.contains(sermon.id)
                         )
                     }
                 }
@@ -245,13 +179,15 @@ fun ScriptureScreen(
         }
 
         // LEVEL 3: Verse Heat Map Grid for selected chapter
-        if (selectedBook != null && selectedChapter != null) {
-            if (isLoadingChapter) {
+        if (state.selectedBook != null && state.selectedChapter != null) {
+            if (state.isLoadingChapter) {
                 LoadingView(text = "Loading verse sermon counts...")
             } else {
-                val chapter = chapterData
-                val verses = chapter?.verses ?: emptyList()
-                val maxCount = verses.maxOfOrNull { it.sermonCount }?.coerceAtLeast(1) ?: 1
+                val chapter = state.chapterData
+                val heatMap = chapter?.verseHeatMap ?: emptyMap()
+                val verseCount = chapter?.verseCount ?: heatMap.size
+                val versesList = (1..verseCount.coerceAtLeast(1)).map { v -> v to (heatMap[v] ?: 0) }
+                val maxCount = versesList.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
 
                 Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     Text(
@@ -261,7 +197,7 @@ fun ScriptureScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    if (verses.isEmpty()) {
+                    if (versesList.isEmpty() || (versesList.size == 1 && versesList.first().second == 0)) {
                         EmptyStateView(
                             title = "Chapter Sermons",
                             subtitle = "No verse breakdown is available for this chapter."
@@ -272,11 +208,12 @@ fun ScriptureScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            items(verses) { verseCount ->
+                            items(versesList, key = { it.first }) { (verseNum, count) ->
                                 VerseHeatMapCell(
-                                    verse = verseCount,
+                                    verse = verseNum,
+                                    count = count,
                                     maxCount = maxCount,
-                                    onClick = { selectedVerse = verseCount.verse }
+                                    onClick = { onEvent(ScriptureUiEvent.SelectVerse(verseNum)) }
                                 )
                             }
                         }
@@ -287,8 +224,8 @@ fun ScriptureScreen(
         }
 
         // LEVEL 2: Chapter Grid for selected book
-        if (selectedBook != null) {
-            val totalChapters = selectedBook?.chapters ?: 1
+        if (state.selectedBook != null) {
+            val totalChapters = state.selectedBook.chapterCount.coerceAtLeast(1)
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 Text(
                     text = "Select chapter (1..$totalChapters):",
@@ -307,7 +244,7 @@ fun ScriptureScreen(
                             modifier = Modifier
                                 .aspectRatio(1f)
                                 .clip(RoundedCornerShape(12.dp))
-                                .clickable { selectedChapter = chapterNum },
+                                .clickable { onEvent(ScriptureUiEvent.SelectChapter(chapterNum)) },
                             color = MaterialTheme.colorScheme.surfaceVariant,
                             shape = RoundedCornerShape(12.dp)
                         ) {
@@ -327,57 +264,51 @@ fun ScriptureScreen(
         }
 
         // LEVEL 1: 66 Books Directory
-        if (isLoadingBooks) {
+        if (state.isLoadingBooks) {
             LoadingView(text = "Loading Bible books...")
             return@Column
         }
 
-        if (booksError != null && books.isEmpty()) {
-            ErrorView(message = booksError ?: "Failed to load", onRetry = {
-                scope.launch {
-                    isLoadingBooks = true
-                    repository.getScriptureBooks().onSuccess { books = it; isLoadingBooks = false }
-                }
-            })
+        if (state.errorMessage != null && state.books.isEmpty()) {
+            ErrorView(
+                message = state.errorMessage,
+                onRetry = { onEvent(ScriptureUiEvent.RetryBooks) }
+            )
             return@Column
         }
 
         PrimaryTabRow(
-            selectedTabIndex = testamentTabIndex,
+            selectedTabIndex = state.testamentTabIndex,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
             Tab(
-                selected = testamentTabIndex == 0,
-                onClick = { testamentTabIndex = 0 },
+                selected = state.testamentTabIndex == 0,
+                onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(0)) },
                 text = { Text("All (66)") }
             )
             Tab(
-                selected = testamentTabIndex == 1,
-                onClick = { testamentTabIndex = 1 },
+                selected = state.testamentTabIndex == 1,
+                onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(1)) },
                 text = { Text("Old Testament") }
             )
             Tab(
-                selected = testamentTabIndex == 2,
-                onClick = { testamentTabIndex = 2 },
+                selected = state.testamentTabIndex == 2,
+                onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(2)) },
                 text = { Text("New Testament") }
             )
         }
 
-        val filteredBooks = when (testamentTabIndex) {
-            1 -> books.filter { it.testament.equals("OT", ignoreCase = true) }
-            2 -> books.filter { it.testament.equals("NT", ignoreCase = true) }
-            else -> books
-        }
+        val filteredBooks = state.filteredBooks
 
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(filteredBooks) { book ->
+            items(filteredBooks, key = { it.id }) { book ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { selectedBook = book },
+                        .clickable { onEvent(ScriptureUiEvent.SelectBook(book)) },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -398,7 +329,7 @@ fun ScriptureScreen(
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
-                                        text = book.bookId,
+                                        text = book.id,
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Bold,
                                         color = MaterialTheme.colorScheme.onPrimaryContainer
@@ -414,7 +345,7 @@ fun ScriptureScreen(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "${book.chapters} chapters • ${book.sermonCount} sermons",
+                                    text = "${book.chapterCount} chapters",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -422,7 +353,7 @@ fun ScriptureScreen(
                         }
 
                         Icon(
-                            Icons.Default.ChevronRight,
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -435,13 +366,13 @@ fun ScriptureScreen(
 
 @Composable
 private fun VerseHeatMapCell(
-    verse: VerseCountDto,
+    verse: Int,
+    count: Int,
     maxCount: Int,
     onClick: () -> Unit
 ) {
-    // Heat map intensity from 0.15 to 1.0
-    val density = (verse.sermonCount.toFloat() / maxCount.toFloat()).coerceIn(0f, 1f)
-    val cellColor = if (verse.sermonCount > 0) {
+    val density = (count.toFloat() / maxCount.toFloat()).coerceIn(0f, 1f)
+    val cellColor = if (count > 0) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.25f + 0.75f * density)
     } else {
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -461,14 +392,14 @@ private fun VerseHeatMapCell(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = "${verse.verse}",
+                text = "$verse",
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (density > 0.5f) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
             )
-            if (verse.sermonCount > 0) {
+            if (count > 0) {
                 Text(
-                    text = "${verse.sermonCount}",
+                    text = "$count",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (density > 0.5f) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -1,4 +1,4 @@
-package com.example.sermonindex.ui.topics
+﻿package com.example.sermonindex.ui.topics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,76 +24,74 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.model.SermonDto
-import com.example.sermonindex.data.model.TopicDetailDto
-import com.example.sermonindex.data.model.TopicScriptureDto
+import com.example.sermonindex.domain.model.Sermon
+import com.example.sermonindex.domain.model.TopicScripture
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
-import kotlinx.coroutines.launch
 
+/**
+ * Stateful entry point for TopicDetailScreen.
+ */
 @Composable
 fun TopicDetailScreen(
     slug: String,
     onBack: () -> Unit,
-    onSermonClick: (SermonDto) -> Unit,
+    onSermonClick: (Sermon) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
-
-    var topicDetail by remember { mutableStateOf<TopicDetailDto?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    val favorites by repository.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
-    val favoriteIds = remember(favorites) { favorites.map { it.id }.toSet() }
-
-    LaunchedEffect(slug) {
-        isLoading = true
-        errorMessage = null
-        repository.getTopicDetails(slug)
-            .onSuccess {
-                topicDetail = it
-                isLoading = false
-            }
-            .onFailure {
-                errorMessage = it.localizedMessage ?: "Failed to load topic details."
-                isLoading = false
-            }
+    val viewModel: TopicDetailViewModel = hiltViewModel(key = "topic_$slug") { factory: TopicDetailViewModel.Factory ->
+        factory.create(slug)
     }
 
-    if (isLoading) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    TopicDetailContent(
+        state = state,
+        onEvent = { event ->
+            when (event) {
+                is TopicDetailUiEvent.ClickSermon -> onSermonClick(event.sermon)
+                else -> viewModel.onEvent(event)
+            }
+        },
+        onBack = onBack,
+        modifier = modifier
+    )
+}
+
+/**
+ * Stateless TopicDetailContent.
+ */
+@Composable
+fun TopicDetailContent(
+    state: TopicDetailUiState,
+    onEvent: (TopicDetailUiEvent) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (state.isLoading) {
         LoadingView(modifier = modifier, text = "Loading theme insights...")
         return
     }
 
-    if (errorMessage != null && topicDetail == null) {
+    if (state.errorMessage != null && state.topicDetail == null) {
         ErrorView(
-            message = errorMessage ?: "Failed to load topic",
-            onRetry = {
-                // Retry
-            },
+            message = state.errorMessage,
+            onRetry = { onEvent(TopicDetailUiEvent.Retry) },
             modifier = modifier
         )
         return
     }
 
-    val detail = topicDetail ?: return
+    val detail = state.topicDetail ?: return
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -143,7 +141,6 @@ fun TopicDetailScreen(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            // Simple text presentation
                             val cleanDescription = detail.description.replace(Regex("<[^>]*>"), "")
                             Text(
                                 text = cleanDescription,
@@ -183,13 +180,13 @@ fun TopicDetailScreen(
                     )
                 }
 
-                items(detail.sermons) { sermon ->
+                items(detail.sermons, key = { it.id }) { sermon ->
                     SermonListItem(
                         sermon = sermon,
-                        onPlayClick = { playbackManager.playSermon(sermon) },
-                        onItemClick = { onSermonClick(sermon) },
-                        onFavoriteToggle = { scope.launch { repository.toggleFavorite(sermon) } },
-                        isFavorite = favoriteIds.contains(sermon.id)
+                        onPlayClick = { onEvent(TopicDetailUiEvent.PlaySermon(sermon)) },
+                        onItemClick = { onEvent(TopicDetailUiEvent.ClickSermon(sermon)) },
+                        onFavoriteToggle = { onEvent(TopicDetailUiEvent.ToggleFavorite(sermon)) },
+                        isFavorite = state.favoriteIds.contains(sermon.id)
                     )
                 }
             }
@@ -199,7 +196,7 @@ fun TopicDetailScreen(
 
 @Composable
 private fun ScriptureVerseCard(
-    scripture: TopicScriptureDto,
+    scripture: TopicScripture,
     modifier: Modifier = Modifier
 ) {
     Card(

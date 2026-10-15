@@ -1,4 +1,4 @@
-package com.example.sermonindex.ui.components
+﻿package com.example.sermonindex.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,11 +36,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.example.sermonindex.data.model.SermonDto
+import com.example.sermonindex.domain.model.Sermon
 
 @Composable
 fun SermonListItem(
-    sermon: SermonDto,
+    sermon: Sermon,
     onPlayClick: () -> Unit,
     onItemClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
@@ -135,7 +135,7 @@ fun SermonListItem(
                     }
                     if (sermon.topics.isNotEmpty()) {
                         Text(
-                            text = "• ${sermon.topics.first().name}",
+                            text = "â€¢ ${sermon.topics.first().name}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,

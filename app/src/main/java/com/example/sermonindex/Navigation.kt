@@ -32,6 +32,7 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.example.sermonindex.playback.PlaybackManager
 import com.example.sermonindex.ui.components.MiniPlayer
 import com.example.sermonindex.ui.home.HomeScreen
 import com.example.sermonindex.ui.library.LibraryScreen
@@ -44,9 +45,8 @@ import com.example.sermonindex.ui.topics.TopicDetailScreen
 import com.example.sermonindex.ui.topics.TopicsScreen
 
 @Composable
-fun MainNavigation() {
+fun MainNavigation(playbackManager: PlaybackManager) {
     val backStack = rememberNavBackStack(HomeRoute as NavKey)
-    val playbackManager = SermonApp.instance.playbackManager
     val playbackState by playbackManager.playbackState.collectAsStateWithLifecycle()
 
     val currentRoute = backStack.lastOrNull()

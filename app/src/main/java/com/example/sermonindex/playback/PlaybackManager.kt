@@ -8,7 +8,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-import com.example.sermonindex.data.model.SermonDto
+import com.example.sermonindex.domain.model.Sermon
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
 import kotlinx.coroutines.CoroutineScope
@@ -33,7 +33,7 @@ class PlaybackManager(private val context: Context) {
     private val _playbackState = MutableStateFlow(PlaybackState())
     val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
-    private var activeSermon: SermonDto? = null
+    private var activeSermon: Sermon? = null
 
     init {
         connectToService()
@@ -54,7 +54,7 @@ class PlaybackManager(private val context: Context) {
         }, MoreExecutors.directExecutor())
     }
 
-    fun playSermon(sermon: SermonDto, startPositionMs: Long = 0L) {
+    fun playSermon(sermon: Sermon, startPositionMs: Long = 0L) {
         if (!sermon.hasAudio && sermon.mp3Url.isBlank() && sermon.cdnMp3Url.isBlank()) {
             _playbackState.value = _playbackState.value.copy(
                 errorMessage = "This sermon has no audio stream available."

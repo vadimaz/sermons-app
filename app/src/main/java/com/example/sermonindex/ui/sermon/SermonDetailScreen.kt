@@ -1,7 +1,6 @@
-package com.example.sermonindex.ui.sermon
+﻿package com.example.sermonindex.ui.sermon
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -13,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,12 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -42,15 +35,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.model.SermonDetailDto
-import com.example.sermonindex.data.model.SermonDto
+import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
-import kotlinx.coroutines.launch
 
+/**
+ * Stateful entry point for SermonDetailScreen.
+ * Injects [SermonDetailViewModel] and collects [SermonDetailUiState].
+ */
 @Composable
 fun SermonDetailScreen(
     sermonId: String,
@@ -58,50 +53,50 @@ fun SermonDetailScreen(
     onSpeakerClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
-
-    var sermonDetail by remember { mutableStateOf<SermonDetailDto?>(null) }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
-
-    val favorites by repository.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
-    val isFavorite = remember(favorites, sermonId) {
-        favorites.any { it.id == sermonId }
+    val viewModel: SermonDetailViewModel = hiltViewModel(key = "sermon_$sermonId") { factory: SermonDetailViewModel.Factory ->
+        factory.create(sermonId)
     }
 
-    LaunchedEffect(sermonId) {
-        isLoading = true
-        errorMessage = null
-        repository.getSermonDetails(sermonId)
-            .onSuccess {
-                sermonDetail = it
-                isLoading = false
-            }
-            .onFailure {
-                errorMessage = it.localizedMessage ?: "Failed to load sermon details."
-                isLoading = false
-            }
-    }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    if (isLoading) {
+    SermonDetailContent(
+        state = state,
+        onEvent = { event ->
+            when (event) {
+                is SermonDetailUiEvent.ClickSpeaker -> onSpeakerClick(event.slug)
+                else -> viewModel.onEvent(event)
+            }
+        },
+        onBack = onBack,
+        modifier = modifier
+    )
+}
+
+/**
+ * Stateless SermonDetailContent adhering to Clean Architecture.
+ */
+@Composable
+fun SermonDetailContent(
+    state: SermonDetailUiState,
+    onEvent: (SermonDetailUiEvent) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (state.isLoading) {
         LoadingView(modifier = modifier, text = "Loading sermon...")
         return
     }
 
-    if (errorMessage != null && sermonDetail == null) {
+    if (state.errorMessage != null && state.detail == null) {
         ErrorView(
-            message = errorMessage ?: "Failed to load sermon",
-            onRetry = {
-                // Retry
-            },
+            message = state.errorMessage,
+            onRetry = { onEvent(SermonDetailUiEvent.Retry) },
             modifier = modifier
         )
         return
     }
 
-    val detail = sermonDetail ?: return
+    val detail = state.detail ?: return
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -133,25 +128,11 @@ fun SermonDetailScreen(
                         .padding(horizontal = 8.dp)
                 )
 
-                IconButton(
-                    onClick = {
-                        scope.launch {
-                            repository.toggleFavorite(
-                                SermonDto(
-                                    id = detail.id,
-                                    title = detail.title,
-                                    speaker = detail.speaker,
-                                    speakerImage = detail.speakerImage,
-                                    duration = detail.duration
-                                )
-                            )
-                        }
-                    }
-                ) {
+                IconButton(onClick = { onEvent(SermonDetailUiEvent.ToggleFavorite) }) {
                     Icon(
-                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Favorite",
-                        tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        tint = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -201,20 +182,7 @@ fun SermonDetailScreen(
             // Play button
             item {
                 Button(
-                    onClick = {
-                        playbackManager.playSermon(
-                            SermonDto(
-                                id = detail.id,
-                                title = detail.title,
-                                speaker = detail.speaker,
-                                speakerImage = detail.speakerImage,
-                                mp3Url = detail.mp3Url,
-                                cdnMp3Url = detail.cdnMp3Url,
-                                hasAudio = detail.hasAudio,
-                                duration = detail.duration
-                            )
-                        )
-                    },
+                    onClick = { onEvent(SermonDetailUiEvent.Play) },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp)
                 ) {
@@ -229,7 +197,9 @@ fun SermonDetailScreen(
                 item {
                     Card(
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
@@ -250,7 +220,9 @@ fun SermonDetailScreen(
                 item {
                     Card(
                         shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(

@@ -1,4 +1,4 @@
-package com.example.sermonindex.ui.topics
+﻿package com.example.sermonindex.ui.topics
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,8 +16,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Label
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -25,66 +25,62 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.model.TopicDto
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SearchTextField
 
+/**
+ * Stateful entry point for TopicsScreen.
+ */
 @Composable
 fun TopicsScreen(
     onTopicSelect: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    var allTopics by remember { mutableStateOf<List<TopicDto>>(emptyList()) }
-    var searchQuery by remember { mutableStateOf("") }
-    var isLoading by remember { mutableStateOf(true) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val viewModel: TopicsViewModel = hiltViewModel()
 
-    LaunchedEffect(Unit) {
-        isLoading = true
-        repository.getTopics()
-            .onSuccess {
-                allTopics = it
-                isLoading = false
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    TopicsContent(
+        state = state,
+        onEvent = { event ->
+            when (event) {
+                is TopicsUiEvent.SelectTopic -> onTopicSelect(event.slug)
+                else -> viewModel.onEvent(event)
             }
-            .onFailure {
-                errorMessage = it.localizedMessage ?: "Failed to load topics catalog."
-                isLoading = false
-            }
-    }
+        },
+        modifier = modifier
+    )
+}
 
-    val filteredTopics = remember(allTopics, searchQuery) {
-        if (searchQuery.isBlank()) {
-            allTopics
-        } else {
-            allTopics.filter { it.name.contains(searchQuery, ignoreCase = true) }
-        }
-    }
-
-    if (isLoading) {
+/**
+ * Stateless TopicsContent.
+ */
+@Composable
+fun TopicsContent(
+    state: TopicsUiState,
+    onEvent: (TopicsUiEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (state.isLoading) {
         LoadingView(modifier = modifier, text = "Loading thematic catalog...")
         return
     }
 
-    if (errorMessage != null && allTopics.isEmpty()) {
+    if (state.errorMessage != null && state.topics.isEmpty()) {
         ErrorView(
-            message = errorMessage ?: "Failed to load topics",
-            onRetry = {
-                // Retry
-            },
+            message = state.errorMessage,
+            onRetry = { onEvent(TopicsUiEvent.Retry) },
             modifier = modifier
         )
         return
@@ -95,13 +91,14 @@ fun TopicsScreen(
     ) {
         Box(modifier = Modifier.padding(16.dp)) {
             SearchTextField(
-                query = searchQuery,
-                onQueryChange = { searchQuery = it },
-                placeholder = "Search among ${allTopics.size} biblical themes..."
+                query = state.searchQuery,
+                onQueryChange = { onEvent(TopicsUiEvent.UpdateSearchQuery(it)) },
+                placeholder = "Search among ${state.topics.size} biblical themes..."
             )
         }
 
-        if (filteredTopics.isEmpty()) {
+        val filtered = state.filteredTopics
+        if (filtered.isEmpty()) {
             EmptyStateView(
                 title = "No topics found",
                 subtitle = "Try searching with another keyword."
@@ -111,8 +108,11 @@ fun TopicsScreen(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filteredTopics) { topic ->
-                    TopicRow(topic = topic, onClick = { onTopicSelect(topic.slug) })
+                items(filtered, key = { it.slug }) { topic ->
+                    TopicRow(
+                        topic = topic,
+                        onClick = { onEvent(TopicsUiEvent.SelectTopic(topic.slug)) }
+                    )
                 }
             }
         }
@@ -121,7 +121,7 @@ fun TopicsScreen(
 
 @Composable
 private fun TopicRow(
-    topic: TopicDto,
+    topic: Topic,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -167,14 +167,14 @@ private fun TopicRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${topic.sermonCount} sermons indexed",
+                    text = "${topic.count} sermons indexed",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
 
             Icon(
-                Icons.Default.ChevronRight,
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )

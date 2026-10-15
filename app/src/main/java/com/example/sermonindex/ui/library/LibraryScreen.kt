@@ -1,8 +1,7 @@
-package com.example.sermonindex.ui.library
+﻿package com.example.sermonindex.ui.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -24,12 +23,9 @@ import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,18 +34,11 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,166 +47,101 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.work.Constraints
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkInfo
-import androidx.work.WorkManager
 import coil3.compose.AsyncImage
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
-import com.example.sermonindex.data.local.entities.FtsSermonResult
-import com.example.sermonindex.data.local.entities.HistoryEntity
-import com.example.sermonindex.data.model.SermonDto
-import com.example.sermonindex.data.sync.CatalogSyncWorker
+import com.example.sermonindex.domain.model.FavoriteSermon
+import com.example.sermonindex.domain.model.ListeningHistory
+import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.SearchTextField
-import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Stateful entry point for LibraryScreen.
+ */
 @Composable
 fun LibraryScreen(
     onSermonSelect: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val viewModel: LibraryViewModel = hiltViewModel()
 
-    var selectedTab by remember { mutableIntStateOf(0) } // 0: Favorites, 1: History, 2: Offline Catalog
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    val favorites by repository.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
-    val history by repository.history.collectAsStateWithLifecycle(initialValue = emptyList())
-    val ftsCount by repository.ftsIndexedCount.collectAsStateWithLifecycle(initialValue = 0)
+    LibraryContent(
+        state = state,
+        onEvent = { event ->
+            when (event) {
+                is LibraryUiEvent.SelectSermon -> onSermonSelect(event.sermonId)
+                else -> viewModel.onEvent(event)
+            }
+        },
+        modifier = modifier
+    )
+}
 
-    val workInfos by WorkManager.getInstance(context)
-        .getWorkInfosForUniqueWorkFlow(CatalogSyncWorker.WORK_NAME)
-        .collectAsStateWithLifecycle(initialValue = emptyList())
-
-    val activeWorkInfo = workInfos.firstOrNull()
-    val isSyncing = activeWorkInfo?.state == WorkInfo.State.RUNNING
-    val syncProgress = activeWorkInfo?.progress?.getInt(CatalogSyncWorker.KEY_PROGRESS, 0) ?: 0
-    val syncCount = activeWorkInfo?.progress?.getInt(CatalogSyncWorker.KEY_COUNT, 0) ?: 0
-
+/**
+ * Stateless LibraryContent.
+ */
+@Composable
+fun LibraryContent(
+    state: LibraryUiState,
+    onEvent: (LibraryUiEvent) -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
         modifier = modifier.fillMaxSize()
     ) {
         PrimaryTabRow(
-            selectedTabIndex = selectedTab,
+            selectedTabIndex = state.selectedTab,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
             Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
+                selected = state.selectedTab == 0,
+                onClick = { onEvent(LibraryUiEvent.SelectTab(0)) },
                 icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
-                text = { Text("Favorites (${favorites.size})") }
+                text = { Text("Favorites (${state.favorites.size})") }
             )
             Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
+                selected = state.selectedTab == 1,
+                onClick = { onEvent(LibraryUiEvent.SelectTab(1)) },
                 icon = { Icon(Icons.Default.History, contentDescription = null) },
-                text = { Text("History (${history.size})") }
+                text = { Text("History (${state.history.size})") }
             )
             Tab(
-                selected = selectedTab == 2,
-                onClick = { selectedTab = 2 },
+                selected = state.selectedTab == 2,
+                onClick = { onEvent(LibraryUiEvent.SelectTab(2)) },
                 icon = { Icon(Icons.Default.CloudDownload, contentDescription = null) },
                 text = { Text("Offline Search") }
             )
         }
 
-        when (selectedTab) {
+        when (state.selectedTab) {
             0 -> FavoritesList(
-                favorites = favorites,
-                onPlay = { fav ->
-                    scope.launch {
-                        repository.getSermonDetails(fav.id).onSuccess { detail ->
-                            playbackManager.playSermon(
-                                SermonDto(
-                                    id = detail.id,
-                                    title = detail.title,
-                                    speaker = detail.speaker,
-                                    speakerImage = detail.speakerImage,
-                                    mp3Url = detail.mp3Url,
-                                    cdnMp3Url = detail.cdnMp3Url,
-                                    hasAudio = detail.hasAudio,
-                                    duration = detail.duration
-                                )
-                            )
-                        }
-                    }
-                },
-                onSelect = onSermonSelect,
-                onRemove = { fav ->
-                    scope.launch {
-                        repository.toggleFavorite(
-                            SermonDto(
-                                id = fav.id,
-                                title = fav.title,
-                                speaker = fav.speaker,
-                                speakerImage = fav.speakerImage,
-                                duration = fav.duration
-                            )
-                        )
-                    }
-                }
+                favorites = state.favorites,
+                onPlay = { onEvent(LibraryUiEvent.PlayFavorite(it)) },
+                onSelect = { onEvent(LibraryUiEvent.SelectSermon(it)) },
+                onRemove = { onEvent(LibraryUiEvent.RemoveFavorite(it)) }
             )
             1 -> HistoryList(
-                history = history,
-                onPlay = { item ->
-                    scope.launch {
-                        repository.getSermonDetails(item.sermonId).onSuccess { detail ->
-                            playbackManager.playSermon(
-                                SermonDto(
-                                    id = detail.id,
-                                    title = detail.title,
-                                    speaker = detail.speaker,
-                                    speakerImage = detail.speakerImage,
-                                    mp3Url = detail.mp3Url,
-                                    cdnMp3Url = detail.cdnMp3Url,
-                                    hasAudio = detail.hasAudio,
-                                    duration = detail.duration
-                                ),
-                                startPositionMs = item.lastPositionMs
-                            )
-                        }
-                    }
-                },
-                onSelect = onSermonSelect,
-                onClearAll = {
-                    scope.launch {
-                        SermonApp.instance.database.historyDao.clearHistory()
-                    }
-                }
+                history = state.history,
+                onPlay = { onEvent(LibraryUiEvent.ResumeHistory(it)) },
+                onSelect = { onEvent(LibraryUiEvent.SelectSermon(it)) },
+                onClearAll = { onEvent(LibraryUiEvent.ClearHistory) }
             )
             2 -> OfflineSearchTab(
-                indexedCount = ftsCount,
-                isSyncing = isSyncing,
-                syncProgress = syncProgress,
-                syncCount = syncCount,
-                onStartSync = {
-                    val workRequest = OneTimeWorkRequestBuilder<CatalogSyncWorker>()
-                        .setConstraints(
-                            Constraints.Builder()
-                                .setRequiredNetworkType(NetworkType.CONNECTED)
-                                .build()
-                        )
-                        .build()
-                    WorkManager.getInstance(context).enqueueUniqueWork(
-                        CatalogSyncWorker.WORK_NAME,
-                        ExistingWorkPolicy.REPLACE,
-                        workRequest
-                    )
-                },
-                onClearIndex = {
-                    scope.launch {
-                        repository.clearOfflineIndex()
-                    }
-                },
-                onSermonSelect = onSermonSelect
+                indexedCount = state.indexedCount,
+                isSyncing = state.isSyncing,
+                syncProgress = state.syncProgress,
+                syncCount = state.syncCount,
+                searchQuery = state.searchQuery,
+                searchResults = state.searchResults,
+                isSearching = state.isSearching,
+                onSearchQueryChange = { onEvent(LibraryUiEvent.UpdateSearchQuery(it)) },
+                onStartSync = { onEvent(LibraryUiEvent.StartSync) },
+                onClearIndex = { onEvent(LibraryUiEvent.ClearIndex) },
+                onPlayResult = { onEvent(LibraryUiEvent.PlayOfflineResult(it)) },
+                onSermonSelect = { onEvent(LibraryUiEvent.SelectSermon(it)) }
             )
         }
     }
@@ -229,28 +153,15 @@ private fun OfflineSearchTab(
     isSyncing: Boolean,
     syncProgress: Int,
     syncCount: Int,
+    searchQuery: String,
+    searchResults: List<OfflineSearchResult>,
+    isSearching: Boolean,
+    onSearchQueryChange: (String) -> Unit,
     onStartSync: () -> Unit,
     onClearIndex: () -> Unit,
+    onPlayResult: (OfflineSearchResult) -> Unit,
     onSermonSelect: (String) -> Unit
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
-
-    var searchQuery by remember { mutableStateOf("") }
-    var searchResults by remember { mutableStateOf<List<FtsSermonResult>>(emptyList()) }
-    var isSearching by remember { mutableStateOf(false) }
-
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isNotBlank() && indexedCount > 0) {
-            isSearching = true
-            searchResults = repository.searchOffline(searchQuery)
-            isSearching = false
-        } else {
-            searchResults = emptyList()
-        }
-    }
-
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -355,7 +266,7 @@ private fun OfflineSearchTab(
                 Spacer(modifier = Modifier.height(4.dp))
                 SearchTextField(
                     query = searchQuery,
-                    onQueryChange = { searchQuery = it },
+                    onQueryChange = onSearchQueryChange,
                     placeholder = "Search across $indexedCount indexed sermons..."
                 )
             }
@@ -369,11 +280,11 @@ private fun OfflineSearchTab(
                 }
             }
 
-            items(searchResults) { result ->
+            items(searchResults, key = { it.sermonId }) { result ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onSermonSelect(result.id) },
+                        .clickable { onSermonSelect(result.sermonId) },
                     shape = RoundedCornerShape(14.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
@@ -408,24 +319,7 @@ private fun OfflineSearchTab(
                         }
 
                         FilledIconButton(
-                            onClick = {
-                                scope.launch {
-                                    repository.getSermonDetails(result.id).onSuccess { detail ->
-                                        playbackManager.playSermon(
-                                            SermonDto(
-                                                id = detail.id,
-                                                title = detail.title,
-                                                speaker = detail.speaker,
-                                                speakerImage = detail.speakerImage,
-                                                mp3Url = detail.mp3Url,
-                                                cdnMp3Url = detail.cdnMp3Url,
-                                                hasAudio = detail.hasAudio,
-                                                duration = detail.duration
-                                            )
-                                        )
-                                    }
-                                }
-                            },
+                            onClick = { onPlayResult(result) },
                             shape = CircleShape,
                             colors = IconButtonDefaults.filledIconButtonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
@@ -443,10 +337,10 @@ private fun OfflineSearchTab(
 
 @Composable
 private fun FavoritesList(
-    favorites: List<FavoriteSermonEntity>,
-    onPlay: (FavoriteSermonEntity) -> Unit,
+    favorites: List<FavoriteSermon>,
+    onPlay: (FavoriteSermon) -> Unit,
     onSelect: (String) -> Unit,
-    onRemove: (FavoriteSermonEntity) -> Unit
+    onRemove: (FavoriteSermon) -> Unit
 ) {
     if (favorites.isEmpty()) {
         EmptyStateView(
@@ -458,7 +352,7 @@ private fun FavoritesList(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(favorites) { item ->
+            items(favorites, key = { it.id }) { item ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -530,8 +424,8 @@ private fun FavoritesList(
 
 @Composable
 private fun HistoryList(
-    history: List<HistoryEntity>,
-    onPlay: (HistoryEntity) -> Unit,
+    history: List<ListeningHistory>,
+    onPlay: (ListeningHistory) -> Unit,
     onSelect: (String) -> Unit,
     onClearAll: () -> Unit
 ) {
@@ -558,7 +452,7 @@ private fun HistoryList(
                 }
             }
 
-            items(history) { item ->
+            items(history, key = { it.sermonId }) { item ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -606,11 +500,8 @@ private fun HistoryList(
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
-                        val progress = if (item.durationMs > 0) {
-                            (item.lastPositionMs.toFloat() / item.durationMs.toFloat()).coerceIn(0f, 1f)
-                        } else 0f
                         LinearProgressIndicator(
-                            progress = { progress },
+                            progress = { item.progressFraction },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(4.dp)

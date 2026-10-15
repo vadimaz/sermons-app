@@ -1,10 +1,9 @@
-package com.example.sermonindex.ui.player
+﻿package com.example.sermonindex.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,10 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,13 +32,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -53,75 +47,69 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import com.example.sermonindex.SermonApp
-import com.example.sermonindex.data.model.SermonDetailDto
-import com.example.sermonindex.ui.components.EmptyStateView
+import com.example.sermonindex.domain.model.FaqItem
+import com.example.sermonindex.domain.model.OutlineItem
+import com.example.sermonindex.domain.model.QuoteItem
+import com.example.sermonindex.domain.model.Sermon
+import com.example.sermonindex.domain.model.SermonDetail
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * Stateful entry point for FullscreenPlayerScreen.
+ * Collects state from [PlayerViewModel] and passes down to stateless [PlayerContent].
+ */
 @Composable
 fun FullscreenPlayerScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val repository = SermonApp.instance.repository
-    val playbackManager = SermonApp.instance.playbackManager
-    val scope = rememberCoroutineScope()
+    val viewModel: PlayerViewModel = hiltViewModel()
 
-    val playbackState by playbackManager.playbackState.collectAsStateWithLifecycle()
-    val sermon = playbackState.currentSermon
-
-    var sermonDetail by remember { mutableStateOf<SermonDetailDto?>(null) }
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var showSpeedMenu by remember { mutableStateOf(false) }
-
-    val favorites by repository.favorites.collectAsStateWithLifecycle(initialValue = emptyList())
-    val isFavorite = remember(favorites, sermon?.id) {
-        favorites.any { it.id == sermon?.id }
-    }
-
-    var sliderPosition by remember { mutableFloatStateOf(0f) }
-    var isDraggingSlider by remember { mutableStateOf(false) }
-
-    LaunchedEffect(sermon?.id) {
-        val id = sermon?.id
-        if (!id.isNullOrBlank()) {
-            repository.getSermonDetails(id).onSuccess {
-                sermonDetail = it
-            }
-        }
-    }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Auto-exit if no sermon is active after waiting for initial service connection
-    LaunchedEffect(sermon) {
-        if (sermon == null) {
+    LaunchedEffect(state.sermon) {
+        if (state.sermon == null) {
             delay(500L)
-            if (playbackManager.playbackState.value.currentSermon == null) {
+            if (viewModel.uiState.value.sermon == null) {
                 onBack()
             }
         }
     }
+
+    PlayerContent(
+        state = state,
+        onEvent = viewModel::onEvent,
+        onBack = onBack,
+        modifier = modifier
+    )
+}
+
+/**
+ * Stateless PlayerContent receiving state and emitting events.
+ */
+@Composable
+fun PlayerContent(
+    state: PlayerUiState,
+    onEvent: (PlayerUiEvent) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sermon = state.sermon
 
     if (sermon == null) {
         Column(
@@ -207,11 +195,7 @@ fun FullscreenPlayerScreen(
         return
     }
 
-    val currentMs = if (isDraggingSlider) {
-        (sliderPosition * playbackState.durationMs).toLong()
-    } else {
-        playbackState.currentPositionMs
-    }
+    val currentMs = state.displayPositionMs
 
     Column(
         modifier = modifier
@@ -237,11 +221,11 @@ fun FullscreenPlayerScreen(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            IconButton(onClick = { scope.launch { repository.toggleFavorite(sermon) } }) {
+            IconButton(onClick = { onEvent(PlayerUiEvent.ToggleFavorite) }) {
                 Icon(
-                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                    imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = "Favorite",
-                    tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -300,7 +284,7 @@ fun FullscreenPlayerScreen(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            if (playbackState.isUsingFailoverCdn) {
+            if (state.isUsingFailoverCdn) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Surface(
                     shape = RoundedCornerShape(6.dp),
@@ -319,17 +303,14 @@ fun FullscreenPlayerScreen(
 
             // Playback Slider
             Slider(
-                value = if (playbackState.durationMs > 0) {
-                    (currentMs.toFloat() / playbackState.durationMs.toFloat()).coerceIn(0f, 1f)
+                value = if (state.durationMs > 0) {
+                    (currentMs.toFloat() / state.durationMs.toFloat()).coerceIn(0f, 1f)
                 } else 0f,
                 onValueChange = {
-                    isDraggingSlider = true
-                    sliderPosition = it
+                    onEvent(PlayerUiEvent.SliderChange(it))
                 },
                 onValueChangeFinished = {
-                    isDraggingSlider = false
-                    val targetMs = (sliderPosition * playbackState.durationMs).toLong()
-                    playbackManager.seekTo(targetMs)
+                    onEvent(PlayerUiEvent.SliderChangeFinished)
                 },
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
@@ -350,7 +331,7 @@ fun FullscreenPlayerScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = formatDuration(playbackState.durationMs),
+                    text = formatDuration(state.durationMs),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -366,21 +347,20 @@ fun FullscreenPlayerScreen(
             ) {
                 // Speed Selector
                 Box {
-                    TextButton(onClick = { showSpeedMenu = true }) {
+                    TextButton(onClick = { onEvent(PlayerUiEvent.SetSpeedMenuVisible(true)) }) {
                         Icon(Icons.Default.Speed, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("${playbackState.playbackSpeed}x")
+                        Text("${state.playbackSpeed}x")
                     }
                     DropdownMenu(
-                        expanded = showSpeedMenu,
-                        onDismissRequest = { showSpeedMenu = false }
+                        expanded = state.showSpeedMenu,
+                        onDismissRequest = { onEvent(PlayerUiEvent.SetSpeedMenuVisible(false)) }
                     ) {
                         listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { speed ->
                             DropdownMenuItem(
                                 text = { Text("${speed}x") },
                                 onClick = {
-                                    playbackManager.setSpeed(speed)
-                                    showSpeedMenu = false
+                                    onEvent(PlayerUiEvent.SetSpeed(speed))
                                 }
                             )
                         }
@@ -388,7 +368,7 @@ fun FullscreenPlayerScreen(
                 }
 
                 // Rewind 15s
-                IconButton(onClick = { playbackManager.rewind(15) }) {
+                IconButton(onClick = { onEvent(PlayerUiEvent.Rewind(15)) }) {
                     Icon(
                         imageVector = Icons.Default.FastRewind,
                         contentDescription = "Rewind 15 seconds",
@@ -399,7 +379,7 @@ fun FullscreenPlayerScreen(
 
                 // Play / Pause
                 FilledIconButton(
-                    onClick = { playbackManager.togglePlayPause() },
+                    onClick = { onEvent(PlayerUiEvent.TogglePlayPause) },
                     shape = CircleShape,
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = MaterialTheme.colorScheme.primary
@@ -407,15 +387,15 @@ fun FullscreenPlayerScreen(
                     modifier = Modifier.size(64.dp)
                 ) {
                     Icon(
-                        imageVector = if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (playbackState.isPlaying) "Pause" else "Play",
+                        imageVector = if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = if (state.isPlaying) "Pause" else "Play",
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(36.dp)
                     )
                 }
 
                 // Forward 30s
-                IconButton(onClick = { playbackManager.fastForward(30) }) {
+                IconButton(onClick = { onEvent(PlayerUiEvent.FastForward(30)) }) {
                     Icon(
                         imageVector = Icons.Default.FastForward,
                         contentDescription = "Fast forward 30 seconds",
@@ -429,24 +409,24 @@ fun FullscreenPlayerScreen(
 
             // Tabs: Overview, Outline, Transcript, Notes
             ScrollableTabRow(
-                selectedTabIndex = selectedTab,
+                selectedTabIndex = state.selectedTab,
                 edgePadding = 12.dp,
                 containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
             ) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Overview", maxLines = 1, softWrap = false) })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Outline", maxLines = 1, softWrap = false) })
-                Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }, text = { Text("Transcript", maxLines = 1, softWrap = false) })
-                Tab(selected = selectedTab == 3, onClick = { selectedTab = 3 }, text = { Text("Notes", maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 0, onClick = { onEvent(PlayerUiEvent.SelectTab(0)) }, text = { Text("Overview", maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 1, onClick = { onEvent(PlayerUiEvent.SelectTab(1)) }, text = { Text("Outline", maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 2, onClick = { onEvent(PlayerUiEvent.SelectTab(2)) }, text = { Text("Transcript", maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 3, onClick = { onEvent(PlayerUiEvent.SelectTab(3)) }, text = { Text("Notes", maxLines = 1, softWrap = false) })
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             // Tab Content
-            val detail = sermonDetail
-            when (selectedTab) {
+            val detail = state.sermonDetail
+            when (state.selectedTab) {
                 0 -> OverviewTab(sermon = sermon, detail = detail)
                 1 -> OutlineTab(outline = detail?.outline ?: emptyList())
                 2 -> TranscriptTab(
@@ -466,7 +446,7 @@ fun FullscreenPlayerScreen(
 }
 
 @Composable
-private fun OverviewTab(sermon: com.example.sermonindex.data.model.SermonDto, detail: SermonDetailDto?) {
+private fun OverviewTab(sermon: Sermon, detail: SermonDetail?) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
@@ -488,7 +468,7 @@ private fun OverviewTab(sermon: com.example.sermonindex.data.model.SermonDto, de
             Spacer(modifier = Modifier.height(14.dp))
         }
 
-        val scriptureRefs = detail?.scripture?.ifEmpty { sermon.scripture } ?: sermon.scripture
+        val scriptureRefs = detail?.scriptureCitations ?: emptyList()
         if (scriptureRefs.isNotEmpty()) {
             Text(
                 text = "Scripture Citations",
@@ -499,7 +479,7 @@ private fun OverviewTab(sermon: com.example.sermonindex.data.model.SermonDto, de
             Spacer(modifier = Modifier.height(6.dp))
             scriptureRefs.forEach { ref ->
                 Text(
-                    text = "• ${ref.text}",
+                    text = "â€¢ $ref",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -509,7 +489,7 @@ private fun OverviewTab(sermon: com.example.sermonindex.data.model.SermonDto, de
 }
 
 @Composable
-private fun OutlineTab(outline: List<com.example.sermonindex.data.model.OutlineItemDto>) {
+private fun OutlineTab(outline: List<OutlineItem>) {
     if (outline.isEmpty()) {
         Text("No preaching outline is available for this sermon.", style = MaterialTheme.typography.bodyMedium)
     } else {
@@ -517,14 +497,14 @@ private fun OutlineTab(outline: List<com.example.sermonindex.data.model.OutlineI
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            outline.forEachIndexed { index, item ->
+            outline.forEach { item ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                 ) {
                     Text(
-                        text = item.heading,
+                        text = item.title,
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(12.dp)
@@ -556,8 +536,8 @@ private fun TranscriptTab(transcriptHtml: String, transcriptText: String) {
 
 @Composable
 private fun StudyNotesTab(
-    quotes: List<String>,
-    faq: List<com.example.sermonindex.data.model.FaqItemDto>,
+    quotes: List<QuoteItem>,
+    faq: List<FaqItem>,
     points: List<String>
 ) {
     Column(
@@ -572,7 +552,7 @@ private fun StudyNotesTab(
                 color = MaterialTheme.colorScheme.primary
             )
             points.forEach { pt ->
-                Text(text = "✓ $pt", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "âœ“ $pt", style = MaterialTheme.typography.bodyMedium)
             }
         }
 
@@ -583,7 +563,7 @@ private fun StudyNotesTab(
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
-            quotes.forEach { quote ->
+            quotes.forEach { quoteItem ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
@@ -592,7 +572,7 @@ private fun StudyNotesTab(
                     Row(modifier = Modifier.padding(12.dp)) {
                         Icon(Icons.Default.FormatQuote, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "\"$quote\"", style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic)
+                        Text(text = "\"${quoteItem.quote}\"", style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic)
                     }
                 }
             }
@@ -612,9 +592,9 @@ private fun StudyNotesTab(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
                 ) {
                     Column(modifier = Modifier.padding(12.dp)) {
-                        Text(text = item.q, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                        Text(text = item.question, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = item.a, style = MaterialTheme.typography.bodySmall)
+                        Text(text = item.answer, style = MaterialTheme.typography.bodySmall)
                     }
                 }
             }
