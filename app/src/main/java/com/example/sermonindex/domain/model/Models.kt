@@ -188,3 +188,46 @@ data class OfflineSearchResult(
         duration = duration
     )
 }
+
+/**
+ * Pure domain model representing an offline downloaded sermon.
+ */
+data class DownloadedSermon(
+    val id: String,
+    val title: String,
+    val speaker: String,
+    val speakerImage: String = "",
+    val duration: String = "",
+    val localPath: String,
+    val fileSizeBytes: Long,
+    val downloadedAt: Long
+) {
+    fun toSermon(): Sermon = Sermon(
+        id = id,
+        title = title,
+        speaker = speaker,
+        speakerImage = speakerImage,
+        duration = duration
+    )
+
+    val formattedSize: String
+        get() {
+            val mb = fileSizeBytes.toDouble() / (1024.0 * 1024.0)
+            return if (mb >= 1.0) {
+                "${(mb * 10).toLong() / 10.0} MB"
+            } else {
+                val kb = fileSizeBytes / 1024
+                "$kb KB"
+            }
+        }
+}
+
+/**
+ * Domain representation of sleep timer status.
+ */
+sealed interface SleepTimerState {
+    data object Off : SleepTimerState
+    data class Active(val remainingMillis: Long, val totalMillis: Long) : SleepTimerState
+    data object EndOfSermon : SleepTimerState
+}
+

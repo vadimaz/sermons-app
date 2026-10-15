@@ -21,9 +21,12 @@ data class HistoryEntity(
 )
 
 data class DownloadedSermonEntity(
-    val sermonId: String,
-    val title: String = "",
-    val speaker: String = "",
-    val localFilePath: String,
+    val id: String,
+    val title: String,
+    val speaker: String,
+    val speakerImage: String,
+    val duration: String,
+    val localPath: String,
+    val fileSizeBytes: Long,
     val downloadedAt: Long = System.currentTimeMillis()
 )

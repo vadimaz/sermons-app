@@ -2,6 +2,7 @@ package com.example.sermonindex.domain.repository
 
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.ChapterDetails
+import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.OfflineSearchResult
@@ -20,9 +21,17 @@ import kotlinx.coroutines.flow.Flow
 interface SermonRepository {
     val favorites: Flow<List<FavoriteSermon>>
     val history: Flow<List<ListeningHistory>>
+    val downloads: Flow<List<DownloadedSermon>>
 
     fun isFavorite(id: String): Flow<Boolean>
     suspend fun toggleFavorite(sermon: Sermon)
+
+    fun isDownloaded(sermonId: String): Flow<Boolean>
+    fun getDownloadProgress(sermonId: String): Flow<Int?>
+    suspend fun downloadSermon(sermon: Sermon)
+    suspend fun cancelDownload(sermonId: String)
+    suspend fun deleteDownload(sermonId: String)
+    suspend fun getLocalAudioPath(sermonId: String): String?
 
     suspend fun updateHistory(
         sermonId: String,

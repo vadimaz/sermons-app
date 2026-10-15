@@ -15,15 +15,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -181,16 +185,49 @@ fun SermonDetailContent(
                 }
             }
 
-            // Play button
+            // Play & Download actions
             item {
-                Button(
-                    onClick = { onEvent(SermonDetailUiEvent.Play) },
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(stringResource(R.string.play_sermon_audio))
+                    Button(
+                        onClick = { onEvent(SermonDetailUiEvent.Play) },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(stringResource(R.string.play))
+                    }
+
+                    OutlinedButton(
+                        onClick = { onEvent(SermonDetailUiEvent.ToggleDownload) },
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        if (state.downloadProgress != null) {
+                            CircularProgressIndicator(
+                                progress = { (state.downloadProgress.toFloat() / 100f).coerceIn(0f, 1f) },
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.downloading_progress, state.downloadProgress))
+                        } else if (state.isDownloaded) {
+                            Icon(
+                                Icons.Default.DownloadDone,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.downloaded))
+                        } else {
+                            Icon(Icons.Default.Download, contentDescription = null)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(stringResource(R.string.download))
+                        }
+                    }
                 }
             }
 

@@ -4,8 +4,10 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import com.example.sermonindex.data.local.dao.DownloadsDao
 import com.example.sermonindex.data.local.dao.FavoritesDao
 import com.example.sermonindex.data.local.dao.HistoryDao
+import com.example.sermonindex.data.local.entities.DownloadedSermonEntity
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
 import com.example.sermonindex.data.local.entities.HistoryEntity
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +22,7 @@ class AppDatabase private constructor(context: Context) {
     private val dbHelper = DatabaseHelper(context.applicationContext)
     private val favoritesChangeSignal = MutableStateFlow(0L)
     private val historyChangeSignal = MutableStateFlow(0L)
+    private val downloadsChangeSignal = MutableStateFlow(0L)
 
     val favoritesDao: FavoritesDao = object : FavoritesDao {
         override fun getAllFavorites(): Flow<List<FavoriteSermonEntity>> {
@@ -113,6 +116,72 @@ class AppDatabase private constructor(context: Context) {
         }
     }
 
+    val downloadsDao: DownloadsDao = object : DownloadsDao {
+        override fun getAllDownloads(): Flow<List<DownloadedSermonEntity>> {
+            return downloadsChangeSignal.asStateFlow().map {
+                queryDownloads()
+            }
+        }
+
+        override suspend fun getDownload(id: String): DownloadedSermonEntity? = withContext(Dispatchers.IO) {
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery(
+                "SELECT id, title, speaker, speaker_image, duration, local_path, file_size_bytes, downloaded_at FROM downloads WHERE id = ?",
+                arrayOf(id)
+            )
+            cursor.use {
+                if (it.moveToFirst()) {
+                    DownloadedSermonEntity(
+                        id = it.getString(0),
+                        title = it.getString(1),
+                        speaker = it.getString(2),
+                        speakerImage = it.getString(3),
+                        duration = it.getString(4),
+                        localPath = it.getString(5),
+                        fileSizeBytes = it.getLong(6),
+                        downloadedAt = it.getLong(7)
+                    )
+                } else null
+            }
+        }
+
+        override fun isDownloaded(id: String): Flow<Boolean> {
+            return downloadsChangeSignal.asStateFlow().map {
+                checkIsDownloaded(id)
+            }
+        }
+
+        override suspend fun insertDownload(entity: DownloadedSermonEntity) = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            val values = ContentValues().apply {
+                put("id", entity.id)
+                put("title", entity.title)
+                put("speaker", entity.speaker)
+                put("speaker_image", entity.speakerImage)
+                put("duration", entity.duration)
+                put("local_path", entity.localPath)
+                put("file_size_bytes", entity.fileSizeBytes)
+                put("downloaded_at", entity.downloadedAt)
+            }
+            db.insertWithOnConflict("downloads", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+            downloadsChangeSignal.value = System.currentTimeMillis()
+        }
+
+        override suspend fun deleteDownload(id: String) = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            db.delete("downloads", "id = ?", arrayOf(id))
+            downloadsChangeSignal.value = System.currentTimeMillis()
+        }
+
+        override suspend fun getTotalStorageBytes(): Long = withContext(Dispatchers.IO) {
+            val db = dbHelper.readableDatabase
+            val cursor = db.rawQuery("SELECT SUM(file_size_bytes) FROM downloads", null)
+            cursor.use {
+                if (it.moveToFirst() && !it.isNull(0)) it.getLong(0) else 0L
+            }
+        }
+    }
+
     private suspend fun queryFavorites(): List<FavoriteSermonEntity> = withContext(Dispatchers.IO) {
         val list = mutableListOf<FavoriteSermonEntity>()
         val db = dbHelper.readableDatabase
@@ -169,7 +238,39 @@ class AppDatabase private constructor(context: Context) {
         list
     }
 
-    private class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "sermonindex.db", null, 1) {
+    private suspend fun queryDownloads(): List<DownloadedSermonEntity> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<DownloadedSermonEntity>()
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT id, title, speaker, speaker_image, duration, local_path, file_size_bytes, downloaded_at FROM downloads ORDER BY downloaded_at DESC",
+            null
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(
+                    DownloadedSermonEntity(
+                        id = it.getString(0),
+                        title = it.getString(1),
+                        speaker = it.getString(2),
+                        speakerImage = it.getString(3),
+                        duration = it.getString(4),
+                        localPath = it.getString(5),
+                        fileSizeBytes = it.getLong(6),
+                        downloadedAt = it.getLong(7)
+                    )
+                )
+            }
+        }
+        list
+    }
+
+    private suspend fun checkIsDownloaded(id: String): Boolean = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT 1 FROM downloads WHERE id = ? LIMIT 1", arrayOf(id))
+        cursor.use { it.moveToFirst() }
+    }
+
+    private class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "sermonindex.db", null, 2) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 """
@@ -199,6 +300,21 @@ class AppDatabase private constructor(context: Context) {
                 """.trimIndent()
             )
 
+            db.execSQL(
+                """
+                CREATE TABLE downloads (
+                    id TEXT PRIMARY KEY NOT NULL,
+                    title TEXT NOT NULL,
+                    speaker TEXT NOT NULL,
+                    speaker_image TEXT NOT NULL,
+                    duration TEXT NOT NULL,
+                    local_path TEXT NOT NULL,
+                    file_size_bytes INTEGER NOT NULL,
+                    downloaded_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+
             // FTS virtual table for Phase 4 offline search
             db.execSQL(
                 """
@@ -213,7 +329,22 @@ class AppDatabase private constructor(context: Context) {
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-            // Future schema migrations
+            if (oldVersion < 2) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS downloads (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        title TEXT NOT NULL,
+                        speaker TEXT NOT NULL,
+                        speaker_image TEXT NOT NULL,
+                        duration TEXT NOT NULL,
+                        local_path TEXT NOT NULL,
+                        file_size_bytes INTEGER NOT NULL,
+                        downloaded_at INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
         }
     }
 

@@ -30,4 +30,9 @@ object DatabaseModule {
     fun provideHistoryDao(database: AppDatabase): HistoryDao {
         return database.historyDao
     }
+
+    @Provides
+    fun provideDownloadsDao(database: AppDatabase): com.example.sermonindex.data.local.dao.DownloadsDao {
+        return database.downloadsDao
+    }
 }

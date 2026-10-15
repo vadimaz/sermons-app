@@ -32,8 +32,10 @@ import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
+import com.example.sermonindex.domain.repository.NetworkMonitor
 import com.example.sermonindex.playback.PlaybackManager
 import com.example.sermonindex.ui.components.MiniPlayer
+import com.example.sermonindex.ui.components.OfflineBanner
 import com.example.sermonindex.ui.home.HomeScreen
 import com.example.sermonindex.ui.library.LibraryScreen
 import com.example.sermonindex.ui.player.FullscreenPlayerScreen
@@ -45,9 +47,13 @@ import com.example.sermonindex.ui.topics.TopicDetailScreen
 import com.example.sermonindex.ui.topics.TopicsScreen
 
 @Composable
-fun MainNavigation(playbackManager: PlaybackManager) {
+fun MainNavigation(
+    playbackManager: PlaybackManager,
+    networkMonitor: NetworkMonitor
+) {
     val backStack = rememberNavBackStack(HomeRoute as NavKey)
     val playbackState by playbackManager.playbackState.collectAsStateWithLifecycle()
+    val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)
 
     val currentRoute = backStack.lastOrNull()
     val isFullscreenPlayer = currentRoute is PlayerRoute
@@ -171,12 +177,20 @@ fun MainNavigation(playbackManager: PlaybackManager) {
             }
         }
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            NavDisplay(
+            if (!isFullscreenPlayer) {
+                OfflineBanner(isOnline = isOnline)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+            ) {
+                NavDisplay(
                 backStack = backStack,
                 onBack = {
                     if (backStack.size > 1) {
@@ -270,3 +284,5 @@ fun MainNavigation(playbackManager: PlaybackManager) {
         }
     }
 }
+}
+

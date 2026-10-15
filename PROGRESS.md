@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.0.2` | **Version Code:** `3`
+> **Current Version:** `1.1.0` | **Version Code:** `4`
 
 ---
 
@@ -9,11 +9,13 @@
 
 ### 1.1 Audio Engine & Playback (Media3)
 - **`PlaybackService`**: Background `MediaSessionService` using ExoPlayer, media notification with playback controls, lockscreen metadata, and audio attributes tuned for speech (`USAGE_MEDIA`, `CONTENT_TYPE_SPEECH`).
+- **Offline File Playback**: Automatically checks local file cache and streams directly from `file://` URIs with zero network overhead when offline.
 - **CDN Failover**: Automatic failover to `cdnMp3Url` when `mp3Url` fails or returns an HTTP error.
+- **Sleep Timer (Таймер сна)**: Configurable timer (15m, 30m, 45m, 60m, or End of Sermon) with active countdown display and automatic audio pause upon expiration.
 - **Position Tracking**: Periodic sync of playback position into `HistoryDao` every 2 seconds.
 - **`PlaybackManager`**: Singleton client wrapping `MediaController`, exposing reactive `playbackState: StateFlow<PlaybackState>`.
 - **`MiniPlayer`**: Persistent floating bar above bottom navigation across all primary tabs with dismiss/stop button.
-- **`FullscreenPlayerScreen`**: Fullscreen player with scrubber, speed selection (0.75x–2.0x), seek 15s/30s, tabs for Overview, Outline, Transcript, and Study Notes, and empty-state handling with auto-exit.
+- **`FullscreenPlayerScreen`**: Fullscreen player with scrubber, speed selection (0.75x–2.0x), seek 15s/30s, Sleep Timer dialog & countdown badge, local audio badge, download action, tabs for Overview, Outline, Transcript, and Study Notes, and empty-state handling with auto-exit.
 
 ### 1.2 Screens & Presentation (Jetpack Compose + Navigation 3)
 | Screen | ViewModel | Key Functionality |
@@ -24,18 +26,21 @@
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, infinite scrolling paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`). |
 | **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges. |
 | **Topic Detail** | `TopicDetailViewModel` | Thematic description, Berean Standard Bible scripture correlations (`topScriptures`), related sermons. |
-| **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, favorite toggle, play action, link to speaker profile. |
-| **Library** | `LibraryViewModel` | Three tabs: Favorites, Listening History (with progress fraction & clear history), and Offline Full-Text Search. |
-| **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, speed selection, chapter outline navigation, transcript reading. |
+| **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, favorite toggle, play action, download action with progress indicator, link to speaker profile. |
+| **Library** | `LibraryViewModel` | Four tabs: Favorites, Downloads (with file sizes, total storage badge & delete action), Listening History, and Offline Full-Text Search. |
+| **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, chapter outline navigation, transcript reading. |
+| **Offline Banner** | N/A (Global) | Animated non-intrusive banner indicating offline mode when internet connection is lost. |
 
 ### 1.3 Offline Capabilities & Background Sync (WorkManager)
+- **`AudioDownloadWorker`**: WorkManager worker streaming MP3 files to app-specific internal storage (`audio_downloads/{id}.mp3`) with live progress reporting, network retry, and BunnyCDN fallback.
 - **`CatalogSyncWorker`**: GZIP streaming worker downloading `https://api.sermonindex.net/downloads/sermons.json.gz` (~27MB) directly into local SQLite FTS4 virtual table (`sermon_fts`) in batches.
 - **Offline Search**: Instant full-text prefix and keyword search across thousands of indexed sermons without internet connection.
 - **HTTP 404 Resilience**: `Http404EmptyInterceptor` handles empty verse queries without crashing.
 
 ### 1.4 Architecture & Testing
-- Pure domain models (`domain/model/Models.kt`), 15 UseCases (`domain/usecase/UseCases.kt`), and pure repository interface (`SermonRepository`).
+- Pure domain models (`domain/model/Models.kt`), 20 UseCases (`domain/usecase/UseCases.kt`), and pure repository interface (`SermonRepository`).
 - Full Dagger Hilt DI with modules for Database, Network, Media, Dispatchers, and Repositories.
+- SQLite `AppDatabase` v2 schema migration supporting `favorites`, `history`, `downloads`, and `sermon_fts`.
 - Complete string extraction in `res/values/strings.xml` for internationalization and accessibility.
 - Domain UseCase test suite (`UseCasesTest.kt`) passing via `./gradlew testDebugUnitTest`.
 
@@ -48,10 +53,19 @@
 interface SermonRepository {
     val favorites: Flow<List<FavoriteSermon>>
     val history: Flow<List<ListeningHistory>>
+    val downloads: Flow<List<DownloadedSermon>>
     val ftsIndexedCount: Flow<Int>
 
     fun isFavorite(id: String): Flow<Boolean>
     suspend fun toggleFavorite(sermon: Sermon)
+
+    fun isDownloaded(sermonId: String): Flow<Boolean>
+    fun getDownloadProgress(sermonId: String): Flow<Int?>
+    suspend fun downloadSermon(sermon: Sermon)
+    suspend fun cancelDownload(sermonId: String)
+    suspend fun deleteDownload(sermonId: String)
+    suspend fun getLocalAudioPath(sermonId: String): String?
+
     suspend fun updateHistory(sermonId: String, title: String, speaker: String, speakerImage: String, positionMs: Long, durationMs: Long)
 
     suspend fun getPopularSermons(): Result<List<Sermon>>
@@ -71,7 +85,14 @@ interface SermonRepository {
 }
 ```
 
-### 2.2 Playback Manager (`PlaybackManager`)
+### 2.2 Network Monitor Contract (`NetworkMonitor`)
+```kotlin
+interface NetworkMonitor {
+    val isOnline: Flow<Boolean>
+}
+```
+
+### 2.3 Playback Manager (`PlaybackManager`)
 ```kotlin
 class PlaybackManager(context: Context) {
     val playbackState: StateFlow<PlaybackState>
@@ -81,46 +102,31 @@ class PlaybackManager(context: Context) {
     fun resume()
     fun stop()
     fun seekTo(positionMs: Long)
-    fun seekForward(deltaMs: Long = 30_000L)
-    fun seekBack(deltaMs: Long = 15_000L)
-    fun setPlaybackSpeed(speed: Float)
+    fun rewind(seconds: Int = 15)
+    fun fastForward(seconds: Int = 30)
+    fun setSpeed(speed: Float)
+    fun setSleepTimerMinutes(minutes: Int)
+    fun setSleepTimerEndOfSermon()
+    fun cancelSleepTimer()
 }
 ```
-
-### 2.3 Network Endpoints (`SermonIndexApiService`)
-- `GET /v2/sermons/popular` -> `PopularSermonsResponse`
-- `GET /v2/sermons/{id}` -> `SermonDetailDto`
-- `GET /v2/scripture` -> `ScriptureBooksResponse`
-- `GET /v2/scripture/{book}/{chapter}` -> `ScriptureChapterResponse`
-- `GET /v2/scripture/{book}/{chapter}/{verse}` -> `ScriptureVerseResponse`
-- `GET /v2/speakers` -> `SpeakersResponse`
-- `GET /v2/speakers/{slug}` -> `SpeakerDetailDto`
-- `GET /v2/speakers/{slug}/page/{page}` -> `SpeakerSermonsPageDto`
-- `GET /v2/topics` -> `TopicsResponse`
-- `GET /v2/topics/{slug}` -> `TopicDetailDto`
 
 ---
 
 ## 3. Next Steps (Immediate Priorities)
 
-1. **Audio File Download Manager (True Offline Playback)**:
-   - While catalog metadata is offline-searchable via FTS, audio itself is currently streamed from network URLs.
-   - Implement `DownloadManager` / Media3 `DownloadService` to save MP3 files locally to app cache/files dir.
-   - Update `PlaybackManager` to prioritize local cached audio files over remote URLs.
-   - Add download progress indicator and "Downloaded" filter tab in `LibraryScreen`.
+1. **Paging 3 Integration**:
+   - Migrate manual pagination in `SpeakerDetailViewModel` to AndroidX Paging 3 (`PagingSource` / `Pager`) for smoother infinite scrolling, prefetching, and state preservation.
 
-2. **Network Connectivity & Offline UX Indicators**:
-   - Add a global connectivity observer (`ConnectivityManager.NetworkCallback`).
-   - Display non-intrusive offline banners when disconnected, indicating cached/downloaded content availability.
+2. **Adaptive Layouts (Foldables & Tablets)**:
+   - Integrate two-pane / list-detail layouts on wide screens and foldables using Jetpack Compose adaptive navigation.
 
-3. **Paging 3 Integration**:
-   - Migrate manual pagination in `SpeakerDetailViewModel` to AndroidX Paging 3 (`PagingSource` / `Pager`) for smoother infinite scrolling and prefetching.
+3. **UI Screenshot & Integration Tests**:
+   - Expand Compose UI tests using `createAndroidComposeRule` for navigation, playback controls, and offline UI verification.
 
 ---
 
 ## 4. Backlog & Technical Debt
 
 - **Room Entity Migration**: `AppDatabase.kt` currently uses `SQLiteOpenHelper` directly for FTS4 speed and simplicity. Evaluate migrating to Room `@Database` with Room `@Fts4` entity once KSP Room schema export configuration is finalized.
-- **UI Screenshot & Integration Tests**: Expand Compose UI tests using `createAndroidComposeRule` for navigation and playback controls.
-- **Adaptive Layouts**: Integrate two-pane / list-detail layouts on tablets and foldables using Jetpack Compose adaptive navigation.
-- **Audio Focus & Sleep Timer**: Add a sleep timer dialog (15m, 30m, 45m, end of sermon) in `FullscreenPlayerScreen`.
+- **Audio Focus Transition**: Smoothly duck audio on brief notifications and pause on audio focus loss (phone calls).

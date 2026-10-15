@@ -113,7 +113,7 @@
     <string name="loading_sermon">Loading sermon…</string>
     <string name="sermon_details">Sermon Details</string>
     <string name="duration_label">Duration: %1$s</string>
-    <string name="play_sermon_audio">Play Sermon Audio</string>
+    <string name="play_sermon_audio">Play</string>
     <string name="detailed_description">Detailed Description</string>
 
     <!-- Speakers Screen &amp; Speaker Detail Screen -->
@@ -149,4 +149,39 @@
     <string name="failed_to_load_more_sermons">Failed to load more sermons.</string>
     <string name="failed_to_load_topics">Failed to load topics catalog.</string>
     <string name="failed_to_load_topic_details">Failed to load topic details.</string>
+
+    <!-- Downloads & Offline Audio -->
+    <string name="tab_downloads_count">Downloads (%1$d)</string>
+    <string name="no_downloads_title">No downloaded sermons</string>
+    <string name="no_downloads_subtitle">Download sermons to listen offline without internet connection.</string>
+    <string name="total_downloads_size">Storage used: %1$s</string>
+    <string name="delete_download">Delete Download</string>
+    <string name="delete_download_confirmation">Are you sure you want to delete this downloaded audio file from device storage?</string>
+    <string name="download">Download</string>
+    <string name="downloading">Downloading…</string>
+    <string name="downloading_progress">Downloading (%1$d%%)</string>
+    <string name="downloaded">Downloaded</string>
+    <string name="cancel_download">Cancel download</string>
+    <string name="offline_audio">Offline Audio</string>
+    <string name="local_storage">Local Storage</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="download_channel_name">Sermon Downloads</string>
+    <string name="download_channel_description">Progress notifications for audio sermon downloads</string>
+
+    <!-- Network & Offline Banner -->
+    <string name="offline_mode_banner">You are offline. Only downloaded sermons and local search are available.</string>
+
+    <!-- Sleep Timer -->
+    <string name="sleep_timer">Sleep Timer</string>
+    <string name="sleep_timer_off">Off</string>
+    <string name="sleep_timer_15m">15 minutes</string>
+    <string name="sleep_timer_30m">30 minutes</string>
+    <string name="sleep_timer_45m">45 minutes</string>
+    <string name="sleep_timer_60m">60 minutes</string>
+    <string name="sleep_timer_end_of_sermon">End of sermon</string>
+    <string name="sleep_timer_active">Sleep in %1$s</string>
+    <string name="sleep_timer_badge">%1$s</string>
+    <string name="sleep_timer_set">Sleep timer set</string>
+    <string name="sleep_timer_cancelled">Sleep timer cancelled</string>
 </resources>

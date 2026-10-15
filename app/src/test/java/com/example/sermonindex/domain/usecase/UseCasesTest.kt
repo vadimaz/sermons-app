@@ -21,7 +21,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class UseCasesTest {
+class  UseCasesTest {
 
     private val fakeSermon = Sermon(
         id = "1",
@@ -70,6 +70,30 @@ class UseCasesTest {
         ) = Unit
 
         override suspend fun clearHistory() = Unit
+        val fakeDownloaded = com.example.sermonindex.domain.model.DownloadedSermon(
+            id = "1",
+            title = "Grace and Truth",
+            speaker = "A.W. Tozer",
+            localPath = "/fake/path/1.mp3",
+            fileSizeBytes = 15_000_000L,
+            downloadedAt = 2000L
+        )
+
+        var downloadedSermonPassed: Sermon? = null
+        var deletedDownloadId: String? = null
+
+        override val downloads: Flow<List<com.example.sermonindex.domain.model.DownloadedSermon>> = flowOf(listOf(fakeDownloaded))
+        override fun isDownloaded(sermonId: String): Flow<Boolean> = flowOf(sermonId == "1")
+        override fun getDownloadProgress(sermonId: String): Flow<Int?> = flowOf(50)
+        override suspend fun downloadSermon(sermon: Sermon) {
+            downloadedSermonPassed = sermon
+        }
+        override suspend fun cancelDownload(sermonId: String) = Unit
+        override suspend fun deleteDownload(sermonId: String) {
+            deletedDownloadId = sermonId
+        }
+        override suspend fun getLocalAudioPath(sermonId: String): String? = if (sermonId == "1") "/fake/path/1.mp3" else null
+
         override suspend fun getScriptureBooks(): Result<List<BibleBook>> = Result.success(emptyList())
         override suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails> = Result.failure(NotImplementedError())
         override suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>> = Result.failure(NotImplementedError())
@@ -109,5 +133,40 @@ class UseCasesTest {
     fun isFavoriteUseCase_emitsCorrectStatus() = runTest {
         val useCase = IsFavoriteUseCase(fakeRepository)
         assertTrue(useCase("1").first())
+    }
+
+    @Test
+    fun getDownloadsUseCase_returnsDownloadsFlow() = runTest {
+        val useCase = GetDownloadsUseCase(fakeRepository)
+        val list = useCase().first()
+        assertEquals(1, list.size)
+        assertEquals("1", list.first().id)
+        assertEquals("/fake/path/1.mp3", list.first().localPath)
+    }
+
+    @Test
+    fun isDownloadedUseCase_returnsCorrectStatus() = runTest {
+        val useCase = IsDownloadedUseCase(fakeRepository)
+        assertTrue(useCase("1").first())
+    }
+
+    @Test
+    fun downloadSermonUseCase_delegatesToRepository() = runTest {
+        val useCase = DownloadSermonUseCase(fakeRepository)
+        useCase(fakeSermon)
+        assertEquals(fakeSermon, fakeRepository.downloadedSermonPassed)
+    }
+
+    @Test
+    fun deleteDownloadUseCase_delegatesToRepository() = runTest {
+        val useCase = DeleteDownloadUseCase(fakeRepository)
+        useCase("1")
+        assertEquals("1", fakeRepository.deletedDownloadId)
+    }
+
+    @Test
+    fun getDownloadProgressUseCase_emitsProgress() = runTest {
+        val useCase = GetDownloadProgressUseCase(fakeRepository)
+        assertEquals(50, useCase("1").first())
     }
 }

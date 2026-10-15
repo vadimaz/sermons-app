@@ -174,3 +174,28 @@ fun Sermon.toFavoriteEntity(): FavoriteSermonEntity = FavoriteSermonEntity(
     duration = duration,
     addedAt = System.currentTimeMillis()
 )
+
+fun com.example.sermonindex.data.local.entities.DownloadedSermonEntity.toDomain(): com.example.sermonindex.domain.model.DownloadedSermon =
+    com.example.sermonindex.domain.model.DownloadedSermon(
+        id = id,
+        title = title,
+        speaker = speaker,
+        speakerImage = speakerImage,
+        duration = duration,
+        localPath = localPath,
+        fileSizeBytes = fileSizeBytes,
+        downloadedAt = downloadedAt
+    )
+
+fun com.example.sermonindex.domain.model.DownloadedSermon.toEntity(): com.example.sermonindex.data.local.entities.DownloadedSermonEntity =
+    com.example.sermonindex.data.local.entities.DownloadedSermonEntity(
+        id = id,
+        title = title,
+        speaker = speaker,
+        speakerImage = speakerImage,
+        duration = duration,
+        localPath = localPath,
+        fileSizeBytes = fileSizeBytes,
+        downloadedAt = downloadedAt
+    )
+

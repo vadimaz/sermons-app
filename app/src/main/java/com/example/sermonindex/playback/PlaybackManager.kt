@@ -69,18 +69,25 @@ class PlaybackManager(private val context: Context) {
             return
         }
 
-        val primaryUrl = sermon.mp3Url.ifBlank { sermon.cdnMp3Url }
+        val localFile = java.io.File(context.filesDir, "audio_downloads/${sermon.id}.mp3")
+        val isLocal = localFile.exists() && localFile.length() > 0
+        val playUrl = if (isLocal) {
+            "file://${localFile.absolutePath}"
+        } else {
+            sermon.mp3Url.ifBlank { sermon.cdnMp3Url }
+        }
         val cdnUrl = sermon.cdnMp3Url
 
         val mediaItem = PlaybackService.buildMediaItem(
-            url = primaryUrl,
+            url = playUrl,
             title = sermon.title,
             speaker = sermon.speaker,
             speakerImage = sermon.speakerImage,
             sermonId = sermon.id,
             isFailover = false,
-            primaryUrl = primaryUrl,
-            cdnUrl = cdnUrl
+            primaryUrl = playUrl,
+            cdnUrl = cdnUrl,
+            isLocal = isLocal
         )
 
         controller.setMediaItem(mediaItem)
@@ -95,10 +102,59 @@ class PlaybackManager(private val context: Context) {
             isPlaying = true,
             isBuffering = true,
             errorMessage = null,
-            currentPositionMs = startPositionMs
+            currentPositionMs = startPositionMs,
+            isLocalAudio = isLocal
         )
 
         startPositionPolling()
+    }
+
+    private var sleepTimerJob: Job? = null
+
+    fun setSleepTimerMinutes(minutes: Int) {
+        sleepTimerJob?.cancel()
+        if (minutes <= 0) {
+            cancelSleepTimer()
+            return
+        }
+
+        val totalMs = minutes * 60 * 1000L
+        var remainingMs = totalMs
+        _playbackState.value = _playbackState.value.copy(
+            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Active(remainingMs, totalMs)
+        )
+
+        sleepTimerJob = scope.launch {
+            while (isActive && remainingMs > 0) {
+                delay(1000L)
+                remainingMs = (remainingMs - 1000L).coerceAtLeast(0L)
+                _playbackState.value = _playbackState.value.copy(
+                    sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Active(remainingMs, totalMs)
+                )
+            }
+            if (isActive) {
+                pause()
+                _playbackState.value = _playbackState.value.copy(
+                    sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Off
+                )
+            }
+        }
+    }
+
+    fun setSleepTimerEndOfSermon() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _playbackState.value = _playbackState.value.copy(
+            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon
+        )
+    }
+
+    fun cancelSleepTimer() {
+        sleepTimerJob?.cancel()
+        sleepTimerJob = null
+        _playbackState.value = _playbackState.value.copy(
+            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Off
+        )
     }
 
     fun resume() {
@@ -170,6 +226,7 @@ class PlaybackManager(private val context: Context) {
 
     private fun syncStateWithPlayer(player: Player) {
         val isFailover = player.currentMediaItem?.mediaMetadata?.extras?.getBoolean(PlaybackService.EXTRA_IS_FAILOVER) ?: false
+        val isLocal = player.currentMediaItem?.mediaMetadata?.extras?.getBoolean(PlaybackService.EXTRA_IS_LOCAL) ?: false
         val duration = player.duration.coerceAtLeast(0L)
         val position = player.currentPosition.coerceAtLeast(0L)
         val buffered = player.bufferedPosition.coerceAtLeast(0L)
@@ -183,7 +240,8 @@ class PlaybackManager(private val context: Context) {
             durationMs = duration,
             bufferedPositionMs = buffered,
             playbackSpeed = player.playbackParameters.speed,
-            isUsingFailoverCdn = isFailover
+            isUsingFailoverCdn = isFailover,
+            isLocalAudio = isLocal
         )
     }
 
@@ -199,6 +257,10 @@ class PlaybackManager(private val context: Context) {
             mediaController?.let { syncStateWithPlayer(it) }
             if (playbackState == Player.STATE_ENDED) {
                 stopPositionPolling()
+                if (_playbackState.value.sleepTimerState is com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon) {
+                    cancelSleepTimer()
+                    pause()
+                }
             }
         }
 

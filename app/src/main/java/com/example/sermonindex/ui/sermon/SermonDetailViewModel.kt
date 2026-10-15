@@ -4,7 +4,11 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sermonindex.domain.model.SermonDetail
+import com.example.sermonindex.domain.usecase.DeleteDownloadUseCase
+import com.example.sermonindex.domain.usecase.DownloadSermonUseCase
+import com.example.sermonindex.domain.usecase.GetDownloadProgressUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
+import com.example.sermonindex.domain.usecase.IsDownloadedUseCase
 import com.example.sermonindex.domain.usecase.IsFavoriteUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
@@ -22,6 +26,8 @@ import kotlinx.coroutines.launch
 data class SermonDetailUiState(
     val detail: SermonDetail? = null,
     val isFavorite: Boolean = false,
+    val isDownloaded: Boolean = false,
+    val downloadProgress: Int? = null,
     val isLoading: Boolean = true,
     val errorMessage: String? = null
 )
@@ -30,6 +36,7 @@ sealed interface SermonDetailUiEvent {
     data object Retry : SermonDetailUiEvent
     data object Play : SermonDetailUiEvent
     data object ToggleFavorite : SermonDetailUiEvent
+    data object ToggleDownload : SermonDetailUiEvent
     data class ClickSpeaker(val slug: String) : SermonDetailUiEvent
 }
 
@@ -39,6 +46,10 @@ class SermonDetailViewModel @AssistedInject constructor(
     private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
     private val isFavoriteUseCase: IsFavoriteUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val isDownloadedUseCase: IsDownloadedUseCase,
+    private val getDownloadProgressUseCase: GetDownloadProgressUseCase,
+    private val downloadSermonUseCase: DownloadSermonUseCase,
+    private val deleteDownloadUseCase: DeleteDownloadUseCase,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
@@ -52,6 +63,7 @@ class SermonDetailViewModel @AssistedInject constructor(
 
     init {
         observeFavorite()
+        observeDownload()
         loadDetails()
     }
 
@@ -59,6 +71,19 @@ class SermonDetailViewModel @AssistedInject constructor(
         viewModelScope.launch {
             isFavoriteUseCase(sermonId).collect { isFav ->
                 _uiState.update { it.copy(isFavorite = isFav) }
+            }
+        }
+    }
+
+    private fun observeDownload() {
+        viewModelScope.launch {
+            isDownloadedUseCase(sermonId).collect { isDown ->
+                _uiState.update { it.copy(isDownloaded = isDown) }
+            }
+        }
+        viewModelScope.launch {
+            getDownloadProgressUseCase(sermonId).collect { prog ->
+                _uiState.update { it.copy(downloadProgress = prog) }
             }
         }
     }
@@ -75,6 +100,16 @@ class SermonDetailViewModel @AssistedInject constructor(
                 _uiState.value.detail?.let { detail ->
                     viewModelScope.launch {
                         toggleFavoriteUseCase(detail.toSermon())
+                    }
+                }
+            }
+            is SermonDetailUiEvent.ToggleDownload -> {
+                val detail = _uiState.value.detail ?: return
+                viewModelScope.launch {
+                    if (_uiState.value.isDownloaded) {
+                        deleteDownloadUseCase(detail.id)
+                    } else {
+                        downloadSermonUseCase(detail.toSermon())
                     }
                 }
             }

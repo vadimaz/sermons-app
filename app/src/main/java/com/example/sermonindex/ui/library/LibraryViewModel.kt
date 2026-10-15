@@ -11,10 +11,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.example.sermonindex.data.sync.CatalogSyncWorker
+import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.domain.repository.SermonRepository
+import com.example.sermonindex.domain.usecase.DeleteDownloadUseCase
+import com.example.sermonindex.domain.usecase.GetDownloadsUseCase
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
 import com.example.sermonindex.domain.usecase.GetHistoryUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
@@ -32,8 +35,10 @@ import javax.inject.Inject
 
 @Immutable
 data class LibraryUiState(
-    val selectedTab: Int = 0, // 0: Favorites, 1: History, 2: Offline Search
+    val selectedTab: Int = 0, // 0: Favorites, 1: Downloads, 2: History, 3: Offline Search
     val favorites: List<FavoriteSermon> = emptyList(),
+    val downloads: List<DownloadedSermon> = emptyList(),
+    val totalDownloadsSizeFormatted: String = "0 MB",
     val history: List<ListeningHistory> = emptyList(),
     val indexedCount: Int = 0,
     val isSyncing: Boolean = false,
@@ -48,6 +53,8 @@ sealed interface LibraryUiEvent {
     data class SelectTab(val tab: Int) : LibraryUiEvent
     data class PlayFavorite(val favorite: FavoriteSermon) : LibraryUiEvent
     data class RemoveFavorite(val favorite: FavoriteSermon) : LibraryUiEvent
+    data class PlayDownload(val download: DownloadedSermon) : LibraryUiEvent
+    data class DeleteDownload(val download: DownloadedSermon) : LibraryUiEvent
     data class ResumeHistory(val history: ListeningHistory) : LibraryUiEvent
     data object ClearHistory : LibraryUiEvent
     data class UpdateSearchQuery(val query: String) : LibraryUiEvent
@@ -61,6 +68,8 @@ sealed interface LibraryUiEvent {
 class LibraryViewModel @Inject constructor(
     @param:ApplicationContext private val context: Context,
     private val getFavoritesUseCase: GetFavoritesUseCase,
+    private val getDownloadsUseCase: GetDownloadsUseCase,
+    private val deleteDownloadUseCase: DeleteDownloadUseCase,
     private val getHistoryUseCase: GetHistoryUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
@@ -81,6 +90,14 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             getFavoritesUseCase().collect { favs ->
                 _uiState.update { it.copy(favorites = favs) }
+            }
+        }
+        viewModelScope.launch {
+            getDownloadsUseCase().collect { dls ->
+                val totalBytes = dls.sumOf { it.fileSizeBytes }
+                val mb = totalBytes.toDouble() / (1024.0 * 1024.0)
+                val formatted = if (mb >= 1.0) "${(mb * 10).toLong() / 10.0} MB" else "${totalBytes / 1024} KB"
+                _uiState.update { it.copy(downloads = dls, totalDownloadsSizeFormatted = formatted) }
             }
         }
         viewModelScope.launch {
@@ -128,6 +145,14 @@ class LibraryViewModel @Inject constructor(
             is LibraryUiEvent.RemoveFavorite -> {
                 viewModelScope.launch {
                     toggleFavoriteUseCase(event.favorite.toSermon())
+                }
+            }
+            is LibraryUiEvent.PlayDownload -> {
+                playbackManager.playSermon(event.download.toSermon())
+            }
+            is LibraryUiEvent.DeleteDownload -> {
+                viewModelScope.launch {
+                    deleteDownloadUseCase(event.download.id)
                 }
             }
             is LibraryUiEvent.ResumeHistory -> {

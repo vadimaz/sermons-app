@@ -78,3 +78,28 @@ class OfflineSearchUseCase @Inject constructor(private val repository: SermonRep
     suspend operator fun invoke(query: String): List<OfflineSearchResult> =
         repository.searchOffline(query)
 }
+
+class GetDownloadsUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(): Flow<List<com.example.sermonindex.domain.model.DownloadedSermon>> = repository.downloads
+}
+
+class IsDownloadedUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(sermonId: String): Flow<Boolean> = repository.isDownloaded(sermonId)
+}
+
+class GetDownloadProgressUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(sermonId: String): Flow<Int?> = repository.getDownloadProgress(sermonId)
+}
+
+class DownloadSermonUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(sermon: Sermon) = repository.downloadSermon(sermon)
+}
+
+class CancelDownloadUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(sermonId: String) = repository.cancelDownload(sermonId)
+}
+
+class DeleteDownloadUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(sermonId: String) = repository.deleteDownload(sermonId)
+}
+

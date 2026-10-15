@@ -5,11 +5,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
+import com.example.sermonindex.domain.model.SleepTimerState
+import com.example.sermonindex.domain.usecase.DeleteDownloadUseCase
+import com.example.sermonindex.domain.usecase.DownloadSermonUseCase
+import com.example.sermonindex.domain.usecase.GetDownloadProgressUseCase
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
+import com.example.sermonindex.domain.usecase.IsDownloadedUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,12 +29,17 @@ data class PlayerUiState(
     val sermonDetail: SermonDetail? = null,
     val isLoadingDetail: Boolean = false,
     val isFavorite: Boolean = false,
+    val isDownloaded: Boolean = false,
+    val downloadProgress: Int? = null,
     val isPlaying: Boolean = false,
     val isBuffering: Boolean = false,
     val currentPositionMs: Long = 0L,
     val durationMs: Long = 0L,
     val playbackSpeed: Float = 1.0f,
     val isUsingFailoverCdn: Boolean = false,
+    val isLocalAudio: Boolean = false,
+    val sleepTimerState: SleepTimerState = SleepTimerState.Off,
+    val showSleepTimerDialog: Boolean = false,
     val selectedTab: Int = 0,
     val sliderPosition: Float = 0f,
     val isDraggingSlider: Boolean = false,
@@ -49,10 +60,15 @@ sealed interface PlayerUiEvent {
     data class FastForward(val seconds: Int = 30) : PlayerUiEvent
     data class SetSpeed(val speed: Float) : PlayerUiEvent
     data object ToggleFavorite : PlayerUiEvent
+    data object ToggleDownload : PlayerUiEvent
     data class SelectTab(val tabIndex: Int) : PlayerUiEvent
     data class SliderChange(val position: Float) : PlayerUiEvent
     data object SliderChangeFinished : PlayerUiEvent
     data class SetSpeedMenuVisible(val visible: Boolean) : PlayerUiEvent
+    data class SetSleepTimerDialogVisible(val visible: Boolean) : PlayerUiEvent
+    data class SetSleepTimerMinutes(val minutes: Int) : PlayerUiEvent
+    data object SetSleepTimerEndOfSermon : PlayerUiEvent
+    data object CancelSleepTimer : PlayerUiEvent
 }
 
 /**
@@ -64,13 +80,19 @@ class PlayerViewModel @Inject constructor(
     private val playbackManager: PlaybackManager,
     private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
-    private val toggleFavoriteUseCase: ToggleFavoriteUseCase
+    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val isDownloadedUseCase: IsDownloadedUseCase,
+    private val getDownloadProgressUseCase: GetDownloadProgressUseCase,
+    private val downloadSermonUseCase: DownloadSermonUseCase,
+    private val deleteDownloadUseCase: DeleteDownloadUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private var currentFavoriteIds = emptySet<String>()
+    private var downloadObserverJob: Job? = null
+    private var progressObserverJob: Job? = null
 
     init {
         observePlaybackState()
@@ -93,13 +115,31 @@ class PlayerViewModel @Inject constructor(
                         durationMs = pbState.durationMs,
                         playbackSpeed = pbState.playbackSpeed,
                         isUsingFailoverCdn = pbState.isUsingFailoverCdn,
+                        isLocalAudio = pbState.isLocalAudio,
+                        sleepTimerState = pbState.sleepTimerState,
                         isFavorite = newSermon?.id?.let { currentFavoriteIds.contains(it) } ?: false
                     )
                 }
 
                 if (sermonChanged && newSermon != null) {
                     loadSermonDetails(newSermon.id)
+                    observeDownloadsForSermon(newSermon.id)
                 }
+            }
+        }
+    }
+
+    private fun observeDownloadsForSermon(sermonId: String) {
+        downloadObserverJob?.cancel()
+        downloadObserverJob = viewModelScope.launch {
+            isDownloadedUseCase(sermonId).collect { downloaded ->
+                _uiState.update { it.copy(isDownloaded = downloaded) }
+            }
+        }
+        progressObserverJob?.cancel()
+        progressObserverJob = viewModelScope.launch {
+            getDownloadProgressUseCase(sermonId).collect { progress ->
+                _uiState.update { it.copy(downloadProgress = progress) }
             }
         }
     }
@@ -160,6 +200,31 @@ class PlayerViewModel @Inject constructor(
             }
             is PlayerUiEvent.SetSpeedMenuVisible -> {
                 _uiState.update { it.copy(showSpeedMenu = event.visible) }
+            }
+            is PlayerUiEvent.SetSleepTimerDialogVisible -> {
+                _uiState.update { it.copy(showSleepTimerDialog = event.visible) }
+            }
+            is PlayerUiEvent.SetSleepTimerMinutes -> {
+                playbackManager.setSleepTimerMinutes(event.minutes)
+                _uiState.update { it.copy(showSleepTimerDialog = false) }
+            }
+            is PlayerUiEvent.SetSleepTimerEndOfSermon -> {
+                playbackManager.setSleepTimerEndOfSermon()
+                _uiState.update { it.copy(showSleepTimerDialog = false) }
+            }
+            is PlayerUiEvent.CancelSleepTimer -> {
+                playbackManager.cancelSleepTimer()
+                _uiState.update { it.copy(showSleepTimerDialog = false) }
+            }
+            is PlayerUiEvent.ToggleDownload -> {
+                val s = _uiState.value.sermon ?: return
+                viewModelScope.launch {
+                    if (_uiState.value.isDownloaded) {
+                        deleteDownloadUseCase(s.id)
+                    } else {
+                        downloadSermonUseCase(s)
+                    }
+                }
             }
         }
     }

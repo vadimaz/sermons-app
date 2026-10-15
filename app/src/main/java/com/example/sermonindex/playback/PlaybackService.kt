@@ -192,6 +192,7 @@ class PlaybackService : MediaSessionService() {
         const val EXTRA_PRIMARY_URL = "extra_primary_url"
         const val EXTRA_CDN_URL = "extra_cdn_url"
         const val EXTRA_IS_FAILOVER = "extra_is_failover"
+        const val EXTRA_IS_LOCAL = "extra_is_local"
 
         fun buildMediaItem(
             url: String,
@@ -201,13 +202,15 @@ class PlaybackService : MediaSessionService() {
             sermonId: String,
             isFailover: Boolean = false,
             primaryUrl: String = url,
-            cdnUrl: String = ""
+            cdnUrl: String = "",
+            isLocal: Boolean = false
         ): MediaItem {
             val extras = Bundle().apply {
                 putString(EXTRA_SERMON_ID, sermonId)
                 putString(EXTRA_PRIMARY_URL, primaryUrl)
                 putString(EXTRA_CDN_URL, cdnUrl)
                 putBoolean(EXTRA_IS_FAILOVER, isFailover)
+                putBoolean(EXTRA_IS_LOCAL, isLocal)
             }
 
             val metadata = MediaMetadata.Builder()

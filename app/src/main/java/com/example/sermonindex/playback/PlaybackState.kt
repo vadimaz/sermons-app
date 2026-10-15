@@ -1,6 +1,7 @@
 package com.example.sermonindex.playback
 
 import com.example.sermonindex.domain.model.Sermon
+import com.example.sermonindex.domain.model.SleepTimerState
 
 data class PlaybackState(
     val currentSermon: Sermon? = null,
@@ -11,6 +12,8 @@ data class PlaybackState(
     val bufferedPositionMs: Long = 0L,
     val playbackSpeed: Float = 1.0f,
     val isUsingFailoverCdn: Boolean = false,
+    val isLocalAudio: Boolean = false,
+    val sleepTimerState: SleepTimerState = SleepTimerState.Off,
     val errorMessage: String? = null
 ) {
     val hasActiveMedia: Boolean

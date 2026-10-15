@@ -19,6 +19,9 @@ class MainActivity : ComponentActivity() {
   @Inject
   lateinit var playbackManager: PlaybackManager
 
+  @Inject
+  lateinit var networkMonitor: com.example.sermonindex.domain.repository.NetworkMonitor
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
@@ -26,7 +29,7 @@ class MainActivity : ComponentActivity() {
     setContent {
       SermonIndexTheme {
         Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-          MainNavigation(playbackManager = playbackManager)
+          MainNavigation(playbackManager = playbackManager, networkMonitor = networkMonitor)
         }
       }
     }

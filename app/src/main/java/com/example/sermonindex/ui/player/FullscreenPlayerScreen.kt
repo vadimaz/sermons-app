@@ -1,6 +1,7 @@
 package com.example.sermonindex.ui.player
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,17 +20,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Bedtime
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
@@ -37,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -199,6 +207,68 @@ fun PlayerContent(
 
     val currentMs = state.displayPositionMs
 
+    if (state.showSleepTimerDialog) {
+        val currentTimer = state.sleepTimerState
+        AlertDialog(
+            onDismissRequest = { onEvent(PlayerUiEvent.SetSleepTimerDialogVisible(false)) },
+            title = { Text(stringResource(R.string.sleep_timer)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val options = listOf(
+                        0 to stringResource(R.string.sleep_timer_off),
+                        15 to stringResource(R.string.sleep_timer_15m),
+                        30 to stringResource(R.string.sleep_timer_30m),
+                        45 to stringResource(R.string.sleep_timer_45m),
+                        60 to stringResource(R.string.sleep_timer_60m),
+                        -1 to stringResource(R.string.sleep_timer_end_of_sermon)
+                    )
+
+                    options.forEach { (minutes, label) ->
+                        val isSelected = when (minutes) {
+                            0 -> currentTimer is com.example.sermonindex.domain.model.SleepTimerState.Off
+                            -1 -> currentTimer is com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon
+                            else -> currentTimer is com.example.sermonindex.domain.model.SleepTimerState.Active &&
+                                    (currentTimer.totalMillis / 60000L).toInt() == minutes
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    when (minutes) {
+                                        0 -> onEvent(PlayerUiEvent.CancelSleepTimer)
+                                        -1 -> onEvent(PlayerUiEvent.SetSleepTimerEndOfSermon)
+                                        else -> onEvent(PlayerUiEvent.SetSleepTimerMinutes(minutes))
+                                    }
+                                }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = {
+                                    when (minutes) {
+                                        0 -> onEvent(PlayerUiEvent.CancelSleepTimer)
+                                        -1 -> onEvent(PlayerUiEvent.SetSleepTimerEndOfSermon)
+                                        else -> onEvent(PlayerUiEvent.SetSleepTimerMinutes(minutes))
+                                    }
+                                }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(text = label, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { onEvent(PlayerUiEvent.SetSleepTimerDialogVisible(false)) }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -223,12 +293,49 @@ fun PlayerContent(
                 color = MaterialTheme.colorScheme.onBackground
             )
 
-            IconButton(onClick = { onEvent(PlayerUiEvent.ToggleFavorite) }) {
-                Icon(
-                    imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = stringResource(R.string.favorite),
-                    tint = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Sleep Timer button
+                IconButton(onClick = { onEvent(PlayerUiEvent.SetSleepTimerDialogVisible(true)) }) {
+                    val isTimerActive = state.sleepTimerState !is com.example.sermonindex.domain.model.SleepTimerState.Off
+                    Icon(
+                        imageVector = Icons.Default.Bedtime,
+                        contentDescription = stringResource(R.string.sleep_timer),
+                        tint = if (isTimerActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Download button
+                IconButton(onClick = { onEvent(PlayerUiEvent.ToggleDownload) }) {
+                    if (state.downloadProgress != null) {
+                        CircularProgressIndicator(
+                            progress = { (state.downloadProgress.toFloat() / 100f).coerceIn(0f, 1f) },
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    } else if (state.isDownloaded) {
+                        Icon(
+                            imageVector = Icons.Default.DownloadDone,
+                            contentDescription = stringResource(R.string.downloaded),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Download,
+                            contentDescription = stringResource(R.string.download),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Favorite button
+                IconButton(onClick = { onEvent(PlayerUiEvent.ToggleFavorite) }) {
+                    Icon(
+                        imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = stringResource(R.string.favorite),
+                        tint = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
 
@@ -286,18 +393,73 @@ fun PlayerContent(
                 color = MaterialTheme.colorScheme.primary
             )
 
-            if (state.isUsingFailoverCdn) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
-                ) {
-                    Text(
-                        text = stringResource(R.string.cdn_failover_active),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.secondary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                    )
+            // Status badges (Offline Audio, Sleep Timer, CDN Failover)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 6.dp)
+            ) {
+                if (state.isLocalAudio) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.OfflinePin,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = stringResource(R.string.offline_audio),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                }
+
+                val timerState = state.sleepTimerState
+                if (timerState !is com.example.sermonindex.domain.model.SleepTimerState.Off) {
+                    val timerText = when (timerState) {
+                        is com.example.sermonindex.domain.model.SleepTimerState.Active -> {
+                            val remainingMinutes = (timerState.remainingMillis / 60000L).coerceAtLeast(1L)
+                            stringResource(R.string.sleep_timer_active, "$remainingMinutes min")
+                        }
+                        is com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon -> stringResource(R.string.sleep_timer_end_of_sermon)
+                        else -> ""
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        modifier = Modifier.clickable { onEvent(PlayerUiEvent.SetSleepTimerDialogVisible(true)) }
+                    ) {
+                        Text(
+                            text = timerText,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+
+                if (state.isUsingFailoverCdn) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.cdn_failover_active),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
 

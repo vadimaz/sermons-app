@@ -62,40 +62,43 @@ com.example.sermonindex
 │
 ├── data/
 │   ├── local/
-│   │   ├── AppDatabase.kt        # SQLiteOpenHelper + FTS4 virtual table
-│   │   ├── dao/                  # FavoritesDao, HistoryDao
-│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, FtsSermonResult
+│   │   ├── AppDatabase.kt        # SQLiteOpenHelper + FTS4 virtual table + downloads/favorites/history
+│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao
+│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, FtsSermonResult
 │   ├── mapper/
 │   │   └── Mappers.kt            # DTO/Entity <-> Domain mapping extensions
 │   ├── model/
 │   │   └── SermonDtos.kt         # @Serializable network DTOs
 │   ├── network/
+│   │   ├── ConnectivityNetworkMonitor.kt # Android ConnectivityManager network callback
 │   │   ├── Http404EmptyInterceptor.kt # Returns empty JSON for 404 verse lookups
 │   │   ├── NetworkClient.kt      # OkHttp with disk cache & logging, Retrofit
 │   │   └── SermonIndexApiService.kt # Endpoints under https://api.sermonindex.net/v2
 │   ├── repository/
 │   │   └── SermonRepositoryImpl.kt # Concrete domain repository with injected CoroutineDispatcher
 │   └── sync/
+│       ├── AudioDownloadWorker.kt # WorkManager streaming worker for MP3 files
 │       └── CatalogSyncWorker.kt  # WorkManager CoroutineWorker for streaming gzip catalog
 │
 ├── di/
-│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao
+│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao
 │   ├── DispatchersModule.kt      # Qualifiers: @IoDispatcher, @DefaultDispatcher, @MainDispatcher
 │   ├── MediaModule.kt            # Provides PlaybackManager as @Singleton
 │   ├── NetworkModule.kt          # Provides OkHttpClient, Retrofit, SermonIndexApiService
-│   └── RepositoryModule.kt       # Binds SermonRepository to SermonRepositoryImpl
+│   └── RepositoryModule.kt       # Binds SermonRepository & NetworkMonitor
 │
 ├── domain/
 │   ├── model/
 │   │   └── Models.kt             # Pure Kotlin domain data classes (no Android dependencies)
 │   ├── repository/
+│   │   ├── NetworkMonitor.kt     # Pure network connectivity contract
 │   │   └── SermonRepository.kt   # Pure domain repository interface
 │   └── usecase/
-│       └── UseCases.kt           # 15 single-responsibility UseCase classes
+│       └── UseCases.kt           # 20 single-responsibility UseCase classes
 │
 ├── playback/
-│   ├── PlaybackManager.kt        # MediaController wrapper, playbackState StateFlow
-│   ├── PlaybackService.kt        # @AndroidEntryPoint MediaSessionService + ExoPlayer + failover
+│   ├── PlaybackManager.kt        # MediaController wrapper, playbackState StateFlow, sleep timer
+│   ├── PlaybackService.kt        # @AndroidEntryPoint MediaSessionService + ExoPlayer + failover & local audio
 │   └── PlaybackState.kt          # Immutable playback state model
 │
 ├── theme/
@@ -105,6 +108,7 @@ com.example.sermonindex
     ├── components/
     │   ├── CommonComponents.kt   # TopBar, LoadingView, EmptyStateView, ErrorView
     │   ├── MiniPlayer.kt         # Persistent floating audio bar
+    │   ├── OfflineBanner.kt      # Animated real-time offline warning banner
     │   └── SermonListItem.kt     # Standard list item with avatar, title, duration
     ├── home/                     # HomeScreen.kt, HomeViewModel.kt
     ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt
