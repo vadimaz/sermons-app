@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.speakers
+package com.example.sermonindex.ui.speakers
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,12 +31,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Speaker
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.ErrorView
@@ -77,7 +79,7 @@ fun SpeakersContent(
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
-        LoadingView(modifier = modifier, text = "Loading preachers directory...")
+        LoadingView(modifier = modifier, text = stringResource(R.string.loading_preachers_directory))
         return
     }
 
@@ -98,15 +100,15 @@ fun SpeakersContent(
             SearchTextField(
                 query = state.searchQuery,
                 onQueryChange = { onEvent(SpeakersUiEvent.UpdateSearchQuery(it)) },
-                placeholder = "Search among ${state.speakers.size} preachers..."
+                placeholder = stringResource(R.string.search_preachers_placeholder, state.speakers.size)
             )
         }
 
         val filtered = state.filteredSpeakers
         if (filtered.isEmpty()) {
             EmptyStateView(
-                title = "No preachers found",
-                subtitle = "Try adjusting your search criteria."
+                title = stringResource(R.string.no_preachers_found_title),
+                subtitle = stringResource(R.string.no_preachers_found_subtitle)
             )
         } else {
             LazyColumn(
@@ -182,7 +184,7 @@ private fun SpeakerRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${speaker.sermonCount} sermons",
+                    text = stringResource(R.string.sermons_count, speaker.sermonCount),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

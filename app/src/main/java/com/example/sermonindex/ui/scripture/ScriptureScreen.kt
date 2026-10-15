@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.scripture
+package com.example.sermonindex.ui.scripture
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -38,11 +38,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.EmptyStateView
@@ -109,7 +111,7 @@ fun ScriptureContent(
                             }
                         }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 } else {
                     Icon(
@@ -125,10 +127,10 @@ fun ScriptureContent(
                     state.selectedBook != null && state.selectedChapter != null && state.selectedVerse != null ->
                         "${state.selectedBook.name} ${state.selectedChapter}:${state.selectedVerse}"
                     state.selectedBook != null && state.selectedChapter != null ->
-                        "${state.selectedBook.name} Chapter ${state.selectedChapter}"
+                        "${state.selectedBook.name} ${stringResource(R.string.chapter_number, state.selectedChapter)}"
                     state.selectedBook != null ->
                         "${state.selectedBook.name} (${state.selectedBook.id})"
-                    else -> "Scripture Explorer"
+                    else -> stringResource(R.string.scripture_explorer)
                 }
 
                 Text(
@@ -145,11 +147,11 @@ fun ScriptureContent(
         // LEVEL 4: Sermons for selected verse
         if (state.selectedBook != null && state.selectedChapter != null && state.selectedVerse != null) {
             if (state.isLoadingVerseSermons) {
-                LoadingView(text = "Loading sermons for ${state.selectedBook.name} ${state.selectedChapter}:${state.selectedVerse}...")
+                LoadingView(text = stringResource(R.string.loading_verse_sermons, state.selectedBook.name, state.selectedChapter, state.selectedVerse))
             } else if (state.verseSermons.isEmpty()) {
                 EmptyStateView(
-                    title = "No sermons found",
-                    subtitle = "There are no indexed sermons specifically referencing this verse."
+                    title = stringResource(R.string.no_sermons_found_title),
+                    subtitle = stringResource(R.string.no_sermons_found_subtitle)
                 )
             } else {
                 LazyColumn(
@@ -158,7 +160,7 @@ fun ScriptureContent(
                 ) {
                     item {
                         Text(
-                            text = "${state.verseSermons.size} Sermons referencing ${state.selectedBook.name} ${state.selectedChapter}:${state.selectedVerse}",
+                            text = stringResource(R.string.sermons_referencing_verse, state.verseSermons.size, state.selectedBook.name, state.selectedChapter, state.selectedVerse),
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.padding(bottom = 8.dp)
@@ -181,7 +183,7 @@ fun ScriptureContent(
         // LEVEL 3: Verse Heat Map Grid for selected chapter
         if (state.selectedBook != null && state.selectedChapter != null) {
             if (state.isLoadingChapter) {
-                LoadingView(text = "Loading verse sermon counts...")
+                LoadingView(text = stringResource(R.string.loading_verse_sermon_counts))
             } else {
                 val chapter = state.chapterData
                 val heatMap = chapter?.verseHeatMap ?: emptyMap()
@@ -191,7 +193,7 @@ fun ScriptureContent(
 
                 Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                     Text(
-                        text = "Select a verse to listen to corresponding sermons:",
+                        text = stringResource(R.string.select_verse_prompt),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -199,8 +201,8 @@ fun ScriptureContent(
 
                     if (versesList.isEmpty() || (versesList.size == 1 && versesList.first().second == 0)) {
                         EmptyStateView(
-                            title = "Chapter Sermons",
-                            subtitle = "No verse breakdown is available for this chapter."
+                            title = stringResource(R.string.chapter_sermons_title),
+                            subtitle = stringResource(R.string.no_verse_breakdown_subtitle)
                         )
                     } else {
                         LazyVerticalGrid(
@@ -228,7 +230,7 @@ fun ScriptureContent(
             val totalChapters = state.selectedBook.chapterCount.coerceAtLeast(1)
             Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
                 Text(
-                    text = "Select chapter (1..$totalChapters):",
+                    text = stringResource(R.string.select_chapter_prompt, totalChapters),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -265,7 +267,7 @@ fun ScriptureContent(
 
         // LEVEL 1: 66 Books Directory
         if (state.isLoadingBooks) {
-            LoadingView(text = "Loading Bible books...")
+            LoadingView(text = stringResource(R.string.loading_bible_books))
             return@Column
         }
 
@@ -284,17 +286,17 @@ fun ScriptureContent(
             Tab(
                 selected = state.testamentTabIndex == 0,
                 onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(0)) },
-                text = { Text("All (66)") }
+                text = { Text(stringResource(R.string.tab_all_books)) }
             )
             Tab(
                 selected = state.testamentTabIndex == 1,
                 onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(1)) },
-                text = { Text("Old Testament") }
+                text = { Text(stringResource(R.string.tab_old_testament)) }
             )
             Tab(
                 selected = state.testamentTabIndex == 2,
                 onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(2)) },
-                text = { Text("New Testament") }
+                text = { Text(stringResource(R.string.tab_new_testament)) }
             )
         }
 
@@ -345,7 +347,7 @@ fun ScriptureContent(
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
-                                    text = "${book.chapterCount} chapters",
+                                    text = stringResource(R.string.chapters_count, book.chapterCount),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.sermon
+package com.example.sermonindex.ui.sermon
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -32,12 +32,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
@@ -83,7 +85,7 @@ fun SermonDetailContent(
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
-        LoadingView(modifier = modifier, text = "Loading sermon...")
+        LoadingView(modifier = modifier, text = stringResource(R.string.loading_sermon))
         return
     }
 
@@ -114,11 +116,11 @@ fun SermonDetailContent(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
 
                 Text(
-                    text = "Sermon Details",
+                    text = stringResource(R.string.sermon_details),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -131,7 +133,7 @@ fun SermonDetailContent(
                 IconButton(onClick = { onEvent(SermonDetailUiEvent.ToggleFavorite) }) {
                     Icon(
                         imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = "Favorite",
+                        contentDescription = stringResource(if (state.isFavorite) R.string.remove_from_favorites else R.string.add_to_favorites),
                         tint = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -170,7 +172,7 @@ fun SermonDetailContent(
                         )
                         if (detail.duration.isNotBlank()) {
                             Text(
-                                text = "Duration: ${detail.duration}",
+                                text = stringResource(R.string.duration_label, detail.duration),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -188,7 +190,7 @@ fun SermonDetailContent(
                 ) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Play Sermon Audio")
+                    Text(stringResource(R.string.play_sermon_audio))
                 }
             }
 
@@ -203,7 +205,7 @@ fun SermonDetailContent(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "Summary",
+                                text = stringResource(R.string.summary),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -226,7 +228,7 @@ fun SermonDetailContent(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "Detailed Description",
+                                text = stringResource(R.string.detailed_description),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary

@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.player
+package com.example.sermonindex.ui.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -60,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.FaqItem
 import com.example.sermonindex.domain.model.OutlineItem
 import com.example.sermonindex.domain.model.QuoteItem
@@ -125,10 +127,10 @@ fun PlayerContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close player")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.close_player))
                 }
                 Text(
-                    text = "Player",
+                    text = stringResource(R.string.player),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -165,7 +167,7 @@ fun PlayerContent(
                     Spacer(modifier = Modifier.height(24.dp))
 
                     Text(
-                        text = "No sermon is currently playing",
+                        text = stringResource(R.string.no_sermon_playing_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -175,7 +177,7 @@ fun PlayerContent(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Choose any sermon from Home, Scripture, Speakers or Topics to start listening.",
+                        text = stringResource(R.string.no_sermon_playing_subtitle),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -187,7 +189,7 @@ fun PlayerContent(
                         onClick = onBack,
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Browse Sermons")
+                        Text(stringResource(R.string.browse_sermons))
                     }
                 }
             }
@@ -211,11 +213,11 @@ fun PlayerContent(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Close player")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.close_player))
             }
 
             Text(
-                text = "Now Playing",
+                text = stringResource(R.string.now_playing),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -224,7 +226,7 @@ fun PlayerContent(
             IconButton(onClick = { onEvent(PlayerUiEvent.ToggleFavorite) }) {
                 Icon(
                     imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = "Favorite",
+                    contentDescription = stringResource(R.string.favorite),
                     tint = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -291,7 +293,7 @@ fun PlayerContent(
                     color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = "CDN Failover Stream Active",
+                        text = stringResource(R.string.cdn_failover_active),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.secondary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -371,7 +373,7 @@ fun PlayerContent(
                 IconButton(onClick = { onEvent(PlayerUiEvent.Rewind(15)) }) {
                     Icon(
                         imageVector = Icons.Default.FastRewind,
-                        contentDescription = "Rewind 15 seconds",
+                        contentDescription = stringResource(R.string.rewind_15_seconds),
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(32.dp)
                     )
@@ -388,7 +390,7 @@ fun PlayerContent(
                 ) {
                     Icon(
                         imageVector = if (state.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (state.isPlaying) "Pause" else "Play",
+                        contentDescription = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
                         tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(36.dp)
                     )
@@ -398,7 +400,7 @@ fun PlayerContent(
                 IconButton(onClick = { onEvent(PlayerUiEvent.FastForward(30)) }) {
                     Icon(
                         imageVector = Icons.Default.FastForward,
-                        contentDescription = "Fast forward 30 seconds",
+                        contentDescription = stringResource(R.string.fast_forward_30_seconds),
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(32.dp)
                     )
@@ -416,10 +418,10 @@ fun PlayerContent(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
             ) {
-                Tab(selected = state.selectedTab == 0, onClick = { onEvent(PlayerUiEvent.SelectTab(0)) }, text = { Text("Overview", maxLines = 1, softWrap = false) })
-                Tab(selected = state.selectedTab == 1, onClick = { onEvent(PlayerUiEvent.SelectTab(1)) }, text = { Text("Outline", maxLines = 1, softWrap = false) })
-                Tab(selected = state.selectedTab == 2, onClick = { onEvent(PlayerUiEvent.SelectTab(2)) }, text = { Text("Transcript", maxLines = 1, softWrap = false) })
-                Tab(selected = state.selectedTab == 3, onClick = { onEvent(PlayerUiEvent.SelectTab(3)) }, text = { Text("Notes", maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 0, onClick = { onEvent(PlayerUiEvent.SelectTab(0)) }, text = { Text(stringResource(R.string.tab_overview), maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 1, onClick = { onEvent(PlayerUiEvent.SelectTab(1)) }, text = { Text(stringResource(R.string.tab_outline), maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 2, onClick = { onEvent(PlayerUiEvent.SelectTab(2)) }, text = { Text(stringResource(R.string.tab_transcript), maxLines = 1, softWrap = false) })
+                Tab(selected = state.selectedTab == 3, onClick = { onEvent(PlayerUiEvent.SelectTab(3)) }, text = { Text(stringResource(R.string.tab_notes), maxLines = 1, softWrap = false) })
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -454,7 +456,7 @@ private fun OverviewTab(sermon: Sermon, detail: SermonDetail?) {
         val summaryText = detail?.summary?.ifBlank { sermon.summary } ?: sermon.summary
         if (summaryText.isNotBlank()) {
             Text(
-                text = "Summary",
+                text = stringResource(R.string.summary),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -471,7 +473,7 @@ private fun OverviewTab(sermon: Sermon, detail: SermonDetail?) {
         val scriptureRefs = detail?.scriptureCitations ?: emptyList()
         if (scriptureRefs.isNotEmpty()) {
             Text(
-                text = "Scripture Citations",
+                text = stringResource(R.string.scripture_citations),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -479,7 +481,7 @@ private fun OverviewTab(sermon: Sermon, detail: SermonDetail?) {
             Spacer(modifier = Modifier.height(6.dp))
             scriptureRefs.forEach { ref ->
                 Text(
-                    text = "â€¢ $ref",
+                    text = "• $ref",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -491,7 +493,7 @@ private fun OverviewTab(sermon: Sermon, detail: SermonDetail?) {
 @Composable
 private fun OutlineTab(outline: List<OutlineItem>) {
     if (outline.isEmpty()) {
-        Text("No preaching outline is available for this sermon.", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.no_outline_available), style = MaterialTheme.typography.bodyMedium)
     } else {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -523,7 +525,7 @@ private fun TranscriptTab(transcriptHtml: String, transcriptText: String) {
     }
 
     if (cleanText.isBlank()) {
-        Text("No written transcript is available for this audio.", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.no_transcript_available), style = MaterialTheme.typography.bodyMedium)
     } else {
         Text(
             text = cleanText,
@@ -546,19 +548,19 @@ private fun StudyNotesTab(
     ) {
         if (points.isNotEmpty()) {
             Text(
-                text = "Application Points",
+                text = stringResource(R.string.application_points),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
             points.forEach { pt ->
-                Text(text = "âœ“ $pt", style = MaterialTheme.typography.bodyMedium)
+                Text(text = "✓ $pt", style = MaterialTheme.typography.bodyMedium)
             }
         }
 
         if (quotes.isNotEmpty()) {
             Text(
-                text = "Key Quotes",
+                text = stringResource(R.string.key_quotes),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -580,7 +582,7 @@ private fun StudyNotesTab(
 
         if (faq.isNotEmpty()) {
             Text(
-                text = "Common Questions (FAQ)",
+                text = stringResource(R.string.common_questions_faq),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary

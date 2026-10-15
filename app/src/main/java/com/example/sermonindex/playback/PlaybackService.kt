@@ -157,10 +157,10 @@ class PlaybackService : MediaSessionService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "Sermon Playback",
+                getString(com.example.sermonindex.R.string.playback_channel_name),
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Controls and media status for sermon audio playback"
+                description = getString(com.example.sermonindex.R.string.playback_channel_description)
                 setShowBadge(false)
             }
             val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

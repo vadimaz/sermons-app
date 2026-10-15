@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.topics
+package com.example.sermonindex.ui.topics
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,11 +28,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.ErrorView
@@ -73,7 +75,7 @@ fun TopicsContent(
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
-        LoadingView(modifier = modifier, text = "Loading thematic catalog...")
+        LoadingView(modifier = modifier, text = stringResource(R.string.loading_thematic_catalog))
         return
     }
 
@@ -93,15 +95,15 @@ fun TopicsContent(
             SearchTextField(
                 query = state.searchQuery,
                 onQueryChange = { onEvent(TopicsUiEvent.UpdateSearchQuery(it)) },
-                placeholder = "Search among ${state.topics.size} biblical themes..."
+                placeholder = stringResource(R.string.search_topics_placeholder, state.topics.size)
             )
         }
 
         val filtered = state.filteredTopics
         if (filtered.isEmpty()) {
             EmptyStateView(
-                title = "No topics found",
-                subtitle = "Try searching with another keyword."
+                title = stringResource(R.string.no_topics_found_title),
+                subtitle = stringResource(R.string.no_topics_found_subtitle)
             )
         } else {
             LazyColumn(
@@ -167,7 +169,7 @@ private fun TopicRow(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${topic.count} sermons indexed",
+                    text = stringResource(R.string.topic_sermons_count, topic.count),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary
                 )

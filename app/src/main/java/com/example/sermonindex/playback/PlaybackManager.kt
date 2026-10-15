@@ -8,6 +8,7 @@ import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
@@ -57,7 +58,7 @@ class PlaybackManager(private val context: Context) {
     fun playSermon(sermon: Sermon, startPositionMs: Long = 0L) {
         if (!sermon.hasAudio && sermon.mp3Url.isBlank() && sermon.cdnMp3Url.isBlank()) {
             _playbackState.value = _playbackState.value.copy(
-                errorMessage = "This sermon has no audio stream available."
+                errorMessage = context.getString(R.string.no_audio_stream_available)
             )
             return
         }

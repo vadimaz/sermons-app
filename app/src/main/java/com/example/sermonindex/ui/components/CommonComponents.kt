@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.components
+package com.example.sermonindex.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,12 +28,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.sermonindex.R
 
 @Composable
-fun LoadingView(modifier: Modifier = Modifier, text: String = "Loading sermons...") {
+fun LoadingView(modifier: Modifier = Modifier, text: String = stringResource(R.string.loading_sermons)) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -86,7 +88,7 @@ fun ErrorView(
             Button(onClick = onRetry) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(modifier = Modifier.size(8.dp))
-                Text("Try Again")
+                Text(stringResource(R.string.try_again))
             }
         }
     }
@@ -103,11 +105,11 @@ fun SearchTextField(
         value = query,
         onValueChange = onQueryChange,
         placeholder = { Text(placeholder) },
-        leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = stringResource(R.string.search)) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                    Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear_search))
                 }
             }
         },

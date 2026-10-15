@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.components
+package com.example.sermonindex.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -117,7 +117,7 @@ fun MiniPlayer(
                                 color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
                             ) {
                                 Text(
-                                    text = "CDN",
+                                    text = androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.cdn),
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.secondary,
                                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
@@ -147,7 +147,9 @@ fun MiniPlayer(
                     ) {
                         Icon(
                             imageVector = if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = if (playbackState.isPlaying) "Pause" else "Play",
+                            contentDescription = androidx.compose.ui.res.stringResource(
+                                if (playbackState.isPlaying) com.example.sermonindex.R.string.pause else com.example.sermonindex.R.string.play
+                            ),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }
@@ -159,7 +161,7 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close player",
+                        contentDescription = androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.close_player),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }

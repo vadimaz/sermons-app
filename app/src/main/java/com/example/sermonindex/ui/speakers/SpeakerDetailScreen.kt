@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.speakers
+package com.example.sermonindex.ui.speakers
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,11 +37,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
@@ -105,7 +107,7 @@ fun SpeakerDetailContent(
     }
 
     if (state.isLoadingSpeaker) {
-        LoadingView(modifier = modifier, text = "Loading preacher profile...")
+        LoadingView(modifier = modifier, text = stringResource(R.string.loading_preacher_profile))
         return
     }
 
@@ -135,7 +137,7 @@ fun SpeakerDetailContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -192,7 +194,7 @@ fun SpeakerDetailContent(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "${currentSpeaker.sermonCount} Sermons â€¢ ${currentSpeaker.audioCount} Audio Available",
+                        text = stringResource(R.string.speaker_sermon_stats, currentSpeaker.sermonCount, currentSpeaker.audioCount),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -213,7 +215,7 @@ fun SpeakerDetailContent(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Frequent Preaching Themes",
+                        text = stringResource(R.string.frequent_preaching_themes),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -240,7 +242,7 @@ fun SpeakerDetailContent(
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Sermons (${state.sermons.size}${if (state.currentPage < state.totalPages) "+" else ""})",
+                    text = stringResource(R.string.sermons_header_count, state.sermons.size, if (state.currentPage < state.totalPages) "+" else ""),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface

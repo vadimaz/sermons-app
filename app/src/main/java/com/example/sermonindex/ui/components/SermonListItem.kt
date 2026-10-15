@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.components
+package com.example.sermonindex.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -109,7 +109,7 @@ fun SermonListItem(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = sermon.speaker.ifBlank { "Unknown Speaker" },
+                    text = sermon.speaker.ifBlank { androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.unknown_speaker) },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                     maxLines = 1,
@@ -135,7 +135,7 @@ fun SermonListItem(
                     }
                     if (sermon.topics.isNotEmpty()) {
                         Text(
-                            text = "â€¢ ${sermon.topics.first().name}",
+                            text = "• ${sermon.topics.first().name}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
@@ -149,7 +149,9 @@ fun SermonListItem(
             IconButton(onClick = onFavoriteToggle) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = if (isFavorite) "Remove from favorites" else "Add to favorites",
+                    contentDescription = androidx.compose.ui.res.stringResource(
+                        if (isFavorite) com.example.sermonindex.R.string.remove_from_favorites else com.example.sermonindex.R.string.add_to_favorites
+                    ),
                     tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -164,7 +166,7 @@ fun SermonListItem(
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Play sermon",
+                    contentDescription = androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.play_sermon),
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
             }

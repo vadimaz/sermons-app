@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.topics
+package com.example.sermonindex.ui.topics
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,11 +27,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.TopicScripture
 import com.example.sermonindex.ui.components.ErrorView
@@ -78,7 +80,7 @@ fun TopicDetailContent(
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
-        LoadingView(modifier = modifier, text = "Loading theme insights...")
+        LoadingView(modifier = modifier, text = stringResource(R.string.loading_theme_insights))
         return
     }
 
@@ -108,7 +110,7 @@ fun TopicDetailContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 IconButton(onClick = onBack) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -135,7 +137,7 @@ fun TopicDetailContent(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "About this Biblical Theme",
+                                text = stringResource(R.string.about_biblical_theme),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
@@ -156,7 +158,7 @@ fun TopicDetailContent(
             if (detail.topScriptures.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Key Scripture References (BSB)",
+                        text = stringResource(R.string.key_scripture_references_bsb),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -173,7 +175,7 @@ fun TopicDetailContent(
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Preachings on ${detail.name} (${detail.sermons.size})",
+                        text = stringResource(R.string.preachings_on_topic_count, detail.name, detail.sermons.size),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -235,7 +237,7 @@ private fun ScriptureVerseCard(
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                         ) {
                             Text(
-                                text = "${scripture.count} sermons",
+                                text = stringResource(R.string.sermons_count, scripture.count),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)

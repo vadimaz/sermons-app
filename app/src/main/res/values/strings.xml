@@ -1,3 +1,152 @@
 <resources>
     <string name="app_name">SermonIndex</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_scripture">Scripture</string>
+    <string name="nav_speakers">Speakers</string>
+    <string name="nav_topics">Topics</string>
+    <string name="nav_library">Library</string>
+
+    <!-- Common &amp; Actions -->
+    <string name="back">Back</string>
+    <string name="try_again">Try Again</string>
+    <string name="search">Search</string>
+    <string name="clear_search">Clear search</string>
+    <string name="error_generic">An unexpected error occurred. Please try again.</string>
+    <string name="loading_sermons">Loading sermons…</string>
+    <string name="play">Play</string>
+    <string name="pause">Pause</string>
+    <string name="favorite">Favorite</string>
+    <string name="add_to_favorites">Add to favorites</string>
+    <string name="remove_from_favorites">Remove from favorites</string>
+    <string name="clear">Clear</string>
+    <string name="remove">Remove</string>
+    <string name="unknown_speaker">Unknown Speaker</string>
+    <string name="play_sermon">Play sermon</string>
+    <string name="cdn">CDN</string>
+    <string name="no_audio_stream_available">This sermon has no audio stream available.</string>
+
+    <!-- Playback Service &amp; Notification -->
+    <string name="playback_channel_name">Sermon Playback</string>
+    <string name="playback_channel_description">Controls and media status for sermon audio playback</string>
+
+    <!-- MiniPlayer -->
+    <string name="close_player">Close player</string>
+
+    <!-- Fullscreen Player -->
+    <string name="player">Player</string>
+    <string name="now_playing">Now Playing</string>
+    <string name="no_sermon_playing_title">No sermon is currently playing</string>
+    <string name="no_sermon_playing_subtitle">Choose any sermon from Home, Scripture, Speakers or Topics to start listening.</string>
+    <string name="browse_sermons">Browse Sermons</string>
+    <string name="cdn_failover_active">CDN Failover Stream Active</string>
+    <string name="rewind_15_seconds">Rewind 15 seconds</string>
+    <string name="fast_forward_30_seconds">Fast forward 30 seconds</string>
+    <string name="tab_overview">Overview</string>
+    <string name="tab_outline">Outline</string>
+    <string name="tab_transcript">Transcript</string>
+    <string name="tab_notes">Notes</string>
+    <string name="summary">Summary</string>
+    <string name="scripture_citations">Scripture Citations</string>
+    <string name="no_outline_available">No preaching outline is available for this sermon.</string>
+    <string name="no_transcript_available">No written transcript is available for this audio.</string>
+    <string name="application_points">Application Points</string>
+    <string name="key_quotes">Key Quotes</string>
+    <string name="common_questions_faq">Common Questions (FAQ)</string>
+
+    <!-- Home Screen -->
+    <string name="loading_classic_sermons">Loading classic sermons…</string>
+    <string name="featured_sermons">Featured Sermons</string>
+    <string name="explore_themes">Explore Themes</string>
+    <string name="continue_listening">Continue Listening</string>
+    <string name="most_listened_sermons">Most Listened Sermons</string>
+
+    <!-- Quick Topics on Home Screen -->
+    <string name="quick_topic_prayer">Prayer</string>
+    <string name="quick_topic_revival">Revival</string>
+    <string name="quick_topic_holy_spirit">Holy Spirit</string>
+    <string name="quick_topic_faith">Faith</string>
+    <string name="quick_topic_grace">Grace</string>
+    <string name="quick_topic_repentance">Repentance</string>
+    <string name="quick_topic_evangelism">Evangelism</string>
+
+    <!-- Library Screen -->
+    <string name="tab_favorites_count">Favorites (%1$d)</string>
+    <string name="tab_history_count">History (%1$d)</string>
+    <string name="tab_offline_search">Offline Search</string>
+    <string name="offline_search_title">Offline Full Catalog Search (~27 MB)</string>
+    <string name="sermons_indexed_count">%1$d sermons indexed locally</string>
+    <string name="index_sermons_offline_hint">Index 70,000+ sermons for offline search</string>
+    <string name="offline_search_description">Downloads and streams uncompressed JSON lines into a local SQLite FTS virtual table for instant search across titles, preachers and summaries without an internet connection.</string>
+    <string name="indexing_catalog_progress">Indexing catalog (%1$d indexed)…</string>
+    <string name="redownload_and_sync">Re-download &amp; Sync</string>
+    <string name="download_catalog">Download Catalog</string>
+    <string name="search_indexed_sermons_placeholder">Search across %1$d indexed sermons…</string>
+    <string name="no_offline_results_title">No results found in offline catalog</string>
+    <string name="no_offline_results_subtitle">Try searching for another preacher or sermon title.</string>
+    <string name="no_favorites_title">No favorites yet</string>
+    <string name="no_favorites_subtitle">Tap the heart icon on any sermon to save it to your personal library.</string>
+    <string name="no_history_title">No playback history</string>
+    <string name="no_history_subtitle">Sermons you listen to will automatically appear here with saved progress.</string>
+    <string name="clear_history">Clear History</string>
+
+    <!-- Scripture Screen -->
+    <string name="scripture_explorer">Scripture Explorer</string>
+    <string name="chapter_number">Chapter %1$d</string>
+    <string name="loading_verse_sermons">Loading sermons for %1$s %2$d:%3$d…</string>
+    <string name="no_sermons_found_title">No sermons found</string>
+    <string name="no_sermons_found_subtitle">There are no indexed sermons specifically referencing this verse.</string>
+    <string name="sermons_referencing_verse">%1$d Sermons referencing %2$s %3$d:%4$d</string>
+    <string name="loading_verse_sermon_counts">Loading verse sermon counts…</string>
+    <string name="select_verse_prompt">Select a verse to listen to corresponding sermons:</string>
+    <string name="chapter_sermons_title">Chapter Sermons</string>
+    <string name="no_verse_breakdown_subtitle">No verse breakdown is available for this chapter.</string>
+    <string name="select_chapter_prompt">Select chapter (1..%1$d):</string>
+    <string name="loading_bible_books">Loading Bible books…</string>
+    <string name="tab_all_books">All (66)</string>
+    <string name="tab_old_testament">Old Testament</string>
+    <string name="tab_new_testament">New Testament</string>
+    <string name="chapters_count">%1$d chapters</string>
+
+    <!-- Sermon Detail Screen -->
+    <string name="loading_sermon">Loading sermon…</string>
+    <string name="sermon_details">Sermon Details</string>
+    <string name="duration_label">Duration: %1$s</string>
+    <string name="play_sermon_audio">Play Sermon Audio</string>
+    <string name="detailed_description">Detailed Description</string>
+
+    <!-- Speakers Screen &amp; Speaker Detail Screen -->
+    <string name="loading_preachers_directory">Loading preachers directory…</string>
+    <string name="search_preachers_placeholder">Search among %1$d preachers…</string>
+    <string name="no_preachers_found_title">No preachers found</string>
+    <string name="no_preachers_found_subtitle">Try adjusting your search criteria.</string>
+    <string name="sermons_count">%1$d sermons</string>
+    <string name="loading_preacher_profile">Loading preacher profile…</string>
+    <string name="speaker_sermon_stats">%1$d Sermons • %2$d Audio Available</string>
+    <string name="frequent_preaching_themes">Frequent Preaching Themes</string>
+    <string name="sermons_header_count">Sermons (%1$d%2$s)</string>
+
+    <!-- Topics Screen &amp; Topic Detail Screen -->
+    <string name="loading_thematic_catalog">Loading thematic catalog…</string>
+    <string name="search_topics_placeholder">Search among %1$d biblical themes…</string>
+    <string name="no_topics_found_title">No topics found</string>
+    <string name="no_topics_found_subtitle">Try adjusting your search criteria.</string>
+    <string name="topic_sermons_count">%1$d sermons indexed</string>
+    <string name="loading_theme_insights">Loading theme insights…</string>
+    <string name="about_biblical_theme">About this Biblical Theme</string>
+    <string name="key_scripture_references_bsb">Key Scripture References (BSB)</string>
+    <string name="preachings_on_topic_count">Preachings on %1$s (%2$d)</string>
+
+    <!-- Error Messages -->
+    <string name="failed_to_load_popular_sermons">Failed to load popular sermons.</string>
+    <string name="failed_to_load_scripture_books">Failed to load scripture books.</string>
+    <string name="failed_to_load_chapter_verses">Failed to load chapter verses.</string>
+    <string name="failed_to_load_verse_sermons">Failed to load sermons for verse.</string>
+    <string name="failed_to_load_sermon_details">Failed to load sermon details.</string>
+    <string name="failed_to_load_speakers">Failed to load speakers catalog.</string>
+    <string name="failed_to_load_speaker_profile">Failed to load speaker profile.</string>
+    <string name="failed_to_load_more_sermons">Failed to load more sermons.</string>
+    <string name="failed_to_load_topics">Failed to load topics catalog.</string>
+    <string name="failed_to_load_topic_details">Failed to load topic details.</string>
 </resources>

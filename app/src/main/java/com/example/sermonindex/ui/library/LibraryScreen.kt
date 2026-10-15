@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.library
+package com.example.sermonindex.ui.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,12 +44,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.OfflineSearchResult
@@ -100,19 +102,19 @@ fun LibraryContent(
                 selected = state.selectedTab == 0,
                 onClick = { onEvent(LibraryUiEvent.SelectTab(0)) },
                 icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
-                text = { Text("Favorites (${state.favorites.size})") }
+                text = { Text(stringResource(R.string.tab_favorites_count, state.favorites.size)) }
             )
             Tab(
                 selected = state.selectedTab == 1,
                 onClick = { onEvent(LibraryUiEvent.SelectTab(1)) },
                 icon = { Icon(Icons.Default.History, contentDescription = null) },
-                text = { Text("History (${state.history.size})") }
+                text = { Text(stringResource(R.string.tab_history_count, state.history.size)) }
             )
             Tab(
                 selected = state.selectedTab == 2,
                 onClick = { onEvent(LibraryUiEvent.SelectTab(2)) },
                 icon = { Icon(Icons.Default.CloudDownload, contentDescription = null) },
-                text = { Text("Offline Search") }
+                text = { Text(stringResource(R.string.tab_offline_search)) }
             )
         }
 
@@ -185,13 +187,13 @@ private fun OfflineSearchTab(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Offline Full Catalog Search (~27 MB)",
+                                text = stringResource(R.string.offline_search_title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = if (indexedCount > 0) "$indexedCount sermons indexed locally" else "Index 70,000+ sermons for offline search",
+                                text = if (indexedCount > 0) stringResource(R.string.sermons_indexed_count, indexedCount) else stringResource(R.string.index_sermons_offline_hint),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -200,7 +202,7 @@ private fun OfflineSearchTab(
 
                     Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Downloads and streams uncompressed JSON lines into a local SQLite FTS virtual table for instant search across titles, preachers and summaries without an internet connection.",
+                        text = stringResource(R.string.offline_search_description),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -212,7 +214,7 @@ private fun OfflineSearchTab(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Indexing catalog ($syncCount indexed)...",
+                                text = stringResource(R.string.indexing_catalog_progress, syncCount),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -244,7 +246,7 @@ private fun OfflineSearchTab(
                             enabled = !isSyncing,
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(if (indexedCount > 0) "Re-download & Sync" else "Download Catalog")
+                            Text(if (indexedCount > 0) stringResource(R.string.redownload_and_sync) else stringResource(R.string.download_catalog))
                         }
 
                         if (indexedCount > 0) {
@@ -252,7 +254,7 @@ private fun OfflineSearchTab(
                                 onClick = onClearIndex,
                                 enabled = !isSyncing
                             ) {
-                                Text("Clear")
+                                Text(stringResource(R.string.clear))
                             }
                         }
                     }
@@ -267,15 +269,15 @@ private fun OfflineSearchTab(
                 SearchTextField(
                     query = searchQuery,
                     onQueryChange = onSearchQueryChange,
-                    placeholder = "Search across $indexedCount indexed sermons..."
+                    placeholder = stringResource(R.string.search_indexed_sermons_placeholder, indexedCount)
                 )
             }
 
             if (searchQuery.isNotBlank() && searchResults.isEmpty() && !isSearching) {
                 item {
                     EmptyStateView(
-                        title = "No results found in offline catalog",
-                        subtitle = "Try searching for another preacher or sermon title."
+                        title = stringResource(R.string.no_offline_results_title),
+                        subtitle = stringResource(R.string.no_offline_results_subtitle)
                     )
                 }
             }
@@ -326,7 +328,7 @@ private fun OfflineSearchTab(
                             ),
                             modifier = Modifier.size(38.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Play")
+                            Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play))
                         }
                     }
                 }
@@ -344,8 +346,8 @@ private fun FavoritesList(
 ) {
     if (favorites.isEmpty()) {
         EmptyStateView(
-            title = "No favorites yet",
-            subtitle = "Tap the heart icon on any sermon to save it to your personal library."
+            title = stringResource(R.string.no_favorites_title),
+            subtitle = stringResource(R.string.no_favorites_subtitle)
         )
     } else {
         LazyColumn(
@@ -401,7 +403,7 @@ private fun FavoritesList(
                         IconButton(onClick = { onRemove(item) }) {
                             Icon(
                                 Icons.Default.Favorite,
-                                contentDescription = "Remove",
+                                contentDescription = stringResource(R.string.remove),
                                 tint = MaterialTheme.colorScheme.error
                             )
                         }
@@ -413,7 +415,7 @@ private fun FavoritesList(
                             ),
                             modifier = Modifier.size(38.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "Play")
+                            Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play))
                         }
                     }
                 }
@@ -431,8 +433,8 @@ private fun HistoryList(
 ) {
     if (history.isEmpty()) {
         EmptyStateView(
-            title = "No playback history",
-            subtitle = "Sermons you listen to will automatically appear here with saved progress."
+            title = stringResource(R.string.no_history_title),
+            subtitle = stringResource(R.string.no_history_subtitle)
         )
     } else {
         LazyColumn(
@@ -447,7 +449,7 @@ private fun HistoryList(
                     TextButton(onClick = onClearAll) {
                         Icon(Icons.Default.DeleteSweep, contentDescription = null)
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Clear History")
+                        Text(stringResource(R.string.clear_history))
                     }
                 }
             }
@@ -495,7 +497,7 @@ private fun HistoryList(
                                 ),
                                 modifier = Modifier.size(36.dp)
                             ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = "Play")
+                                Icon(Icons.Default.PlayArrow, contentDescription = stringResource(R.string.play))
                             }
                         }
 

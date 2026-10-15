@@ -1,4 +1,4 @@
-﻿package com.example.sermonindex.ui.home
+package com.example.sermonindex.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -42,23 +42,27 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
 
+private data class QuickTopicItem(val nameResId: Int, val slug: String)
+
 private val QUICK_TOPICS = listOf(
-    "Prayer" to "prayer",
-    "Revival" to "revival",
-    "Holy Spirit" to "holy-spirit",
-    "Faith" to "faith",
-    "Grace" to "grace",
-    "Repentance" to "repentance",
-    "Evangelism" to "evangelism"
+    QuickTopicItem(R.string.quick_topic_prayer, "prayer"),
+    QuickTopicItem(R.string.quick_topic_revival, "revival"),
+    QuickTopicItem(R.string.quick_topic_holy_spirit, "holy-spirit"),
+    QuickTopicItem(R.string.quick_topic_faith, "faith"),
+    QuickTopicItem(R.string.quick_topic_grace, "grace"),
+    QuickTopicItem(R.string.quick_topic_repentance, "repentance"),
+    QuickTopicItem(R.string.quick_topic_evangelism, "evangelism")
 )
 
 /**
@@ -99,7 +103,7 @@ fun HomeContent(
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
-        LoadingView(modifier = modifier, text = "Loading classic sermons...")
+        LoadingView(modifier = modifier, text = stringResource(R.string.loading_classic_sermons))
         return
     }
 
@@ -120,7 +124,7 @@ fun HomeContent(
         if (state.popularSermons.isNotEmpty()) {
             item {
                 Text(
-                    text = "Featured Sermons",
+                    text = stringResource(R.string.featured_sermons),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -138,7 +142,7 @@ fun HomeContent(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Explore Themes",
+                text = stringResource(R.string.explore_themes),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -148,11 +152,11 @@ fun HomeContent(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(QUICK_TOPICS) { (name, slug) ->
+                items(QUICK_TOPICS) { topic ->
                     FilterChip(
                         selected = false,
-                        onClick = { onEvent(HomeUiEvent.SelectTopic(slug)) },
-                        label = { Text(name) },
+                        onClick = { onEvent(HomeUiEvent.SelectTopic(topic.slug)) },
+                        label = { Text(stringResource(topic.nameResId)) },
                         colors = FilterChipDefaults.filterChipColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                         )
@@ -166,7 +170,7 @@ fun HomeContent(
             item {
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "Continue Listening",
+                    text = stringResource(R.string.continue_listening),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground,
@@ -183,7 +187,7 @@ fun HomeContent(
         item {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Most Listened Sermons",
+                text = stringResource(R.string.most_listened_sermons),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
@@ -315,7 +319,7 @@ private fun HeroCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
-                            contentDescription = "Play",
+                            contentDescription = stringResource(R.string.play),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
                     }

@@ -76,6 +76,11 @@ fun MainNavigation(playbackManager: PlaybackManager) {
                         val isSpeakers = currentRoute is SpeakersRoute || currentRoute is SpeakerDetailRoute
                         val isTopics = currentRoute is TopicsRoute || currentRoute is TopicDetailRoute
                         val isLibrary = currentRoute is LibraryRoute
+                        val homeLabel = androidx.compose.ui.res.stringResource(R.string.nav_home)
+                        val scriptureLabel = androidx.compose.ui.res.stringResource(R.string.nav_scripture)
+                        val speakersLabel = androidx.compose.ui.res.stringResource(R.string.nav_speakers)
+                        val topicsLabel = androidx.compose.ui.res.stringResource(R.string.nav_topics)
+                        val libraryLabel = androidx.compose.ui.res.stringResource(R.string.nav_library)
 
                         NavigationBarItem(
                             selected = isHome,
@@ -88,10 +93,10 @@ fun MainNavigation(playbackManager: PlaybackManager) {
                             icon = {
                                 Icon(
                                     imageVector = if (isHome) Icons.Filled.Home else Icons.Outlined.Home,
-                                    contentDescription = "Home"
+                                    contentDescription = homeLabel
                                 )
                             },
-                            label = { Text("Home") }
+                            label = { Text(homeLabel) }
                         )
 
                         NavigationBarItem(
@@ -105,10 +110,10 @@ fun MainNavigation(playbackManager: PlaybackManager) {
                             icon = {
                                 Icon(
                                     imageVector = if (isScripture) Icons.AutoMirrored.Filled.MenuBook else Icons.AutoMirrored.Outlined.MenuBook,
-                                    contentDescription = "Scripture"
+                                    contentDescription = scriptureLabel
                                 )
                             },
-                            label = { Text("Scripture") }
+                            label = { Text(scriptureLabel) }
                         )
 
                         NavigationBarItem(
@@ -122,10 +127,10 @@ fun MainNavigation(playbackManager: PlaybackManager) {
                             icon = {
                                 Icon(
                                     imageVector = if (isSpeakers) Icons.Filled.Person else Icons.Outlined.Person,
-                                    contentDescription = "Speakers"
+                                    contentDescription = speakersLabel
                                 )
                             },
-                            label = { Text("Speakers") }
+                            label = { Text(speakersLabel) }
                         )
 
                         NavigationBarItem(
@@ -139,10 +144,10 @@ fun MainNavigation(playbackManager: PlaybackManager) {
                             icon = {
                                 Icon(
                                     imageVector = if (isTopics) Icons.AutoMirrored.Filled.Label else Icons.AutoMirrored.Outlined.Label,
-                                    contentDescription = "Topics"
+                                    contentDescription = topicsLabel
                                 )
                             },
-                            label = { Text("Topics") }
+                            label = { Text(topicsLabel) }
                         )
 
                         NavigationBarItem(
@@ -156,10 +161,10 @@ fun MainNavigation(playbackManager: PlaybackManager) {
                             icon = {
                                 Icon(
                                     imageVector = if (isLibrary) Icons.Filled.Bookmarks else Icons.Outlined.Bookmarks,
-                                    contentDescription = "Library"
+                                    contentDescription = libraryLabel
                                 )
                             },
-                            label = { Text("Library") }
+                            label = { Text(libraryLabel) }
                         )
                     }
                 }
