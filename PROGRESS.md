@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.1.0` | **Version Code:** `4`
+> **Current Version:** `1.1.1` | **Version Code:** `5`
 
 ---
 
@@ -15,20 +15,21 @@
 - **Position Tracking**: Periodic sync of playback position into `HistoryDao` every 2 seconds.
 - **`PlaybackManager`**: Singleton client wrapping `MediaController`, exposing reactive `playbackState: StateFlow<PlaybackState>`.
 - **`MiniPlayer`**: Persistent floating bar above bottom navigation across all primary tabs with dismiss/stop button.
-- **`FullscreenPlayerScreen`**: Fullscreen player with scrubber, speed selection (0.75x–2.0x), seek 15s/30s, Sleep Timer dialog & countdown badge, local audio badge, download action, tabs for Overview, Outline, Transcript, and Study Notes, and empty-state handling with auto-exit.
+- **`FullscreenPlayerScreen`**: Fullscreen player with scrubber, speed selection (0.75x–2.0x), seek 15s/30s, Sleep Timer dialog & countdown badge, local audio badge, download action, dedicated inline full-text Transcript reading, and empty-state handling with auto-exit.
 
 ### 1.2 Screens & Presentation (Jetpack Compose + Navigation 3)
+- **Navigation 3 Architecture**: Multi-backstack system with `rememberSaveableStateHolderNavEntryDecorator` retaining scroll positions across all tabs; bottom bar reselection dispatches scroll-to-top to active screens.
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
-| **Home** | `HomeViewModel` | Popular sermons hero carousel, top topic shelves, "Continue Listening" history shelf, refresh support. |
-| **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, verse sermons list. |
-| **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering and sermon count badges. |
+| **Home** | `HomeViewModel` | Popular sermons hero carousel, top topic shelves, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
+| **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, verse sermons list, pop-to-root on reselect. |
+| **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, and sermon count badges. |
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, infinite scrolling paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`). |
-| **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges. |
+| **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges and shortened search placeholder. |
 | **Topic Detail** | `TopicDetailViewModel` | Thematic description, Berean Standard Bible scripture correlations (`topScriptures`), related sermons. |
-| **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, favorite toggle, play action, download action with progress indicator, link to speaker profile. |
-| **Library** | `LibraryViewModel` | Four tabs: Favorites, Downloads (with file sizes, total storage badge & delete action), Listening History, and Offline Full-Text Search. |
-| **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, chapter outline navigation, transcript reading. |
+| **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, 3-in-a-row action layout (Favorite heart, Play pill capsule, Download with progress), 3 tabs for Overview, Outline, and Study Notes. |
+| **Library** | `LibraryViewModel` | Four single-word tabs with Material 3 `BadgedBox` count badges (Favorites, Downloads, History, Search), storage badge & delete action, instant offline search. |
+| **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, and dedicated inline transcript reading. |
 | **Offline Banner** | N/A (Global) | Animated non-intrusive banner indicating offline mode when internet connection is lost. |
 
 ### 1.3 Offline Capabilities & Background Sync (WorkManager)

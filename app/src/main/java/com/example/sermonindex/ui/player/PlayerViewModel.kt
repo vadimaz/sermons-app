@@ -40,7 +40,6 @@ data class PlayerUiState(
     val isLocalAudio: Boolean = false,
     val sleepTimerState: SleepTimerState = SleepTimerState.Off,
     val showSleepTimerDialog: Boolean = false,
-    val selectedTab: Int = 0,
     val sliderPosition: Float = 0f,
     val isDraggingSlider: Boolean = false,
     val showSpeedMenu: Boolean = false
@@ -61,7 +60,6 @@ sealed interface PlayerUiEvent {
     data class SetSpeed(val speed: Float) : PlayerUiEvent
     data object ToggleFavorite : PlayerUiEvent
     data object ToggleDownload : PlayerUiEvent
-    data class SelectTab(val tabIndex: Int) : PlayerUiEvent
     data class SliderChange(val position: Float) : PlayerUiEvent
     data object SliderChangeFinished : PlayerUiEvent
     data class SetSpeedMenuVisible(val visible: Boolean) : PlayerUiEvent
@@ -185,9 +183,6 @@ class PlayerViewModel @Inject constructor(
                 viewModelScope.launch {
                     toggleFavoriteUseCase(s)
                 }
-            }
-            is PlayerUiEvent.SelectTab -> {
-                _uiState.update { it.copy(selectedTab = event.tabIndex) }
             }
             is PlayerUiEvent.SliderChange -> {
                 _uiState.update { it.copy(sliderPosition = event.position, isDraggingSlider = true) }

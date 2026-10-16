@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -34,8 +33,6 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -45,11 +42,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,11 +53,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -70,9 +63,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.sermonindex.R
-import com.example.sermonindex.domain.model.FaqItem
-import com.example.sermonindex.domain.model.OutlineItem
-import com.example.sermonindex.domain.model.QuoteItem
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import kotlinx.coroutines.delay
@@ -432,7 +422,6 @@ fun PlayerContent(
                             stringResource(R.string.sleep_timer_active, "$remainingMinutes min")
                         }
                         is com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon -> stringResource(R.string.sleep_timer_end_of_sermon)
-                        else -> ""
                     }
                     Surface(
                         shape = RoundedCornerShape(6.dp),
@@ -569,40 +558,14 @@ fun PlayerContent(
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Tabs: Overview, Outline, Transcript, Notes
-            ScrollableTabRow(
-                selectedTabIndex = state.selectedTab,
-                edgePadding = 12.dp,
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-            ) {
-                Tab(selected = state.selectedTab == 0, onClick = { onEvent(PlayerUiEvent.SelectTab(0)) }, text = { Text(stringResource(R.string.tab_overview), maxLines = 1, softWrap = false) })
-                Tab(selected = state.selectedTab == 1, onClick = { onEvent(PlayerUiEvent.SelectTab(1)) }, text = { Text(stringResource(R.string.tab_outline), maxLines = 1, softWrap = false) })
-                Tab(selected = state.selectedTab == 2, onClick = { onEvent(PlayerUiEvent.SelectTab(2)) }, text = { Text(stringResource(R.string.tab_transcript), maxLines = 1, softWrap = false) })
-                Tab(selected = state.selectedTab == 3, onClick = { onEvent(PlayerUiEvent.SelectTab(3)) }, text = { Text(stringResource(R.string.tab_notes), maxLines = 1, softWrap = false) })
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tab Content
+            // Transcript Section
             val detail = state.sermonDetail
-            when (state.selectedTab) {
-                0 -> OverviewTab(sermon = sermon, detail = detail)
-                1 -> OutlineTab(outline = detail?.outline ?: emptyList())
-                2 -> TranscriptTab(
-                    transcriptHtml = detail?.transcriptHtml ?: "",
-                    transcriptText = detail?.transcript ?: ""
-                )
-                3 -> StudyNotesTab(
-                    quotes = detail?.quotes ?: emptyList(),
-                    faq = detail?.faq ?: emptyList(),
-                    points = detail?.applicationPoints ?: emptyList()
-                )
-            }
+            TranscriptSection(
+                transcriptHtml = detail?.transcriptHtml ?: "",
+                transcriptText = detail?.transcript ?: ""
+            )
 
             Spacer(modifier = Modifier.navigationBarsPadding().height(24.dp))
         }
@@ -610,158 +573,33 @@ fun PlayerContent(
 }
 
 @Composable
-private fun OverviewTab(sermon: Sermon, detail: SermonDetail?) {
+private fun TranscriptSection(transcriptHtml: String, transcriptText: String) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
-        val summaryText = detail?.summary?.ifBlank { sermon.summary } ?: sermon.summary
-        if (summaryText.isNotBlank()) {
-            Text(
-                text = stringResource(R.string.summary),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = summaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-        }
-
-        val scriptureRefs = detail?.scriptureCitations ?: emptyList()
-        if (scriptureRefs.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.scripture_citations),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            scriptureRefs.forEach { ref ->
-                Text(
-                    text = "• $ref",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun OutlineTab(outline: List<OutlineItem>) {
-    if (outline.isEmpty()) {
-        Text(stringResource(R.string.no_outline_available), style = MaterialTheme.typography.bodyMedium)
-    } else {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            outline.forEach { item ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text = item.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TranscriptTab(transcriptHtml: String, transcriptText: String) {
-    val cleanText = remember(transcriptHtml, transcriptText) {
-        if (transcriptText.isNotBlank()) transcriptText
-        else transcriptHtml.replace(Regex("<[^>]*>"), "")
-    }
-
-    if (cleanText.isBlank()) {
-        Text(stringResource(R.string.no_transcript_available), style = MaterialTheme.typography.bodyMedium)
-    } else {
         Text(
-            text = cleanText,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
+            text = stringResource(R.string.tab_transcript),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
         )
-    }
-}
+        Spacer(modifier = Modifier.height(10.dp))
 
-@Composable
-private fun StudyNotesTab(
-    quotes: List<QuoteItem>,
-    faq: List<FaqItem>,
-    points: List<String>
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        if (points.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.application_points),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            points.forEach { pt ->
-                Text(text = "✓ $pt", style = MaterialTheme.typography.bodyMedium)
-            }
+        val cleanText = remember(transcriptHtml, transcriptText) {
+            if (transcriptText.isNotBlank()) transcriptText
+            else transcriptHtml.replace(Regex("<[^>]*>"), "")
         }
 
-        if (quotes.isNotEmpty()) {
+        if (cleanText.isBlank()) {
+            Text(stringResource(R.string.no_transcript_available), style = MaterialTheme.typography.bodyMedium)
+        } else {
             Text(
-                text = stringResource(R.string.key_quotes),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                text = cleanText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
             )
-            quotes.forEach { quoteItem ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                ) {
-                    Row(modifier = Modifier.padding(12.dp)) {
-                        Icon(Icons.Default.FormatQuote, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "\"${quoteItem.quote}\"", style = MaterialTheme.typography.bodyMedium, fontStyle = FontStyle.Italic)
-                    }
-                }
-            }
-        }
-
-        if (faq.isNotEmpty()) {
-            Text(
-                text = stringResource(R.string.common_questions_faq),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            faq.forEach { item ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text(text = item.question, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(text = item.answer, style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
         }
     }
 }

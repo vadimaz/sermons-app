@@ -29,7 +29,8 @@ data class SermonDetailUiState(
     val isDownloaded: Boolean = false,
     val downloadProgress: Int? = null,
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val selectedTab: Int = 0
 )
 
 sealed interface SermonDetailUiEvent {
@@ -38,6 +39,7 @@ sealed interface SermonDetailUiEvent {
     data object ToggleFavorite : SermonDetailUiEvent
     data object ToggleDownload : SermonDetailUiEvent
     data class ClickSpeaker(val slug: String) : SermonDetailUiEvent
+    data class SelectTab(val tabIndex: Int) : SermonDetailUiEvent
 }
 
 @HiltViewModel(assistedFactory = SermonDetailViewModel.Factory::class)
@@ -112,6 +114,9 @@ class SermonDetailViewModel @AssistedInject constructor(
                         downloadSermonUseCase(detail.toSermon())
                     }
                 }
+            }
+            is SermonDetailUiEvent.SelectTab -> {
+                _uiState.update { it.copy(selectedTab = event.tabIndex) }
             }
             is SermonDetailUiEvent.ClickSpeaker -> Unit
         }

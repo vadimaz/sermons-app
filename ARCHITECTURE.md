@@ -12,7 +12,7 @@
 | **JDK** | Java 17 | `jvmToolchain(17)`, Gradle 9.1.0, AGP 9.0.1 |
 | **Language** | Kotlin 2.3.20 | KSP 2.3.11, Kotlin Serialization 1.8.0 |
 | **UI Toolkit** | Jetpack Compose | BOM 2026.03.01, Material 3, Material Icons Extended |
-| **Navigation** | Navigation 3 (`androidx.navigation3`) | Version 1.0.1 (`NavDisplay`, `NavKey`, `rememberNavBackStack`) |
+| **Navigation** | Navigation 3 (`androidx.navigation3`) | Version 1.0.1 (`NavDisplay`, `NavKey`, multi-backstacks with `rememberSaveableStateHolderNavEntryDecorator`) |
 | **Dependency Injection** | Dagger Hilt 2.60.1 | `androidx.hilt:hilt-navigation-compose:1.2.0`, `@AndroidEntryPoint`, `@HiltViewModel` |
 | **Async / Reactive** | Coroutines 1.10.2 & Flow | `StateFlow`, `SharedFlow`, `flowOn(ioDispatcher)` |
 | **Media Player** | AndroidX Media3 1.5.1 | `ExoPlayer`, `MediaSessionService`, `MediaController` |
@@ -56,7 +56,7 @@ The application strictly adheres to **Clean Architecture** principles and Google
 ```
 com.example.sermonindex
 ├── MainActivity.kt               # @AndroidEntryPoint, loads MainNavigation
-├── Navigation.kt                 # NavDisplay, Scaffold, MiniPlayer, BottomBar
+├── Navigation.kt                 # NavDisplay, Scaffold, MiniPlayer, BottomBar, Multi-Backstack Navigator, Reselect Events
 ├── NavigationKeys.kt             # @Serializable NavKey definitions
 ├── SermonApp.kt                  # @HiltAndroidApp Application class
 │

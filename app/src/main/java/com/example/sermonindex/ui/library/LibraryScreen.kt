@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -25,6 +27,8 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,6 +44,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,7 +60,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import coil3.compose.AsyncImage
+import com.example.sermonindex.LibraryRoute
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
@@ -63,6 +70,7 @@ import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.SearchTextField
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Stateful entry point for LibraryScreen.
@@ -70,6 +78,7 @@ import com.example.sermonindex.ui.components.SearchTextField
 @Composable
 fun LibraryScreen(
     onSermonSelect: (String) -> Unit,
+    reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
     val viewModel: LibraryViewModel = hiltViewModel()
@@ -84,6 +93,7 @@ fun LibraryScreen(
                 else -> viewModel.onEvent(event)
             }
         },
+        reselectEvents = reselectEvents,
         modifier = modifier
     )
 }
@@ -95,8 +105,27 @@ fun LibraryScreen(
 fun LibraryContent(
     state: LibraryUiState,
     onEvent: (LibraryUiEvent) -> Unit,
+    reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
+    val favoritesListState = rememberLazyListState()
+    val downloadsListState = rememberLazyListState()
+    val historyListState = rememberLazyListState()
+    val searchListState = rememberLazyListState()
+
+    LaunchedEffect(reselectEvents) {
+        reselectEvents?.collect { route ->
+            if (route == LibraryRoute) {
+                when (state.selectedTab) {
+                    0 -> favoritesListState.animateScrollToItem(0)
+                    1 -> downloadsListState.animateScrollToItem(0)
+                    2 -> historyListState.animateScrollToItem(0)
+                    3 -> searchListState.animateScrollToItem(0)
+                }
+            }
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxSize()
     ) {
@@ -107,38 +136,70 @@ fun LibraryContent(
             Tab(
                 selected = state.selectedTab == 0,
                 onClick = { onEvent(LibraryUiEvent.SelectTab(0)) },
-                icon = { Icon(Icons.Default.Favorite, contentDescription = null) },
-                text = { Text(stringResource(R.string.tab_favorites_count, state.favorites.size)) }
+                icon = {
+                    BadgedBox(
+                        badge = {
+                            if (state.favorites.isNotEmpty()) {
+                                Badge { Text("${state.favorites.size}") }
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.Favorite, contentDescription = null)
+                    }
+                },
+                text = { Text(stringResource(R.string.tab_favorites)) }
             )
             Tab(
                 selected = state.selectedTab == 1,
                 onClick = { onEvent(LibraryUiEvent.SelectTab(1)) },
-                icon = { Icon(Icons.Default.DownloadDone, contentDescription = null) },
-                text = { Text(stringResource(R.string.tab_downloads_count, state.downloads.size)) }
+                icon = {
+                    BadgedBox(
+                        badge = {
+                            if (state.downloads.isNotEmpty()) {
+                                Badge { Text("${state.downloads.size}") }
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.DownloadDone, contentDescription = null)
+                    }
+                },
+                text = { Text(stringResource(R.string.tab_downloads)) }
             )
             Tab(
                 selected = state.selectedTab == 2,
                 onClick = { onEvent(LibraryUiEvent.SelectTab(2)) },
-                icon = { Icon(Icons.Default.History, contentDescription = null) },
-                text = { Text(stringResource(R.string.tab_history_count, state.history.size)) }
+                icon = {
+                    BadgedBox(
+                        badge = {
+                            if (state.history.isNotEmpty()) {
+                                Badge { Text("${state.history.size}") }
+                            }
+                        }
+                    ) {
+                        Icon(Icons.Default.History, contentDescription = null)
+                    }
+                },
+                text = { Text(stringResource(R.string.tab_history)) }
             )
             Tab(
                 selected = state.selectedTab == 3,
                 onClick = { onEvent(LibraryUiEvent.SelectTab(3)) },
                 icon = { Icon(Icons.Default.CloudDownload, contentDescription = null) },
-                text = { Text(stringResource(R.string.tab_offline_search)) }
+                text = { Text(stringResource(R.string.tab_search)) }
             )
         }
 
         when (state.selectedTab) {
             0 -> FavoritesList(
                 favorites = state.favorites,
+                listState = favoritesListState,
                 onPlay = { onEvent(LibraryUiEvent.PlayFavorite(it)) },
                 onSelect = { onEvent(LibraryUiEvent.SelectSermon(it)) },
                 onRemove = { onEvent(LibraryUiEvent.RemoveFavorite(it)) }
             )
             1 -> DownloadsList(
                 downloads = state.downloads,
+                listState = downloadsListState,
                 totalStorageFormatted = state.totalDownloadsSizeFormatted,
                 onPlay = { onEvent(LibraryUiEvent.PlayDownload(it)) },
                 onSelect = { onEvent(LibraryUiEvent.SelectSermon(it)) },
@@ -146,12 +207,14 @@ fun LibraryContent(
             )
             2 -> HistoryList(
                 history = state.history,
+                listState = historyListState,
                 onPlay = { onEvent(LibraryUiEvent.ResumeHistory(it)) },
                 onSelect = { onEvent(LibraryUiEvent.SelectSermon(it)) },
                 onClearAll = { onEvent(LibraryUiEvent.ClearHistory) }
             )
             3 -> OfflineSearchTab(
                 indexedCount = state.indexedCount,
+                listState = searchListState,
                 isSyncing = state.isSyncing,
                 syncProgress = state.syncProgress,
                 syncCount = state.syncCount,
@@ -171,6 +234,7 @@ fun LibraryContent(
 @Composable
 private fun OfflineSearchTab(
     indexedCount: Int,
+    listState: LazyListState = rememberLazyListState(),
     isSyncing: Boolean,
     syncProgress: Int,
     syncCount: Int,
@@ -184,6 +248,7 @@ private fun OfflineSearchTab(
     onSermonSelect: (String) -> Unit
 ) {
     LazyColumn(
+        state = listState,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -359,6 +424,7 @@ private fun OfflineSearchTab(
 @Composable
 private fun FavoritesList(
     favorites: List<FavoriteSermon>,
+    listState: LazyListState = rememberLazyListState(),
     onPlay: (FavoriteSermon) -> Unit,
     onSelect: (String) -> Unit,
     onRemove: (FavoriteSermon) -> Unit
@@ -370,6 +436,7 @@ private fun FavoritesList(
         )
     } else {
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -446,6 +513,7 @@ private fun FavoritesList(
 @Composable
 private fun HistoryList(
     history: List<ListeningHistory>,
+    listState: LazyListState = rememberLazyListState(),
     onPlay: (ListeningHistory) -> Unit,
     onSelect: (String) -> Unit,
     onClearAll: () -> Unit
@@ -457,6 +525,7 @@ private fun HistoryList(
         )
     } else {
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -540,6 +609,7 @@ private fun HistoryList(
 private fun DownloadsList(
     downloads: List<DownloadedSermon>,
     totalStorageFormatted: String,
+    listState: LazyListState = rememberLazyListState(),
     onPlay: (DownloadedSermon) -> Unit,
     onSelect: (String) -> Unit,
     onDelete: (DownloadedSermon) -> Unit
@@ -576,6 +646,7 @@ private fun DownloadsList(
         )
     } else {
         LazyColumn(
+            state = listState,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

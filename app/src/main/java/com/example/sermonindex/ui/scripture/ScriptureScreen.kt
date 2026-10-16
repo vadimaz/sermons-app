@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -34,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,13 +46,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.R
+import com.example.sermonindex.ScriptureRoute
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Stateful entry point for ScriptureScreen.
@@ -58,6 +63,7 @@ import com.example.sermonindex.ui.components.SermonListItem
 @Composable
 fun ScriptureScreen(
     onSermonClick: (Sermon) -> Unit,
+    reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
     val viewModel: ScriptureViewModel = hiltViewModel()
@@ -72,6 +78,7 @@ fun ScriptureScreen(
                 else -> viewModel.onEvent(event)
             }
         },
+        reselectEvents = reselectEvents,
         modifier = modifier
     )
 }
@@ -83,8 +90,27 @@ fun ScriptureScreen(
 fun ScriptureContent(
     state: ScriptureUiState,
     onEvent: (ScriptureUiEvent) -> Unit,
+    reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
+    val booksListState = rememberLazyListState()
+
+    LaunchedEffect(reselectEvents) {
+        reselectEvents?.collect { route ->
+            if (route == ScriptureRoute) {
+                if (state.selectedVerse != null) {
+                    onEvent(ScriptureUiEvent.ClearVerse)
+                } else if (state.selectedChapter != null) {
+                    onEvent(ScriptureUiEvent.ClearChapter)
+                } else if (state.selectedBook != null) {
+                    onEvent(ScriptureUiEvent.ClearBook)
+                } else {
+                    booksListState.animateScrollToItem(0)
+                }
+            }
+        }
+    }
+
     Column(
         modifier = modifier.fillMaxSize()
     ) {
@@ -303,6 +329,7 @@ fun ScriptureContent(
         val filteredBooks = state.filteredBooks
 
         LazyColumn(
+            state = booksListState,
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

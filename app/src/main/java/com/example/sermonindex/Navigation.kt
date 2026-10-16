@@ -20,17 +20,27 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.runtime.rememberDecoratedNavEntries
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.sermonindex.domain.repository.NetworkMonitor
 import com.example.sermonindex.playback.PlaybackManager
@@ -45,17 +55,141 @@ import com.example.sermonindex.ui.speakers.SpeakerDetailScreen
 import com.example.sermonindex.ui.speakers.SpeakersScreen
 import com.example.sermonindex.ui.topics.TopicDetailScreen
 import com.example.sermonindex.ui.topics.TopicsScreen
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+
+private val TOP_LEVEL_ROUTES = setOf<NavKey>(
+    HomeRoute,
+    ScriptureRoute,
+    SpeakersRoute,
+    TopicsRoute,
+    LibraryRoute
+)
+
+/**
+ * Handles navigation events (forward, back, and reselect) across multiple back stacks.
+ */
+class Navigator(val state: NavigationState) {
+    private val _reselectEvents = MutableSharedFlow<NavKey>(extraBufferCapacity = 1)
+    val reselectEvents = _reselectEvents.asSharedFlow()
+
+    fun navigate(route: NavKey) {
+        if (route in state.backStacks.keys) {
+            state.topLevelRoute = route
+        } else {
+            state.backStacks[state.topLevelRoute]?.add(route)
+        }
+    }
+
+    fun onReselect(route: NavKey) {
+        val currentStack = state.backStacks[state.topLevelRoute]
+        if (currentStack != null && currentStack.size > 1) {
+            while (currentStack.size > 1) {
+                currentStack.removeLastOrNull()
+            }
+        } else {
+            _reselectEvents.tryEmit(route)
+        }
+    }
+
+    fun goBack() {
+        val currentStack = state.backStacks[state.topLevelRoute] ?: return
+        val currentRoute = currentStack.lastOrNull()
+        if (currentRoute == state.topLevelRoute) {
+            if (state.topLevelRoute != state.startRoute) {
+                state.topLevelRoute = state.startRoute
+            }
+        } else {
+            currentStack.removeLastOrNull()
+        }
+    }
+}
+
+/**
+ * Navigation state holding independent back stacks per top level route,
+ * with state preservation across tabs via SaveableStateHolder.
+ */
+class NavigationState(
+    val startRoute: NavKey,
+    topLevelRoute: MutableState<NavKey>,
+    val backStacks: Map<NavKey, NavBackStack<NavKey>>
+) {
+    var topLevelRoute: NavKey by topLevelRoute
+
+    val currentRoute: NavKey?
+        get() = backStacks[topLevelRoute]?.lastOrNull()
+
+    @Composable
+    fun toDecoratedEntries(
+        entryProvider: (NavKey) -> NavEntry<NavKey>
+    ): List<NavEntry<NavKey>> {
+        val decoratedEntries = backStacks.mapValues { (_, stack) ->
+            val decorators = listOf(
+                rememberSaveableStateHolderNavEntryDecorator<NavKey>()
+            )
+            rememberDecoratedNavEntries(
+                backStack = stack,
+                entryDecorators = decorators,
+                entryProvider = entryProvider
+            )
+        }
+
+        return getTopLevelRoutesInUse().flatMap { decoratedEntries[it] ?: emptyList() }
+    }
+
+    private fun getTopLevelRoutesInUse(): List<NavKey> =
+        if (topLevelRoute == startRoute) {
+            listOf(startRoute)
+        } else {
+            listOf(startRoute, topLevelRoute)
+        }
+}
+
+@Composable
+fun rememberNavigationState(
+    startRoute: NavKey,
+    topLevelRoutes: Set<NavKey>
+): NavigationState {
+    val topLevelRoute = rememberSaveable(
+        startRoute,
+        saver = Saver(
+            save = { it.value.toString() },
+            restore = { savedString ->
+                mutableStateOf(
+                    topLevelRoutes.firstOrNull { it.toString() == savedString } ?: startRoute
+                )
+            }
+        )
+    ) {
+        mutableStateOf(startRoute)
+    }
+
+    val backStacks = topLevelRoutes.associateWith { key -> rememberNavBackStack(key) }
+
+    return remember(startRoute, topLevelRoutes) {
+        NavigationState(
+            startRoute = startRoute,
+            topLevelRoute = topLevelRoute,
+            backStacks = backStacks
+        )
+    }
+}
 
 @Composable
 fun MainNavigation(
     playbackManager: PlaybackManager,
     networkMonitor: NetworkMonitor
 ) {
-    val backStack = rememberNavBackStack(HomeRoute as NavKey)
+    val navigationState = rememberNavigationState(
+        startRoute = HomeRoute,
+        topLevelRoutes = TOP_LEVEL_ROUTES
+    )
+    val navigator = remember { Navigator(navigationState) }
+
     val playbackState by playbackManager.playbackState.collectAsStateWithLifecycle()
     val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)
 
-    val currentRoute = backStack.lastOrNull()
+    val currentRoute = navigationState.currentRoute
     val isFullscreenPlayer = currentRoute is PlayerRoute
 
     Scaffold(
@@ -67,7 +201,7 @@ fun MainNavigation(
                         MiniPlayer(
                             playbackState = playbackState,
                             onTogglePlayPause = { playbackManager.togglePlayPause() },
-                            onExpandClick = { backStack.add(PlayerRoute) },
+                            onExpandClick = { navigator.navigate(PlayerRoute) },
                             onCloseClick = { playbackManager.stop() }
                         )
                     }
@@ -77,23 +211,25 @@ fun MainNavigation(
                         containerColor = MaterialTheme.colorScheme.surface,
                         tonalElevation = 8.dp
                     ) {
-                        val isHome = currentRoute is HomeRoute
-                        val isScripture = currentRoute is ScriptureRoute
-                        val isSpeakers = currentRoute is SpeakersRoute || currentRoute is SpeakerDetailRoute
-                        val isTopics = currentRoute is TopicsRoute || currentRoute is TopicDetailRoute
-                        val isLibrary = currentRoute is LibraryRoute
-                        val homeLabel = androidx.compose.ui.res.stringResource(R.string.nav_home)
-                        val scriptureLabel = androidx.compose.ui.res.stringResource(R.string.nav_scripture)
-                        val speakersLabel = androidx.compose.ui.res.stringResource(R.string.nav_speakers)
-                        val topicsLabel = androidx.compose.ui.res.stringResource(R.string.nav_topics)
-                        val libraryLabel = androidx.compose.ui.res.stringResource(R.string.nav_library)
+                        val isHome = navigationState.topLevelRoute == HomeRoute
+                        val isScripture = navigationState.topLevelRoute == ScriptureRoute
+                        val isSpeakers = navigationState.topLevelRoute == SpeakersRoute
+                        val isTopics = navigationState.topLevelRoute == TopicsRoute
+                        val isLibrary = navigationState.topLevelRoute == LibraryRoute
+
+                        val homeLabel = stringResource(R.string.nav_home)
+                        val scriptureLabel = stringResource(R.string.nav_scripture)
+                        val speakersLabel = stringResource(R.string.nav_speakers)
+                        val topicsLabel = stringResource(R.string.nav_topics)
+                        val libraryLabel = stringResource(R.string.nav_library)
 
                         NavigationBarItem(
                             selected = isHome,
                             onClick = {
-                                if (!isHome) {
-                                    backStack.clear()
-                                    backStack.add(HomeRoute)
+                                if (isHome) {
+                                    navigator.onReselect(HomeRoute)
+                                } else {
+                                    navigator.navigate(HomeRoute)
                                 }
                             },
                             icon = {
@@ -108,9 +244,10 @@ fun MainNavigation(
                         NavigationBarItem(
                             selected = isScripture,
                             onClick = {
-                                if (!isScripture) {
-                                    backStack.clear()
-                                    backStack.add(ScriptureRoute)
+                                if (isScripture) {
+                                    navigator.onReselect(ScriptureRoute)
+                                } else {
+                                    navigator.navigate(ScriptureRoute)
                                 }
                             },
                             icon = {
@@ -125,9 +262,10 @@ fun MainNavigation(
                         NavigationBarItem(
                             selected = isSpeakers,
                             onClick = {
-                                if (!isSpeakers) {
-                                    backStack.clear()
-                                    backStack.add(SpeakersRoute)
+                                if (isSpeakers) {
+                                    navigator.onReselect(SpeakersRoute)
+                                } else {
+                                    navigator.navigate(SpeakersRoute)
                                 }
                             },
                             icon = {
@@ -142,9 +280,10 @@ fun MainNavigation(
                         NavigationBarItem(
                             selected = isTopics,
                             onClick = {
-                                if (!isTopics) {
-                                    backStack.clear()
-                                    backStack.add(TopicsRoute)
+                                if (isTopics) {
+                                    navigator.onReselect(TopicsRoute)
+                                } else {
+                                    navigator.navigate(TopicsRoute)
                                 }
                             },
                             icon = {
@@ -159,9 +298,10 @@ fun MainNavigation(
                         NavigationBarItem(
                             selected = isLibrary,
                             onClick = {
-                                if (!isLibrary) {
-                                    backStack.clear()
-                                    backStack.add(LibraryRoute)
+                                if (isLibrary) {
+                                    navigator.onReselect(LibraryRoute)
+                                } else {
+                                    navigator.navigate(LibraryRoute)
                                 }
                             },
                             icon = {
@@ -190,99 +330,102 @@ fun MainNavigation(
                     .weight(1f)
                     .fillMaxWidth()
             ) {
+                val entries = navigationState.toDecoratedEntries(
+                    entryProvider {
+                        entry<HomeRoute> {
+                            HomeScreen(
+                                onSermonSelect = { sermon ->
+                                    navigator.navigate(SermonDetailRoute(sermon.id))
+                                },
+                                onTopicSelect = { slug ->
+                                    navigator.navigate(TopicDetailRoute(slug))
+                                },
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<ScriptureRoute> {
+                            ScriptureScreen(
+                                onSermonClick = { sermon ->
+                                    navigator.navigate(SermonDetailRoute(sermon.id))
+                                },
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<SpeakersRoute> {
+                            SpeakersScreen(
+                                onSpeakerSelect = { slug ->
+                                    navigator.navigate(SpeakerDetailRoute(slug))
+                                },
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<SpeakerDetailRoute> { route ->
+                            SpeakerDetailScreen(
+                                slug = route.slug,
+                                onBack = { navigator.goBack() },
+                                onSermonClick = { sermon ->
+                                    navigator.navigate(SermonDetailRoute(sermon.id))
+                                },
+                                onTopicClick = { slug ->
+                                    navigator.navigate(TopicDetailRoute(slug))
+                                }
+                            )
+                        }
+
+                        entry<TopicsRoute> {
+                            TopicsScreen(
+                                onTopicSelect = { slug ->
+                                    navigator.navigate(TopicDetailRoute(slug))
+                                },
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<TopicDetailRoute> { route ->
+                            TopicDetailScreen(
+                                slug = route.slug,
+                                onBack = { navigator.goBack() },
+                                onSermonClick = { sermon ->
+                                    navigator.navigate(SermonDetailRoute(sermon.id))
+                                }
+                            )
+                        }
+
+                        entry<LibraryRoute> {
+                            LibraryScreen(
+                                onSermonSelect = { sermonId ->
+                                    navigator.navigate(SermonDetailRoute(sermonId))
+                                },
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<SermonDetailRoute> { route ->
+                            SermonDetailScreen(
+                                sermonId = route.sermonId,
+                                onBack = { navigator.goBack() },
+                                onSpeakerClick = { slug ->
+                                    navigator.navigate(SpeakerDetailRoute(slug))
+                                }
+                            )
+                        }
+
+                        entry<PlayerRoute> {
+                            FullscreenPlayerScreen(
+                                onBack = { navigator.goBack() }
+                            )
+                        }
+                    }
+                )
+
                 NavDisplay(
-                backStack = backStack,
-                onBack = {
-                    if (backStack.size > 1) {
-                        backStack.removeLastOrNull()
-                    }
-                },
-                entryProvider = entryProvider {
-                    entry<HomeRoute> {
-                        HomeScreen(
-                            onSermonSelect = { sermon ->
-                                backStack.add(SermonDetailRoute(sermon.id))
-                            },
-                            onTopicSelect = { slug ->
-                                backStack.add(TopicDetailRoute(slug))
-                            }
-                        )
-                    }
-
-                    entry<ScriptureRoute> {
-                        ScriptureScreen(
-                            onSermonClick = { sermon ->
-                                backStack.add(SermonDetailRoute(sermon.id))
-                            }
-                        )
-                    }
-
-                    entry<SpeakersRoute> {
-                        SpeakersScreen(
-                            onSpeakerSelect = { slug ->
-                                backStack.add(SpeakerDetailRoute(slug))
-                            }
-                        )
-                    }
-
-                    entry<SpeakerDetailRoute> { route ->
-                        SpeakerDetailScreen(
-                            slug = route.slug,
-                            onBack = { backStack.removeLastOrNull() },
-                            onSermonClick = { sermon ->
-                                backStack.add(SermonDetailRoute(sermon.id))
-                            },
-                            onTopicClick = { slug ->
-                                backStack.add(TopicDetailRoute(slug))
-                            }
-                        )
-                    }
-
-                    entry<TopicsRoute> {
-                        TopicsScreen(
-                            onTopicSelect = { slug ->
-                                backStack.add(TopicDetailRoute(slug))
-                            }
-                        )
-                    }
-
-                    entry<TopicDetailRoute> { route ->
-                        TopicDetailScreen(
-                            slug = route.slug,
-                            onBack = { backStack.removeLastOrNull() },
-                            onSermonClick = { sermon ->
-                                backStack.add(SermonDetailRoute(sermon.id))
-                            }
-                        )
-                    }
-
-                    entry<LibraryRoute> {
-                        LibraryScreen(
-                            onSermonSelect = { sermonId ->
-                                backStack.add(SermonDetailRoute(sermonId))
-                            }
-                        )
-                    }
-
-                    entry<SermonDetailRoute> { route ->
-                        SermonDetailScreen(
-                            sermonId = route.sermonId,
-                            onBack = { backStack.removeLastOrNull() },
-                            onSpeakerClick = { slug ->
-                                backStack.add(SpeakerDetailRoute(slug))
-                            }
-                        )
-                    }
-
-                    entry<PlayerRoute> {
-                        FullscreenPlayerScreen(
-                            onBack = { backStack.removeLastOrNull() }
-                        )
-                    }
-                }
-            )
+                    entries = entries,
+                    onBack = { navigator.goBack() }
+                )
+            }
         }
     }
 }
-}
-

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -32,6 +33,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,19 +41,22 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.res.stringResource
+import androidx.navigation3.runtime.NavKey
 import coil3.compose.AsyncImage
+import com.example.sermonindex.HomeRoute
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
+import kotlinx.coroutines.flow.Flow
 
 private data class QuickTopicItem(val nameResId: Int, val slug: String)
 
@@ -73,6 +78,7 @@ private val QUICK_TOPICS = listOf(
 fun HomeScreen(
     onSermonSelect: (Sermon) -> Unit,
     onTopicSelect: (String) -> Unit,
+    reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
@@ -88,6 +94,7 @@ fun HomeScreen(
                 else -> viewModel.onEvent(event)
             }
         },
+        reselectEvents = reselectEvents,
         modifier = modifier
     )
 }
@@ -100,8 +107,19 @@ fun HomeScreen(
 fun HomeContent(
     state: HomeUiState,
     onEvent: (HomeUiEvent) -> Unit,
+    reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(reselectEvents) {
+        reselectEvents?.collect { route ->
+            if (route == HomeRoute) {
+                listState.animateScrollToItem(0)
+            }
+        }
+    }
+
     if (state.isLoading) {
         LoadingView(modifier = modifier, text = stringResource(R.string.loading_classic_sermons))
         return
@@ -117,6 +135,7 @@ fun HomeContent(
     }
 
     LazyColumn(
+        state = listState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp)
     ) {

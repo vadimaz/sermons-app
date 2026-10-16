@@ -12,23 +12,29 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FormatQuote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,13 +43,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.sermonindex.R
+import com.example.sermonindex.domain.model.FaqItem
+import com.example.sermonindex.domain.model.OutlineItem
+import com.example.sermonindex.domain.model.QuoteItem
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
@@ -134,13 +145,7 @@ fun SermonDetailContent(
                         .padding(horizontal = 8.dp)
                 )
 
-                IconButton(onClick = { onEvent(SermonDetailUiEvent.ToggleFavorite) }) {
-                    Icon(
-                        imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = stringResource(if (state.isFavorite) R.string.remove_from_favorites else R.string.add_to_favorites),
-                        tint = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Spacer(modifier = Modifier.size(48.dp))
             }
         }
 
@@ -148,6 +153,7 @@ fun SermonDetailContent(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Sermon Header: Artwork & Titles
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val imageUrl = detail.speakerImage.ifBlank { detail.thumbnailUrl }
@@ -185,93 +191,371 @@ fun SermonDetailContent(
                 }
             }
 
-            // Play & Download actions
+            // Action Buttons: Favorite (Heart), Play (Pill Capsule), Download
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = { onEvent(SermonDetailUiEvent.Play) },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp)
+                    // 1. Favorite (Heart)
+                    FilledTonalIconButton(
+                        onClick = { onEvent(SermonDetailUiEvent.ToggleFavorite) },
+                        shape = CircleShape,
+                        modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(stringResource(R.string.play))
+                        Icon(
+                            imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                            contentDescription = stringResource(
+                                if (state.isFavorite) R.string.remove_from_favorites else R.string.add_to_favorites
+                            ),
+                            modifier = Modifier.size(26.dp)
+                        )
                     }
 
-                    OutlinedButton(
+                    // 2. Play Button (Pill / Capsule)
+                    Button(
+                        onClick = { onEvent(SermonDetailUiEvent.Play) },
+                        shape = CircleShape,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(56.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = stringResource(R.string.play),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+
+                    // 3. Download
+                    FilledTonalIconButton(
                         onClick = { onEvent(SermonDetailUiEvent.ToggleDownload) },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = CircleShape,
+                        modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     ) {
                         if (state.downloadProgress != null) {
                             CircularProgressIndicator(
                                 progress = { (state.downloadProgress.toFloat() / 100f).coerceIn(0f, 1f) },
-                                modifier = Modifier.size(18.dp),
-                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.5.dp,
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.downloading_progress, state.downloadProgress))
                         } else if (state.isDownloaded) {
                             Icon(
-                                Icons.Default.DownloadDone,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
+                                imageVector = Icons.Default.DownloadDone,
+                                contentDescription = stringResource(R.string.downloaded),
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp)
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.downloaded))
                         } else {
-                            Icon(Icons.Default.Download, contentDescription = null)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(stringResource(R.string.download))
+                            Icon(
+                                imageVector = Icons.Default.Download,
+                                contentDescription = stringResource(R.string.download),
+                                modifier = Modifier.size(26.dp)
+                            )
                         }
                     }
                 }
             }
 
-            // Summary
-            if (detail.summary.isNotBlank()) {
-                item {
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            // Tabs: Overview, Outline, Notes
+            item {
+                PrimaryTabRow(
+                    selectedTabIndex = state.selectedTab,
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                ) {
+                    Tab(
+                        selected = state.selectedTab == 0,
+                        onClick = { onEvent(SermonDetailUiEvent.SelectTab(0)) },
+                        text = { Text(stringResource(R.string.tab_overview)) }
+                    )
+                    Tab(
+                        selected = state.selectedTab == 1,
+                        onClick = { onEvent(SermonDetailUiEvent.SelectTab(1)) },
+                        text = { Text(stringResource(R.string.tab_outline)) }
+                    )
+                    Tab(
+                        selected = state.selectedTab == 2,
+                        onClick = { onEvent(SermonDetailUiEvent.SelectTab(2)) },
+                        text = { Text(stringResource(R.string.tab_notes)) }
+                    )
+                }
+            }
+
+            // Tab Content
+            item {
+                when (state.selectedTab) {
+                    0 -> SermonOverviewSection(detail = detail)
+                    1 -> SermonOutlineSection(outline = detail.outline)
+                    2 -> SermonNotesSection(
+                        quotes = detail.quotes,
+                        faq = detail.faq,
+                        points = detail.applicationPoints
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SermonOverviewSection(detail: SermonDetail) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        if (detail.summary.isNotBlank()) {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = stringResource(R.string.summary),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = detail.summary, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+
+        if (detail.scriptureCitations.isNotEmpty()) {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = stringResource(R.string.scripture_citations),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    detail.scriptureCitations.forEach { citation ->
+                        Text(
+                            text = "• $citation",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
+                    }
+                }
+            }
+        }
+
+        if (detail.description.isNotBlank()) {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Text(
+                        text = stringResource(R.string.detailed_description),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = detail.description, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SermonOutlineSection(outline: List<OutlineItem>) {
+    if (outline.isEmpty()) {
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            )
+        ) {
+            Text(
+                text = stringResource(R.string.no_outline_available),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    } else {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            outline.forEach { item ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
+                        if (item.timestamp.isNotBlank()) {
                             Text(
-                                text = stringResource(R.string.summary),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                                text = item.timestamp,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Bold
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = detail.summary, style = MaterialTheme.typography.bodyMedium)
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+                        Text(
+                            text = item.title,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SermonNotesSection(
+    quotes: List<QuoteItem>,
+    faq: List<FaqItem>,
+    points: List<String>
+) {
+    if (quotes.isEmpty() && faq.isEmpty() && points.isEmpty()) {
+        Card(
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            )
+        ) {
+            Text(
+                text = stringResource(R.string.no_sermons_found_subtitle),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    } else {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            if (points.isNotEmpty()) {
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = stringResource(R.string.application_points),
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        points.forEach { pt ->
+                            Text(
+                                text = "✓ $pt",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(vertical = 2.dp)
+                            )
                         }
                     }
                 }
             }
 
-            // Description
-            if (detail.description.isNotBlank()) {
-                item {
-                    Card(
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                text = stringResource(R.string.detailed_description),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+            if (quotes.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.key_quotes),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    quotes.forEach { quoteItem ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(text = detail.description, style = MaterialTheme.typography.bodyMedium)
+                        ) {
+                            Row(modifier = Modifier.padding(12.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.FormatQuote,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "\"${quoteItem.quote}\"",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (faq.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.common_questions_faq),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    faq.forEach { item ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = item.question,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = item.answer,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
                         }
                     }
                 }
