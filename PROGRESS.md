@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.1.1` | **Version Code:** `5`
+> **Current Version:** `1.2.0` | **Version Code:** `6`
 
 ---
 
@@ -18,14 +18,14 @@
 - **`FullscreenPlayerScreen`**: Fullscreen player with scrubber, speed selection (0.75x–2.0x), seek 15s/30s, Sleep Timer dialog & countdown badge, local audio badge, download action, dedicated inline full-text Transcript reading, and empty-state handling with auto-exit.
 
 ### 1.2 Screens & Presentation (Jetpack Compose + Navigation 3)
-- **Navigation 3 Architecture**: Multi-backstack system with `rememberSaveableStateHolderNavEntryDecorator` retaining scroll positions across all tabs; bottom bar reselection dispatches scroll-to-top to active screens.
+- **Navigation 3 Architecture**: 3 primary top-level tabs (Home, Scripture, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator`; bottom bar reselection dispatches scroll-to-top; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
-| **Home** | `HomeViewModel` | Popular sermons hero carousel, top topic shelves, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
+| **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
 | **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, verse sermons list, pop-to-root on reselect. |
-| **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, and sermon count badges. |
+| **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, sermon count badges, and back navigation when opened from Home. |
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, infinite scrolling paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`). |
-| **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges and shortened search placeholder. |
+| **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges, shortened search placeholder, and back navigation when opened from Home. |
 | **Topic Detail** | `TopicDetailViewModel` | Thematic description, Berean Standard Bible scripture correlations (`topScriptures`), related sermons. |
 | **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, 3-in-a-row action layout (Favorite heart, Play pill capsule, Download with progress), 3 tabs for Overview, Outline, and Study Notes. |
 | **Library** | `LibraryViewModel` | Four single-word tabs with Material 3 `BadgedBox` count badges (Favorites, Downloads, History, Search), storage badge & delete action, instant offline search. |
@@ -116,14 +116,19 @@ class PlaybackManager(context: Context) {
 
 ## 3. Next Steps (Immediate Priorities)
 
-1. **Paging 3 Integration**:
-   - Migrate manual pagination in `SpeakerDetailViewModel` to AndroidX Paging 3 (`PagingSource` / `Pager`) for smoother infinite scrolling, prefetching, and state preservation.
+1. **Stage 2: Scripture Verse Text, Translation Chip & Parallel View**:
+   - Display biblical scripture quote card directly above sermon results when a verse is selected in Scripture Explorer.
+   - Translation selection chip (`[ 🇷🇺 Синодальный ▾ ]`) with `ModalBottomSheet` and fast search across available translations (`/v2/bible/available_translations.json`).
+   - Parallel View mode: side-by-side / dual column reading (native translation e.g. Synodal/Ukrainian + English BSB or KJV) with chapter text fetching (`/v2/bible/{translation}/{bookId}/{chapter}.json`).
 
-2. **Adaptive Layouts (Foldables & Tablets)**:
-   - Integrate two-pane / list-detail layouts on wide screens and foldables using Jetpack Compose adaptive navigation.
+2. **Stage 3: Offline Database Primary Source & Version Notifications**:
+   - Download precompiled `sermonindex.db` (172 MB) into app SQLite database storage.
+   - Dual-Source data layer: fetch from local SQLite when offline DB is present; fallback to remote API when absent.
+   - Version polling via `/v2/stats.json` (`generated` timestamp) and local push notifications on database updates.
 
-3. **UI Screenshot & Integration Tests**:
-   - Expand Compose UI tests using `createAndroidComposeRule` for navigation, playback controls, and offline UI verification.
+3. **Stage 4: Synchronized Transcript in Fullscreen Player (Karaoke Style)**:
+   - WebVTT cue parsing (`vttUrl`) with sentence-level millisecond timestamps.
+   - Auto-scrolling active sentence highlight, lyrics-style karaoke display, and seek-on-tap.
 
 ---
 

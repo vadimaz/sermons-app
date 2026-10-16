@@ -21,16 +21,18 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,8 +45,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
@@ -53,22 +57,12 @@ import com.example.sermonindex.HomeRoute
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.Sermon
+import com.example.sermonindex.domain.model.Speaker
+import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
 import kotlinx.coroutines.flow.Flow
-
-private data class QuickTopicItem(val nameResId: Int, val slug: String)
-
-private val QUICK_TOPICS = listOf(
-    QuickTopicItem(R.string.quick_topic_prayer, "prayer"),
-    QuickTopicItem(R.string.quick_topic_revival, "revival"),
-    QuickTopicItem(R.string.quick_topic_holy_spirit, "holy-spirit"),
-    QuickTopicItem(R.string.quick_topic_faith, "faith"),
-    QuickTopicItem(R.string.quick_topic_grace, "grace"),
-    QuickTopicItem(R.string.quick_topic_repentance, "repentance"),
-    QuickTopicItem(R.string.quick_topic_evangelism, "evangelism")
-)
 
 /**
  * Stateful entry point for HomeScreen.
@@ -77,7 +71,10 @@ private val QUICK_TOPICS = listOf(
 @Composable
 fun HomeScreen(
     onSermonSelect: (Sermon) -> Unit,
+    onSpeakerSelect: (Speaker) -> Unit,
+    onSeeAllSpeakers: () -> Unit,
     onTopicSelect: (String) -> Unit,
+    onSeeAllTopics: () -> Unit,
     reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
@@ -94,6 +91,10 @@ fun HomeScreen(
                 else -> viewModel.onEvent(event)
             }
         },
+        onSpeakerSelect = onSpeakerSelect,
+        onSeeAllSpeakers = onSeeAllSpeakers,
+        onTopicSelect = onTopicSelect,
+        onSeeAllTopics = onSeeAllTopics,
         reselectEvents = reselectEvents,
         modifier = modifier
     )
@@ -107,6 +108,10 @@ fun HomeScreen(
 fun HomeContent(
     state: HomeUiState,
     onEvent: (HomeUiEvent) -> Unit,
+    onSpeakerSelect: (Speaker) -> Unit = {},
+    onSeeAllSpeakers: () -> Unit = {},
+    onTopicSelect: (String) -> Unit = {},
+    onSeeAllTopics: () -> Unit = {},
     reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
@@ -137,9 +142,9 @@ fun HomeContent(
     LazyColumn(
         state = listState,
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 16.dp)
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        // Hero Carousel
+        // 1. Hero Carousel (Featured Sermons at the very top)
         if (state.popularSermons.isNotEmpty()) {
             item {
                 Text(
@@ -157,37 +162,10 @@ fun HomeContent(
             }
         }
 
-        // Quick Topics
-        item {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.explore_themes),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(QUICK_TOPICS) { topic ->
-                    FilterChip(
-                        selected = false,
-                        onClick = { onEvent(HomeUiEvent.SelectTopic(topic.slug)) },
-                        label = { Text(stringResource(topic.nameResId)) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
-                    )
-                }
-            }
-        }
-
-        // Continue Listening Shelf
+        // 2. Continue Listening Shelf (History)
         if (state.history.isNotEmpty()) {
             item {
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
                     text = stringResource(R.string.continue_listening),
                     style = MaterialTheme.typography.titleMedium,
@@ -202,15 +180,47 @@ fun HomeContent(
             }
         }
 
-        // Most Listened Sermons List
+        // 3. Speakers Shelf (Apple Music style header + circular cards)
+        if (state.speakers.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionHeader(
+                    eyebrow = stringResource(R.string.home_speakers_eyebrow),
+                    title = stringResource(R.string.home_speakers_title),
+                    onClick = onSeeAllSpeakers
+                )
+                SpeakersShelf(
+                    speakers = state.speakers.take(12),
+                    onSpeakerClick = onSpeakerSelect
+                )
+            }
+        }
+
+        // 4. Topics Shelf (Apple Music style header + rich cards)
+        if (state.topics.isNotEmpty()) {
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+                SectionHeader(
+                    eyebrow = stringResource(R.string.home_topics_eyebrow),
+                    title = stringResource(R.string.home_topics_title),
+                    onClick = onSeeAllTopics
+                )
+                TopicsShelf(
+                    topics = state.topics.take(12),
+                    onTopicClick = { onTopicSelect(it.slug) }
+                )
+            }
+        }
+
+        // 5. Most Listened Sermons List
         item {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             Text(
                 text = stringResource(R.string.most_listened_sermons),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
 
@@ -223,6 +233,207 @@ fun HomeContent(
                 isFavorite = state.favoriteIds.contains(sermon.id),
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun SectionHeader(
+    eyebrow: String,
+    title: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = eyebrow.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary,
+            letterSpacing = 1.sp
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpeakersShelf(
+    speakers: List<Speaker>,
+    onSpeakerClick: (Speaker) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(speakers, key = { it.slug }) { speaker ->
+            SpeakerCard(
+                speaker = speaker,
+                onClick = { onSpeakerClick(speaker) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpeakerCard(
+    speaker: Speaker,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
+            .width(108.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(88.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            if (speaker.image.isNotBlank()) {
+                AsyncImage(
+                    model = speaker.image,
+                    contentDescription = speaker.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = speaker.name,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        if (speaker.sermonCount > 0) {
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = stringResource(R.string.sermons_count, speaker.sermonCount),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun TopicsShelf(
+    topics: List<Topic>,
+    onTopicClick: (Topic) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        items(topics, key = { it.slug }) { topic ->
+            TopicCard(
+                topic = topic,
+                onClick = { onTopicClick(topic) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TopicCard(
+    topic: Topic,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        ),
+        modifier = modifier
+            .width(160.dp)
+            .height(100.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Label,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    text = topic.name,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            if (topic.count > 0) {
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = stringResource(R.string.sermons_count, topic.count),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
     }
 }

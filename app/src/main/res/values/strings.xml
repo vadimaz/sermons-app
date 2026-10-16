@@ -61,6 +61,10 @@
     <string name="explore_themes">Explore Themes</string>
     <string name="continue_listening">Continue Listening</string>
     <string name="most_listened_sermons">Most Listened Sermons</string>
+    <string name="home_speakers_eyebrow">Voices of Revival</string>
+    <string name="home_speakers_title">Speakers</string>
+    <string name="home_topics_eyebrow">Key Themes</string>
+    <string name="home_topics_title">Topics</string>
 
     <!-- Quick Topics on Home Screen -->
     <string name="quick_topic_prayer">Prayer</string>

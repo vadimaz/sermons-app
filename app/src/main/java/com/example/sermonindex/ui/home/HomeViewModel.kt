@@ -5,13 +5,18 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.Sermon
+import com.example.sermonindex.domain.model.Speaker
+import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
 import com.example.sermonindex.domain.usecase.GetHistoryUseCase
 import com.example.sermonindex.domain.usecase.GetPopularSermonsUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
+import com.example.sermonindex.domain.usecase.GetSpeakersUseCase
+import com.example.sermonindex.domain.usecase.GetTopicsUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +28,8 @@ import javax.inject.Inject
 data class HomeUiState(
     val isLoading: Boolean = true,
     val popularSermons: List<Sermon> = emptyList(),
+    val speakers: List<Speaker> = emptyList(),
+    val topics: List<Topic> = emptyList(),
     val history: List<ListeningHistory> = emptyList(),
     val favoriteIds: Set<String> = emptySet(),
     val errorMessage: String? = null
@@ -40,6 +47,8 @@ sealed interface HomeUiEvent {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getPopularSermonsUseCase: GetPopularSermonsUseCase,
+    private val getSpeakersUseCase: GetSpeakersUseCase,
+    private val getTopicsUseCase: GetTopicsUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
     private val getHistoryUseCase: GetHistoryUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
@@ -52,7 +61,7 @@ class HomeViewModel @Inject constructor(
 
     init {
         observeFavoritesAndHistory()
-        loadPopularSermons()
+        loadHomeData()
     }
 
     private fun observeFavoritesAndHistory() {
@@ -71,7 +80,7 @@ class HomeViewModel @Inject constructor(
 
     fun onEvent(event: HomeUiEvent) {
         when (event) {
-            is HomeUiEvent.Refresh -> loadPopularSermons()
+            is HomeUiEvent.Refresh -> loadHomeData()
             is HomeUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
             is HomeUiEvent.ResumeHistory -> resumeHistoryItem(event.history)
             is HomeUiEvent.ToggleFavorite -> {
@@ -84,27 +93,36 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun loadPopularSermons() {
+    private fun loadHomeData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            getPopularSermonsUseCase()
-                .onSuccess { sermons ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            popularSermons = sermons,
-                            errorMessage = null
-                        )
-                    }
-                }
-                .onFailure { error ->
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessage = error.localizedMessage ?: "Failed to load popular sermons."
-                        )
-                    }
-                }
+
+            val popularDeferred = async { getPopularSermonsUseCase() }
+            val speakersDeferred = async { getSpeakersUseCase() }
+            val topicsDeferred = async { getTopicsUseCase() }
+
+            val popularResult = popularDeferred.await()
+            val speakersResult = speakersDeferred.await()
+            val topicsResult = topicsDeferred.await()
+
+            val sermons = popularResult.getOrDefault(emptyList())
+            val speakers = speakersResult.getOrDefault(emptyList())
+            val topics = topicsResult.getOrDefault(emptyList())
+
+            val hasError = popularResult.isFailure && speakersResult.isFailure
+            val errorMsg = if (hasError) {
+                popularResult.exceptionOrNull()?.localizedMessage ?: "Failed to load home content."
+            } else null
+
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    popularSermons = sermons,
+                    speakers = speakers,
+                    topics = topics,
+                    errorMessage = errorMsg
+                )
+            }
         }
     }
 

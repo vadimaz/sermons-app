@@ -61,8 +61,6 @@ import kotlinx.coroutines.flow.asSharedFlow
 private val TOP_LEVEL_ROUTES = setOf<NavKey>(
     HomeRoute,
     ScriptureRoute,
-    SpeakersRoute,
-    TopicsRoute,
     LibraryRoute
 )
 
@@ -213,14 +211,10 @@ fun MainNavigation(
                     ) {
                         val isHome = navigationState.topLevelRoute == HomeRoute
                         val isScripture = navigationState.topLevelRoute == ScriptureRoute
-                        val isSpeakers = navigationState.topLevelRoute == SpeakersRoute
-                        val isTopics = navigationState.topLevelRoute == TopicsRoute
                         val isLibrary = navigationState.topLevelRoute == LibraryRoute
 
                         val homeLabel = stringResource(R.string.nav_home)
                         val scriptureLabel = stringResource(R.string.nav_scripture)
-                        val speakersLabel = stringResource(R.string.nav_speakers)
-                        val topicsLabel = stringResource(R.string.nav_topics)
                         val libraryLabel = stringResource(R.string.nav_library)
 
                         NavigationBarItem(
@@ -257,42 +251,6 @@ fun MainNavigation(
                                 )
                             },
                             label = { Text(scriptureLabel) }
-                        )
-
-                        NavigationBarItem(
-                            selected = isSpeakers,
-                            onClick = {
-                                if (isSpeakers) {
-                                    navigator.onReselect(SpeakersRoute)
-                                } else {
-                                    navigator.navigate(SpeakersRoute)
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (isSpeakers) Icons.Filled.Person else Icons.Outlined.Person,
-                                    contentDescription = speakersLabel
-                                )
-                            },
-                            label = { Text(speakersLabel) }
-                        )
-
-                        NavigationBarItem(
-                            selected = isTopics,
-                            onClick = {
-                                if (isTopics) {
-                                    navigator.onReselect(TopicsRoute)
-                                } else {
-                                    navigator.navigate(TopicsRoute)
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (isTopics) Icons.AutoMirrored.Filled.Label else Icons.AutoMirrored.Outlined.Label,
-                                    contentDescription = topicsLabel
-                                )
-                            },
-                            label = { Text(topicsLabel) }
                         )
 
                         NavigationBarItem(
@@ -337,8 +295,17 @@ fun MainNavigation(
                                 onSermonSelect = { sermon ->
                                     navigator.navigate(SermonDetailRoute(sermon.id))
                                 },
+                                onSpeakerSelect = { speaker ->
+                                    navigator.navigate(SpeakerDetailRoute(speaker.slug))
+                                },
+                                onSeeAllSpeakers = {
+                                    navigator.navigate(SpeakersRoute)
+                                },
                                 onTopicSelect = { slug ->
                                     navigator.navigate(TopicDetailRoute(slug))
+                                },
+                                onSeeAllTopics = {
+                                    navigator.navigate(TopicsRoute)
                                 },
                                 reselectEvents = navigator.reselectEvents
                             )
@@ -358,6 +325,7 @@ fun MainNavigation(
                                 onSpeakerSelect = { slug ->
                                     navigator.navigate(SpeakerDetailRoute(slug))
                                 },
+                                onBackClick = { navigator.goBack() },
                                 reselectEvents = navigator.reselectEvents
                             )
                         }
@@ -380,6 +348,7 @@ fun MainNavigation(
                                 onTopicSelect = { slug ->
                                     navigator.navigate(TopicDetailRoute(slug))
                                 },
+                                onBackClick = { navigator.goBack() },
                                 reselectEvents = navigator.reselectEvents
                             )
                         }

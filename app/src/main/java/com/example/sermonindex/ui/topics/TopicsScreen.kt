@@ -17,11 +17,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,6 +54,7 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun TopicsScreen(
     onTopicSelect: (String) -> Unit,
+    onBackClick: (() -> Unit)? = null,
     reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
@@ -67,6 +70,7 @@ fun TopicsScreen(
                 else -> viewModel.onEvent(event)
             }
         },
+        onBackClick = onBackClick,
         reselectEvents = reselectEvents,
         modifier = modifier
     )
@@ -79,6 +83,7 @@ fun TopicsScreen(
 fun TopicsContent(
     state: TopicsUiState,
     onEvent: (TopicsUiEvent) -> Unit,
+    onBackClick: (() -> Unit)? = null,
     reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
@@ -109,6 +114,30 @@ fun TopicsContent(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
+        if (onBackClick != null) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBackClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.back),
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = stringResource(R.string.home_topics_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+        }
+
         Box(modifier = Modifier.padding(16.dp)) {
             SearchTextField(
                 query = state.searchQuery,
