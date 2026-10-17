@@ -30,6 +30,7 @@ data class TopicDetailUiState(
 sealed interface TopicDetailUiEvent {
     data object Retry : TopicDetailUiEvent
     data class PlaySermon(val sermon: Sermon) : TopicDetailUiEvent
+    data class ReadSermon(val sermon: Sermon) : TopicDetailUiEvent
     data class ToggleFavorite(val sermon: Sermon) : TopicDetailUiEvent
     data class ClickSermon(val sermon: Sermon) : TopicDetailUiEvent
 }
@@ -69,6 +70,7 @@ class TopicDetailViewModel @AssistedInject constructor(
         when (event) {
             is TopicDetailUiEvent.Retry -> loadTopicDetails()
             is TopicDetailUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
+            is TopicDetailUiEvent.ReadSermon -> Unit
             is TopicDetailUiEvent.ToggleFavorite -> {
                 viewModelScope.launch {
                     toggleFavoriteUseCase(event.sermon)

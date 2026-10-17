@@ -15,3 +15,11 @@ val LightSecondary = Color(0xFF475569)
 
 val AmberAccent = Color(0xFFF59E0B)
 val BurgundyAccent = Color(0xFF881337)
+
+// Option 1: Sage Teal Palette for Text Sermons
+val SageTeal = Color(0xFF0D9488)
+val SageTealDark = Color(0xFF2DD4BF)
+val SageTealContainerDark = Color(0xFF134E4A)
+val SageTealOnContainerDark = Color(0xFF99F6E4)
+val SageTealContainerLight = Color(0xFFCCFBF1)
+val SageTealOnContainerLight = Color(0xFF115E59)

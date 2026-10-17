@@ -195,4 +195,24 @@ class  UseCasesTest {
         assertTrue(result.isSuccess)
         assertEquals("For God so loved the world", result.getOrNull())
     }
+
+    @Test
+    fun sermon_isTextOnly_returnsTrueOnlyWhenAudioUnavailable() {
+        val textSermon = Sermon(id = "1", title = "Text Sermon", speaker = "Spurgeon", hasAudio = false, mp3Url = "", cdnMp3Url = "")
+        val audioSermon = Sermon(id = "2", title = "Audio Sermon", speaker = "Tozer", hasAudio = true, mp3Url = "https://example.com/audio.mp3")
+        val cdnOnlySermon = Sermon(id = "3", title = "CDN Sermon", speaker = "Ravenhill", hasAudio = false, cdnMp3Url = "https://example.com/cdn.mp3")
+
+        assertTrue(textSermon.isTextOnly)
+        org.junit.Assert.assertFalse(audioSermon.isTextOnly)
+        org.junit.Assert.assertFalse(cdnOnlySermon.isTextOnly)
+    }
+
+    @Test
+    fun sermonDetail_isTextOnly_returnsTrueOnlyWhenAudioUnavailable() {
+        val textDetail = SermonDetail(id = "1", title = "Text Sermon", speaker = "Spurgeon", hasAudio = false, mp3Url = "", cdnMp3Url = "")
+        val audioDetail = SermonDetail(id = "2", title = "Audio Sermon", speaker = "Tozer", hasAudio = true, mp3Url = "https://example.com/audio.mp3")
+
+        assertTrue(textDetail.isTextOnly)
+        org.junit.Assert.assertFalse(audioDetail.isTextOnly)
+    }
 }

@@ -199,4 +199,13 @@
     <string name="first_translation">First Translation</string>
     <string name="second_translation">Second Translation</string>
     <string name="close">Close</string>
+
+    <!-- Text Sermons & Reader -->
+    <string name="badge_text_sermon">Text</string>
+    <string name="read_sermon">Read</string>
+    <string name="read_full_sermon">Read Sermon</string>
+    <string name="text_sermon_reader">Sermon Reader</string>
+    <string name="loading_text_sermon">Loading sermon text…</string>
+    <string name="text_only_sermon_badge">Text Sermon</string>
+    <string name="no_text_content_available">No text content is available for this sermon.</string>
 </resources>

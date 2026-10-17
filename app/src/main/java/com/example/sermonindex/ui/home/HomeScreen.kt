@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Label
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
@@ -76,6 +77,7 @@ fun HomeScreen(
     onTopicSelect: (String) -> Unit,
     onSeeAllTopics: () -> Unit,
     reselectEvents: Flow<NavKey>? = null,
+    onTextSermonSelect: (Sermon) -> Unit = onSermonSelect,
     modifier: Modifier = Modifier
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
@@ -87,6 +89,7 @@ fun HomeScreen(
         onEvent = { event ->
             when (event) {
                 is HomeUiEvent.SelectSermon -> onSermonSelect(event.sermon)
+                is HomeUiEvent.ReadSermon -> onTextSermonSelect(event.sermon)
                 is HomeUiEvent.SelectTopic -> onTopicSelect(event.slug)
                 else -> viewModel.onEvent(event)
             }
@@ -228,6 +231,7 @@ fun HomeContent(
             SermonListItem(
                 sermon = sermon,
                 onPlayClick = { onEvent(HomeUiEvent.PlaySermon(sermon)) },
+                onReadClick = { onEvent(HomeUiEvent.ReadSermon(sermon)) },
                 onItemClick = { onEvent(HomeUiEvent.SelectSermon(sermon)) },
                 onFavoriteToggle = { onEvent(HomeUiEvent.ToggleFavorite(sermon)) },
                 isFavorite = state.favoriteIds.contains(sermon.id),
@@ -522,15 +526,23 @@ private fun HeroCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    val isTextOnly = sermon.isTextOnly
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = sermon.speaker,
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary,
+                            color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (sermon.duration.isNotBlank()) {
+                        if (isTextOnly) {
+                            Text(
+                                text = stringResource(R.string.badge_text_sermon),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        } else if (sermon.duration.isNotBlank()) {
                             Text(
                                 text = sermon.duration,
                                 style = MaterialTheme.typography.labelSmall,
@@ -543,14 +555,14 @@ private fun HeroCard(
                         onClick = onPlayClick,
                         shape = CircleShape,
                         colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                            containerColor = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.play),
-                            tint = MaterialTheme.colorScheme.onPrimary
+                            imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,
+                            contentDescription = stringResource(if (isTextOnly) R.string.read_sermon else R.string.play),
+                            tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary
                         )
                     }
                 }

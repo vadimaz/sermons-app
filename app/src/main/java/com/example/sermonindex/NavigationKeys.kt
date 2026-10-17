@@ -29,3 +29,6 @@ data class SermonDetailRoute(val sermonId: String) : NavKey
 
 @Serializable
 data object PlayerRoute : NavKey
+
+@Serializable
+data class TextSermonRoute(val sermonId: String) : NavKey

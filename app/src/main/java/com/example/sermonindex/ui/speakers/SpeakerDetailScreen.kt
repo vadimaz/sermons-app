@@ -57,6 +57,7 @@ fun SpeakerDetailScreen(
     slug: String,
     onBack: () -> Unit,
     onSermonClick: (Sermon) -> Unit,
+    onTextSermonClick: (Sermon) -> Unit = onSermonClick,
     onTopicClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -71,6 +72,7 @@ fun SpeakerDetailScreen(
         onEvent = { event ->
             when (event) {
                 is SpeakerDetailUiEvent.ClickSermon -> onSermonClick(event.sermon)
+                is SpeakerDetailUiEvent.ReadSermon -> onTextSermonClick(event.sermon)
                 is SpeakerDetailUiEvent.ClickTopic -> onTopicClick(event.slug)
                 else -> viewModel.onEvent(event)
             }
@@ -254,6 +256,7 @@ fun SpeakerDetailContent(
                 SermonListItem(
                     sermon = sermon,
                     onPlayClick = { onEvent(SpeakerDetailUiEvent.PlaySermon(sermon)) },
+                    onReadClick = { onEvent(SpeakerDetailUiEvent.ReadSermon(sermon)) },
                     onItemClick = { onEvent(SpeakerDetailUiEvent.ClickSermon(sermon)) },
                     onFavoriteToggle = { onEvent(SpeakerDetailUiEvent.ToggleFavorite(sermon)) },
                     isFavorite = state.favoriteIds.contains(sermon.id)

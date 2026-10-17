@@ -17,7 +17,10 @@ data class Sermon(
     val thumbnailUrl: String = "",
     val summary: String = "",
     val topics: List<Topic> = emptyList()
-)
+) {
+    val isTextOnly: Boolean
+        get() = !hasAudio && mp3Url.isBlank() && cdnMp3Url.isBlank()
+}
 
 /**
  * Detailed sermon domain model including transcript, outline, quotes, and FAQ.
@@ -44,6 +47,9 @@ data class SermonDetail(
     val transcript: String = "",
     val transcriptHtml: String = ""
 ) {
+    val isTextOnly: Boolean
+        get() = !hasAudio && mp3Url.isBlank() && cdnMp3Url.isBlank()
+
     fun toSermon(): Sermon = Sermon(
         id = id,
         title = title,

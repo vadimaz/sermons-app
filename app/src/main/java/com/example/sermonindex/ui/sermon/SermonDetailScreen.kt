@@ -1,6 +1,7 @@
 package com.example.sermonindex.ui.sermon
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
@@ -69,6 +71,7 @@ fun SermonDetailScreen(
     sermonId: String,
     onBack: () -> Unit,
     onSpeakerClick: (String) -> Unit,
+    onReadClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val viewModel: SermonDetailViewModel = hiltViewModel(key = "sermon_$sermonId") { factory: SermonDetailViewModel.Factory ->
@@ -86,6 +89,7 @@ fun SermonDetailScreen(
             }
         },
         onBack = onBack,
+        onReadClick = onReadClick,
         modifier = modifier
     )
 }
@@ -98,6 +102,7 @@ fun SermonDetailContent(
     state: SermonDetailUiState,
     onEvent: (SermonDetailUiEvent) -> Unit,
     onBack: () -> Unit,
+    onReadClick: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
@@ -115,6 +120,7 @@ fun SermonDetailContent(
     }
 
     val detail = state.detail ?: return
+    val isTextOnly = detail.isTextOnly
 
     Column(
         modifier = modifier.fillMaxSize()
@@ -158,14 +164,31 @@ fun SermonDetailContent(
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val imageUrl = detail.speakerImage.ifBlank { detail.thumbnailUrl }
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = detail.speaker,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(80.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                    )
+                    if (imageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = detail.speaker,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                        )
+                    } else {
+                        Surface(
+                            color = if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.size(80.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,
+                                    contentDescription = null,
+                                    tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            }
+                        }
+                    }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
@@ -179,9 +202,23 @@ fun SermonDetailContent(
                             text = detail.speaker,
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                         )
-                        if (detail.duration.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        if (isTextOnly) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.tertiaryContainer
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.text_only_sermon_badge),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        } else if (detail.duration.isNotBlank()) {
                             Text(
                                 text = stringResource(R.string.duration_label, detail.duration),
                                 style = MaterialTheme.typography.bodySmall,
@@ -192,7 +229,7 @@ fun SermonDetailContent(
                 }
             }
 
-            // Action Buttons: Favorite (Heart), Play (Pill Capsule), Download
+            // Action Buttons: Favorite (Heart), Play/Read (Pill Capsule), Download (audio only)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -218,55 +255,83 @@ fun SermonDetailContent(
                         )
                     }
 
-                    // 2. Play Button (Pill / Capsule)
-                    Button(
-                        onClick = { onEvent(SermonDetailUiEvent.Play) },
-                        shape = CircleShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            contentColor = MaterialTheme.colorScheme.onPrimary
-                        ),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(56.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (state.isPlaying) Icons.Filled.Pause else Icons.Default.PlayArrow,
-                            contentDescription = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
-                            modifier = Modifier.size(32.dp)
-                        )
+                    // 2. Play or Read Button (Pill / Capsule)
+                    if (isTextOnly) {
+                        Button(
+                            onClick = { onReadClick(detail.id) },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.tertiary,
+                                contentColor = MaterialTheme.colorScheme.onTertiary
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                contentDescription = stringResource(R.string.read_sermon),
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = stringResource(R.string.read_full_sermon),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Button(
+                            onClick = { onEvent(SermonDetailUiEvent.Play) },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(56.dp)
+                        ) {
+                            Icon(
+                                imageVector = if (state.isPlaying) Icons.Filled.Pause else Icons.Default.PlayArrow,
+                                contentDescription = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
 
-                    // 3. Download
-                    FilledTonalIconButton(
-                        onClick = { onEvent(SermonDetailUiEvent.ToggleDownload) },
-                        shape = CircleShape,
-                        modifier = Modifier.size(56.dp),
-                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    ) {
-                        if (state.downloadProgress != null) {
-                            CircularProgressIndicator(
-                                progress = { (state.downloadProgress.toFloat() / 100f).coerceIn(0f, 1f) },
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.5.dp,
-                                color = MaterialTheme.colorScheme.primary
+                    // 3. Download (Only for audio sermons)
+                    if (!isTextOnly) {
+                        FilledTonalIconButton(
+                            onClick = { onEvent(SermonDetailUiEvent.ToggleDownload) },
+                            shape = CircleShape,
+                            modifier = Modifier.size(56.dp),
+                            colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        } else if (state.isDownloaded) {
-                            Icon(
-                                imageVector = Icons.Default.DownloadDone,
-                                contentDescription = stringResource(R.string.downloaded),
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Download,
-                                contentDescription = stringResource(R.string.download),
-                                modifier = Modifier.size(26.dp)
-                            )
+                        ) {
+                            if (state.downloadProgress != null) {
+                                CircularProgressIndicator(
+                                    progress = { (state.downloadProgress.toFloat() / 100f).coerceIn(0f, 1f) },
+                                    modifier = Modifier.size(24.dp),
+                                    strokeWidth = 2.5.dp,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            } else if (state.isDownloaded) {
+                                Icon(
+                                    imageVector = Icons.Default.DownloadDone,
+                                    contentDescription = stringResource(R.string.downloaded),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = stringResource(R.string.download),
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
                         }
                     }
                 }

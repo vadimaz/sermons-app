@@ -48,6 +48,7 @@ fun TopicDetailScreen(
     slug: String,
     onBack: () -> Unit,
     onSermonClick: (Sermon) -> Unit,
+    onTextSermonClick: (Sermon) -> Unit = onSermonClick,
     modifier: Modifier = Modifier
 ) {
     val viewModel: TopicDetailViewModel = hiltViewModel(key = "topic_$slug") { factory: TopicDetailViewModel.Factory ->
@@ -61,6 +62,7 @@ fun TopicDetailScreen(
         onEvent = { event ->
             when (event) {
                 is TopicDetailUiEvent.ClickSermon -> onSermonClick(event.sermon)
+                is TopicDetailUiEvent.ReadSermon -> onTextSermonClick(event.sermon)
                 else -> viewModel.onEvent(event)
             }
         },
@@ -186,6 +188,7 @@ fun TopicDetailContent(
                     SermonListItem(
                         sermon = sermon,
                         onPlayClick = { onEvent(TopicDetailUiEvent.PlaySermon(sermon)) },
+                        onReadClick = { onEvent(TopicDetailUiEvent.ReadSermon(sermon)) },
                         onItemClick = { onEvent(TopicDetailUiEvent.ClickSermon(sermon)) },
                         onFavoriteToggle = { onEvent(TopicDetailUiEvent.ToggleFavorite(sermon)) },
                         isFavorite = state.favoriteIds.contains(sermon.id)

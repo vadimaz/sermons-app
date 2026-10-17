@@ -38,6 +38,7 @@ data class HomeUiState(
 sealed interface HomeUiEvent {
     data object Refresh : HomeUiEvent
     data class PlaySermon(val sermon: Sermon) : HomeUiEvent
+    data class ReadSermon(val sermon: Sermon) : HomeUiEvent
     data class ResumeHistory(val history: ListeningHistory) : HomeUiEvent
     data class ToggleFavorite(val sermon: Sermon) : HomeUiEvent
     data class SelectSermon(val sermon: Sermon) : HomeUiEvent
@@ -82,6 +83,7 @@ class HomeViewModel @Inject constructor(
         when (event) {
             is HomeUiEvent.Refresh -> loadHomeData()
             is HomeUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
+            is HomeUiEvent.ReadSermon -> Unit
             is HomeUiEvent.ResumeHistory -> resumeHistoryItem(event.history)
             is HomeUiEvent.ToggleFavorite -> {
                 viewModelScope.launch {

@@ -125,6 +125,7 @@ sealed interface ScriptureUiEvent {
     data object ClearChapter : ScriptureUiEvent
     data object ClearBook : ScriptureUiEvent
     data class PlaySermon(val sermon: Sermon) : ScriptureUiEvent
+    data class ReadSermon(val sermon: Sermon) : ScriptureUiEvent
     data class ToggleFavorite(val sermon: Sermon) : ScriptureUiEvent
     data class ClickSermon(val sermon: Sermon) : ScriptureUiEvent
 
@@ -251,6 +252,7 @@ class ScriptureViewModel @Inject constructor(
                 }
             }
             is ScriptureUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
+            is ScriptureUiEvent.ReadSermon -> Unit
             is ScriptureUiEvent.ToggleFavorite -> {
                 viewModelScope.launch {
                     toggleFavoriteUseCase(event.sermon)

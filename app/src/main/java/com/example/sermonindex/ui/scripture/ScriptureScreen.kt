@@ -66,6 +66,7 @@ import kotlinx.coroutines.flow.Flow
 @Composable
 fun ScriptureScreen(
     onSermonClick: (Sermon) -> Unit,
+    onTextSermonClick: (Sermon) -> Unit = onSermonClick,
     reselectEvents: Flow<NavKey>? = null,
     onIsAtRootChanged: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -85,6 +86,7 @@ fun ScriptureScreen(
         onEvent = { event ->
             when (event) {
                 is ScriptureUiEvent.ClickSermon -> onSermonClick(event.sermon)
+                is ScriptureUiEvent.ReadSermon -> onTextSermonClick(event.sermon)
                 else -> viewModel.onEvent(event)
             }
         },
@@ -250,6 +252,7 @@ fun ScriptureContent(
                         SermonListItem(
                             sermon = sermon,
                             onPlayClick = { onEvent(ScriptureUiEvent.PlaySermon(sermon)) },
+                            onReadClick = { onEvent(ScriptureUiEvent.ReadSermon(sermon)) },
                             onItemClick = { onEvent(ScriptureUiEvent.ClickSermon(sermon)) },
                             onFavoriteToggle = { onEvent(ScriptureUiEvent.ToggleFavorite(sermon)) },
                             isFavorite = state.favoriteIds.contains(sermon.id)

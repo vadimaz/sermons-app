@@ -36,6 +36,7 @@ sealed interface SpeakerDetailUiEvent {
     data object Retry : SpeakerDetailUiEvent
     data object LoadMore : SpeakerDetailUiEvent
     data class PlaySermon(val sermon: Sermon) : SpeakerDetailUiEvent
+    data class ReadSermon(val sermon: Sermon) : SpeakerDetailUiEvent
     data class ToggleFavorite(val sermon: Sermon) : SpeakerDetailUiEvent
     data class ClickSermon(val sermon: Sermon) : SpeakerDetailUiEvent
     data class ClickTopic(val slug: String) : SpeakerDetailUiEvent
@@ -78,6 +79,7 @@ class SpeakerDetailViewModel @AssistedInject constructor(
             is SpeakerDetailUiEvent.Retry -> loadSpeakerAndPage1()
             is SpeakerDetailUiEvent.LoadMore -> loadNextPage()
             is SpeakerDetailUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
+            is SpeakerDetailUiEvent.ReadSermon -> Unit
             is SpeakerDetailUiEvent.ToggleFavorite -> {
                 viewModelScope.launch {
                     toggleFavoriteUseCase(event.sermon)

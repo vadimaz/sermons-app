@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -32,10 +34,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
 
 @Composable
@@ -45,8 +49,11 @@ fun SermonListItem(
     onItemClick: () -> Unit,
     onFavoriteToggle: () -> Unit,
     isFavorite: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onReadClick: () -> Unit = onPlayClick
 ) {
+    val isTextOnly = sermon.isTextOnly
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -62,7 +69,7 @@ fun SermonListItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Speaker / Sermon Portrait
+            // Speaker / Sermon Portrait or Type Placeholder
             Box(
                 modifier = Modifier
                     .size(56.dp)
@@ -78,14 +85,14 @@ fun SermonListItem(
                     )
                 } else {
                     Surface(
-                        color = MaterialTheme.colorScheme.primaryContainer,
+                        color = if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
                         modifier = Modifier.size(56.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
-                                imageVector = Icons.Outlined.PlayCircle,
+                                imageVector = if (isTextOnly) Icons.AutoMirrored.Outlined.MenuBook else Icons.Outlined.PlayCircle,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
+                                tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(28.dp)
                             )
                         }
@@ -109,9 +116,9 @@ fun SermonListItem(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = sermon.speaker.ifBlank { androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.unknown_speaker) },
+                    text = sermon.speaker.ifBlank { stringResource(R.string.unknown_speaker) },
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -120,7 +127,20 @@ fun SermonListItem(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (sermon.duration.isNotBlank()) {
+                    if (isTextOnly) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Text(
+                                text = stringResource(R.string.badge_text_sermon),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    } else if (sermon.duration.isNotBlank()) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
                             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
@@ -145,29 +165,30 @@ fun SermonListItem(
                 }
             }
 
-            // Actions: Favorite + Play
+            // Actions: Favorite + Play/Read
             IconButton(onClick = onFavoriteToggle) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                    contentDescription = androidx.compose.ui.res.stringResource(
-                        if (isFavorite) com.example.sermonindex.R.string.remove_from_favorites else com.example.sermonindex.R.string.add_to_favorites
+                    contentDescription = stringResource(
+                        if (isFavorite) R.string.remove_from_favorites else R.string.add_to_favorites
                     ),
                     tint = if (isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             FilledIconButton(
-                onClick = onPlayClick,
+                onClick = if (isTextOnly) onReadClick else onPlayClick,
                 shape = CircleShape,
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                    contentColor = if (isTextOnly) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary
                 ),
                 modifier = Modifier.size(40.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.PlayArrow,
-                    contentDescription = androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.play_sermon),
-                    tint = MaterialTheme.colorScheme.onPrimary
+                    imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,
+                    contentDescription = stringResource(if (isTextOnly) R.string.read_sermon else R.string.play_sermon),
+                    tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary
                 )
             }
         }

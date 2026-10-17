@@ -50,6 +50,7 @@ import com.example.sermonindex.ui.components.OfflineBanner
 import com.example.sermonindex.ui.home.HomeScreen
 import com.example.sermonindex.ui.library.LibraryScreen
 import com.example.sermonindex.ui.player.FullscreenPlayerScreen
+import com.example.sermonindex.ui.reader.TextSermonScreen
 import com.example.sermonindex.ui.scripture.ScriptureScreen
 import com.example.sermonindex.ui.sermon.SermonDetailScreen
 import com.example.sermonindex.ui.speakers.SpeakerDetailScreen
@@ -182,7 +183,7 @@ fun MainNavigation(
     val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)
 
     val currentRoute = navigationState.currentRoute
-    val isFullscreenPlayer = currentRoute is PlayerRoute
+    val isFullscreenPlayer = currentRoute is PlayerRoute || currentRoute is TextSermonRoute
     var isScriptureAtRoot by rememberSaveable { mutableStateOf(true) }
 
     val isAtTopLevel = when (currentRoute) {
@@ -305,6 +306,9 @@ fun MainNavigation(
                                 onSermonSelect = { sermon ->
                                     navigator.navigate(SermonDetailRoute(sermon.id))
                                 },
+                                onTextSermonSelect = { sermon ->
+                                    navigator.navigate(TextSermonRoute(sermon.id))
+                                },
                                 onSpeakerSelect = { speaker ->
                                     navigator.navigate(SpeakerDetailRoute(speaker.slug))
                                 },
@@ -325,6 +329,9 @@ fun MainNavigation(
                             ScriptureScreen(
                                 onSermonClick = { sermon ->
                                     navigator.navigate(SermonDetailRoute(sermon.id))
+                                },
+                                onTextSermonClick = { sermon ->
+                                    navigator.navigate(TextSermonRoute(sermon.id))
                                 },
                                 reselectEvents = navigator.reselectEvents,
                                 onIsAtRootChanged = { isScriptureAtRoot = it }
@@ -348,6 +355,9 @@ fun MainNavigation(
                                 onSermonClick = { sermon ->
                                     navigator.navigate(SermonDetailRoute(sermon.id))
                                 },
+                                onTextSermonClick = { sermon ->
+                                    navigator.navigate(TextSermonRoute(sermon.id))
+                                },
                                 onTopicClick = { slug ->
                                     navigator.navigate(TopicDetailRoute(slug))
                                 }
@@ -370,6 +380,9 @@ fun MainNavigation(
                                 onBack = { navigator.goBack() },
                                 onSermonClick = { sermon ->
                                     navigator.navigate(SermonDetailRoute(sermon.id))
+                                },
+                                onTextSermonClick = { sermon ->
+                                    navigator.navigate(TextSermonRoute(sermon.id))
                                 }
                             )
                         }
@@ -389,6 +402,9 @@ fun MainNavigation(
                                 onBack = { navigator.goBack() },
                                 onSpeakerClick = { slug ->
                                     navigator.navigate(SpeakerDetailRoute(slug))
+                                },
+                                onReadClick = { sermonId ->
+                                    navigator.navigate(TextSermonRoute(sermonId))
                                 }
                             )
                         }
@@ -396,6 +412,16 @@ fun MainNavigation(
                         entry<PlayerRoute> {
                             FullscreenPlayerScreen(
                                 onBack = { navigator.goBack() }
+                            )
+                        }
+
+                        entry<TextSermonRoute> { route ->
+                            TextSermonScreen(
+                                sermonId = route.sermonId,
+                                onBack = { navigator.goBack() },
+                                onSpeakerClick = { slug ->
+                                    navigator.navigate(SpeakerDetailRoute(slug))
+                                }
                             )
                         }
                     }
