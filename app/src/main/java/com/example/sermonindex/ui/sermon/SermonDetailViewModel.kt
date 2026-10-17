@@ -28,6 +28,7 @@ data class SermonDetailUiState(
     val isFavorite: Boolean = false,
     val isDownloaded: Boolean = false,
     val downloadProgress: Int? = null,
+    val isPlaying: Boolean = false,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val selectedTab: Int = 0
@@ -66,7 +67,17 @@ class SermonDetailViewModel @AssistedInject constructor(
     init {
         observeFavorite()
         observeDownload()
+        observePlayback()
         loadDetails()
+    }
+
+    private fun observePlayback() {
+        viewModelScope.launch {
+            playbackManager.playbackState.collect { pbState ->
+                val playing = pbState.currentSermon?.id == sermonId && pbState.isPlaying
+                _uiState.update { it.copy(isPlaying = playing) }
+            }
+        }
     }
 
     private fun observeFavorite() {
@@ -95,7 +106,12 @@ class SermonDetailViewModel @AssistedInject constructor(
             is SermonDetailUiEvent.Retry -> loadDetails()
             is SermonDetailUiEvent.Play -> {
                 _uiState.value.detail?.let { detail ->
-                    playbackManager.playSermon(detail.toSermon())
+                    val currentState = playbackManager.playbackState.value
+                    if (currentState.currentSermon?.id == detail.id) {
+                        playbackManager.togglePlayPause()
+                    } else {
+                        playbackManager.playSermon(detail.toSermon())
+                    }
                 }
             }
             is SermonDetailUiEvent.ToggleFavorite -> {

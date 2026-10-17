@@ -11,6 +11,7 @@ data class Sermon(
     val speakerImage: String = "",
     val mp3Url: String = "",
     val cdnMp3Url: String = "",
+    val vttUrl: String = "",
     val hasAudio: Boolean = true,
     val duration: String = "",
     val thumbnailUrl: String = "",
@@ -29,6 +30,7 @@ data class SermonDetail(
     val speakerSlug: String = "",
     val mp3Url: String = "",
     val cdnMp3Url: String = "",
+    val vttUrl: String = "",
     val hasAudio: Boolean = true,
     val duration: String = "",
     val thumbnailUrl: String = "",
@@ -49,12 +51,23 @@ data class SermonDetail(
         speakerImage = speakerImage,
         mp3Url = mp3Url,
         cdnMp3Url = cdnMp3Url,
+        vttUrl = vttUrl,
         hasAudio = hasAudio,
         duration = duration,
         thumbnailUrl = thumbnailUrl,
         summary = summary
     )
 }
+
+/**
+ * Represents a single time-coded subtitle/transcript cue from WebVTT.
+ */
+data class TranscriptCue(
+    val index: Int,
+    val startMs: Long,
+    val endMs: Long,
+    val text: String
+)
 
 data class OutlineItem(
     val timestamp: String,
@@ -123,6 +136,17 @@ data class BibleBook(
     val chapterCount: Int
 )
 
+data class BibleTranslation(
+    val id: String,
+    val name: String,
+    val englishName: String,
+    val shortName: String,
+    val language: String,
+    val languageName: String = "",
+    val languageEnglishName: String = "",
+    val numberOfBooks: Int = 66
+)
+
 data class ChapterDetails(
     val bookId: String,
     val bookName: String,
@@ -167,25 +191,6 @@ data class ListeningHistory(
         speaker = speaker,
         speakerImage = speakerImage,
         duration = ""
-    )
-}
-
-data class OfflineSearchResult(
-    val sermonId: String,
-    val title: String,
-    val speaker: String,
-    val summary: String = "",
-    val topic: String = "",
-    val scripture: String = "",
-    val year: String = "",
-    val duration: String = ""
-) {
-    fun toSermon(): Sermon = Sermon(
-        id = sermonId,
-        title = title,
-        speaker = speaker,
-        summary = summary,
-        duration = duration
     )
 }
 

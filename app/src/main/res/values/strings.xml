@@ -43,6 +43,9 @@
     <string name="cdn_failover_active">CDN Failover Stream Active</string>
     <string name="rewind_15_seconds">Rewind 15 seconds</string>
     <string name="fast_forward_30_seconds">Fast forward 30 seconds</string>
+    <string name="playback_speed">Playback Speed</string>
+    <string name="reading_mode">Synchronized Transcript</string>
+    <string name="reading_mode_active">Synchronized Reading Active</string>
     <string name="tab_overview">Overview</string>
     <string name="tab_outline">Outline</string>
     <string name="tab_transcript">Transcript</string>
@@ -79,20 +82,8 @@
     <string name="tab_favorites">Favorites</string>
     <string name="tab_downloads">Downloads</string>
     <string name="tab_history">History</string>
-    <string name="tab_search">Search</string>
     <string name="tab_favorites_count">Favorites (%1$d)</string>
     <string name="tab_history_count">History (%1$d)</string>
-    <string name="tab_offline_search">Offline Search</string>
-    <string name="offline_search_title">Offline Full Catalog Search (~27 MB)</string>
-    <string name="sermons_indexed_count">%1$d sermons indexed locally</string>
-    <string name="index_sermons_offline_hint">Index 70,000+ sermons for offline search</string>
-    <string name="offline_search_description">Downloads and streams uncompressed JSON lines into a local SQLite FTS virtual table for instant search across titles, preachers and summaries without an internet connection.</string>
-    <string name="indexing_catalog_progress">Indexing catalog (%1$d indexed)…</string>
-    <string name="redownload_and_sync">Re-download &amp; Sync</string>
-    <string name="download_catalog">Download Catalog</string>
-    <string name="search_indexed_sermons_placeholder">Search %1$d sermons…</string>
-    <string name="no_offline_results_title">No results found in offline catalog</string>
-    <string name="no_offline_results_subtitle">Try searching for another preacher or sermon title.</string>
     <string name="no_favorites_title">No favorites yet</string>
     <string name="no_favorites_subtitle">Tap the heart icon on any sermon to save it to your personal library.</string>
     <string name="no_history_title">No playback history</string>
@@ -163,6 +154,10 @@
     <string name="no_downloads_title">No downloaded sermons</string>
     <string name="no_downloads_subtitle">Download sermons to listen offline without internet connection.</string>
     <string name="total_downloads_size">Storage used: %1$s</string>
+    <string name="delete_all_downloads">Clear Downloads</string>
+    <string name="delete_all_downloads_title">Clear All Downloads?</string>
+    <string name="delete_all_downloads_confirmation">Are you sure you want to delete all downloaded sermons? This will remove all audio files and free up device storage.</string>
+    <string name="delete_all">Delete All</string>
     <string name="delete_download">Delete Download</string>
     <string name="delete_download_confirmation">Are you sure you want to delete this downloaded audio file from device storage?</string>
     <string name="download">Download</string>
@@ -192,4 +187,16 @@
     <string name="sleep_timer_badge">%1$s</string>
     <string name="sleep_timer_set">Sleep timer set</string>
     <string name="sleep_timer_cancelled">Sleep timer cancelled</string>
+
+    <!-- Scripture Verse Quote & Translations -->
+    <string name="scripture_verse_quote_title">Scripture Verse</string>
+    <string name="select_translation">Select Translation</string>
+    <string name="search_translations_placeholder">Search %1$d translations…</string>
+    <string name="popular_translations">Popular Translations</string>
+    <string name="all_translations">All Translations (%1$d)</string>
+    <string name="loading_verse_text">Loading scripture text…</string>
+    <string name="verse_text_unavailable">Verse text is unavailable in this translation.</string>
+    <string name="first_translation">First Translation</string>
+    <string name="second_translation">Second Translation</string>
+    <string name="close">Close</string>
 </resources>

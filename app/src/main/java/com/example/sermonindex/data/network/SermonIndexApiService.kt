@@ -1,5 +1,7 @@
 package com.example.sermonindex.data.network
 
+import com.example.sermonindex.data.model.AvailableTranslationsResponse
+import com.example.sermonindex.data.model.BibleChapterResponse
 import com.example.sermonindex.data.model.PopularSermonsResponse
 import com.example.sermonindex.data.model.ScriptureBooksResponse
 import com.example.sermonindex.data.model.ScriptureChapterDto
@@ -60,4 +62,19 @@ interface SermonIndexApiService {
     suspend fun getSermonDetails(
         @Path("id") id: String
     ): SermonDetailDto
+
+    @GET("bible/available_translations.json")
+    suspend fun getAvailableBibleTranslations(): AvailableTranslationsResponse
+
+    @GET("bible/{translation}/{bookId}/{chapter}.json")
+    suspend fun getBibleChapter(
+        @Path("translation") translation: String,
+        @Path("bookId") bookId: String,
+        @Path("chapter") chapter: Int
+    ): BibleChapterResponse
+
+    @GET
+    suspend fun getRawVtt(
+        @retrofit2.http.Url url: String
+    ): okhttp3.ResponseBody
 }

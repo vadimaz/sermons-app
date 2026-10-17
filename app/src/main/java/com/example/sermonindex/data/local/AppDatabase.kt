@@ -173,6 +173,12 @@ class AppDatabase private constructor(context: Context) {
             downloadsChangeSignal.value = System.currentTimeMillis()
         }
 
+        override suspend fun deleteAllDownloads() = withContext(Dispatchers.IO) {
+            val db = dbHelper.writableDatabase
+            db.delete("downloads", null, null)
+            downloadsChangeSignal.value = System.currentTimeMillis()
+        }
+
         override suspend fun getTotalStorageBytes(): Long = withContext(Dispatchers.IO) {
             val db = dbHelper.readableDatabase
             val cursor = db.rawQuery("SELECT SUM(file_size_bytes) FROM downloads", null)
@@ -314,18 +320,6 @@ class AppDatabase private constructor(context: Context) {
                 )
                 """.trimIndent()
             )
-
-            // FTS virtual table for Phase 4 offline search
-            db.execSQL(
-                """
-                CREATE VIRTUAL TABLE IF NOT EXISTS sermon_fts USING fts4(
-                    id TEXT,
-                    title TEXT,
-                    speaker TEXT,
-                    summary TEXT
-                )
-                """.trimIndent()
-            )
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -345,95 +339,8 @@ class AppDatabase private constructor(context: Context) {
                     """.trimIndent()
                 )
             }
+            db.execSQL("DROP TABLE IF EXISTS sermon_fts")
         }
-    }
-
-    private val ftsChangeSignal = MutableStateFlow(0L)
-
-    fun getFtsCountFlow(): Flow<Int> = ftsChangeSignal.asStateFlow().map {
-        getFtsCount()
-    }
-
-    suspend fun getFtsCount(): Int = withContext(Dispatchers.IO) {
-        val db = dbHelper.readableDatabase
-        val cursor = db.rawQuery("SELECT COUNT(*) FROM sermon_fts", null)
-        cursor.use {
-            if (it.moveToFirst()) it.getInt(0) else 0
-        }
-    }
-
-    suspend fun clearFts() = withContext(Dispatchers.IO) {
-        val db = dbHelper.writableDatabase
-        db.delete("sermon_fts", null, null)
-        ftsChangeSignal.value = System.currentTimeMillis()
-    }
-
-    suspend fun insertFtsBatch(items: List<com.example.sermonindex.data.local.entities.FtsSermonResult>) = withContext(Dispatchers.IO) {
-        val db = dbHelper.writableDatabase
-        db.beginTransaction()
-        try {
-            val statement = db.compileStatement("INSERT INTO sermon_fts (id, title, speaker, summary) VALUES (?, ?, ?, ?)")
-            for (item in items) {
-                statement.bindString(1, item.id)
-                statement.bindString(2, item.title)
-                statement.bindString(3, item.speaker)
-                statement.bindString(4, item.summary)
-                statement.executeInsert()
-            }
-            db.setTransactionSuccessful()
-        } finally {
-            db.endTransaction()
-        }
-        ftsChangeSignal.value = System.currentTimeMillis()
-    }
-
-    suspend fun searchFts(query: String, limit: Int = 60): List<com.example.sermonindex.data.local.entities.FtsSermonResult> = withContext(Dispatchers.IO) {
-        val trimmed = query.trim()
-        if (trimmed.isBlank()) return@withContext emptyList()
-
-        val list = mutableListOf<com.example.sermonindex.data.local.entities.FtsSermonResult>()
-        val db = dbHelper.readableDatabase
-
-        // Try FTS prefix search first
-        val sanitizedQuery = trimmed.replace("\"", "").replace("'", "") + "*"
-        try {
-            val cursor = db.rawQuery(
-                "SELECT id, title, speaker, summary FROM sermon_fts WHERE sermon_fts MATCH ? LIMIT ?",
-                arrayOf(sanitizedQuery, limit.toString())
-            )
-            cursor.use {
-                while (it.moveToNext()) {
-                    list.add(
-                        com.example.sermonindex.data.local.entities.FtsSermonResult(
-                            id = it.getString(0) ?: "",
-                            title = it.getString(1) ?: "",
-                            speaker = it.getString(2) ?: "",
-                            summary = it.getString(3) ?: ""
-                        )
-                    )
-                }
-            }
-        } catch (_: Exception) {
-            // Fallback to LIKE if FTS syntax had issues
-            val likePattern = "%$trimmed%"
-            val cursor = db.rawQuery(
-                "SELECT id, title, speaker, summary FROM sermon_fts WHERE title LIKE ? OR speaker LIKE ? LIMIT ?",
-                arrayOf(likePattern, likePattern, limit.toString())
-            )
-            cursor.use {
-                while (it.moveToNext()) {
-                    list.add(
-                        com.example.sermonindex.data.local.entities.FtsSermonResult(
-                            id = it.getString(0) ?: "",
-                            title = it.getString(1) ?: "",
-                            speaker = it.getString(2) ?: "",
-                            summary = it.getString(3) ?: ""
-                        )
-                    )
-                }
-            }
-        }
-        list
     }
 
     companion object {

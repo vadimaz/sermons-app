@@ -9,22 +9,25 @@ import androidx.work.workDataOf
 import com.example.sermonindex.data.local.AppDatabase
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
 import com.example.sermonindex.data.local.entities.HistoryEntity
+import com.example.sermonindex.data.mapper.extractVerseMap
 import com.example.sermonindex.data.mapper.toDomain
 import com.example.sermonindex.data.mapper.toFavoriteEntity
 import com.example.sermonindex.data.network.SermonIndexApiService
 import com.example.sermonindex.data.sync.AudioDownloadWorker
 import com.example.sermonindex.domain.model.BibleBook
+import com.example.sermonindex.domain.model.BibleTranslation
 import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
-import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.model.Speaker
 import com.example.sermonindex.domain.model.SpeakerPagedSermons
+import com.example.sermonindex.data.parser.VttParser
 import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.domain.model.TopicDetail
+import com.example.sermonindex.domain.model.TranscriptCue
 import com.example.sermonindex.domain.repository.SermonRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -49,6 +52,9 @@ class SermonRepositoryImpl @Inject constructor(
     private val database: AppDatabase,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : SermonRepository {
+
+    private var cachedTranslations: List<BibleTranslation>? = null
+    private val chapterVerseCache = java.util.concurrent.ConcurrentHashMap<String, Map<Int, String>>()
 
     override val favorites: Flow<List<FavoriteSermon>> =
         database.favoritesDao.getAllFavorites()
@@ -125,6 +131,17 @@ class SermonRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun deleteAllDownloads() = withContext(ioDispatcher) {
+        val allDownloads = database.downloadsDao.getAllDownloads().first()
+        for (entity in allDownloads) {
+            val file = File(entity.localPath)
+            if (file.exists()) {
+                file.delete()
+            }
+        }
+        database.downloadsDao.deleteAllDownloads()
+    }
+
     override suspend fun getLocalAudioPath(sermonId: String): String? = withContext(ioDispatcher) {
         val entity = database.downloadsDao.getDownload(sermonId) ?: return@withContext null
         val file = File(entity.localPath)
@@ -196,6 +213,36 @@ class SermonRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getAvailableBibleTranslations(): Result<List<BibleTranslation>> =
+        withContext(ioDispatcher) {
+            runCatching {
+                cachedTranslations?.let { return@runCatching it }
+                val translations = apiService.getAvailableBibleTranslations().translations.map { it.toDomain() }
+                cachedTranslations = translations
+                translations
+            }
+        }
+
+    override suspend fun getBibleVerseText(
+        translationId: String,
+        bookId: String,
+        chapter: Int,
+        verse: Int
+    ): Result<String> = withContext(ioDispatcher) {
+        runCatching {
+            val key = "$translationId:$bookId:$chapter"
+            val cachedMap = chapterVerseCache[key]
+            if (cachedMap != null) {
+                return@runCatching cachedMap[verse]
+                    ?: throw NoSuchElementException("Verse $verse not found in $key")
+            }
+            val response = apiService.getBibleChapter(translationId, bookId, chapter)
+            val verseMap = response.extractVerseMap()
+            chapterVerseCache[key] = verseMap
+            verseMap[verse] ?: throw NoSuchElementException("Verse $verse not found in $key")
+        }
+    }
+
     override suspend fun getSpeakers(): Result<List<Speaker>> = withContext(ioDispatcher) {
         runCatching {
             apiService.getSpeakers().speakers.map { it.toDomain() }
@@ -233,15 +280,20 @@ class SermonRepositoryImpl @Inject constructor(
         }
     }
 
-    override val ftsIndexedCount: Flow<Int> = database.getFtsCountFlow().flowOn(ioDispatcher)
+    private val vttCache = java.util.concurrent.ConcurrentHashMap<String, List<TranscriptCue>>()
 
-    override suspend fun searchOffline(query: String): List<OfflineSearchResult> =
-        withContext(ioDispatcher) {
-            database.searchFts(query).map { it.toDomain() }
+    override suspend fun getTranscriptCues(vttUrl: String): Result<List<TranscriptCue>> = withContext(ioDispatcher) {
+        if (vttUrl.isBlank()) return@withContext Result.success(emptyList())
+        val cached = vttCache[vttUrl]
+        if (cached != null) return@withContext Result.success(cached)
+
+        runCatching {
+            val response = apiService.getRawVtt(vttUrl)
+            val vttText = response.string()
+            val cues = VttParser.parse(vttText)
+            vttCache[vttUrl] = cues
+            cues
         }
-
-    override suspend fun clearOfflineIndex() = withContext(ioDispatcher) {
-        database.clearFts()
     }
 
     override suspend fun clearHistory() = withContext(ioDispatcher) {

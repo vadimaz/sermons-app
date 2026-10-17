@@ -1,7 +1,6 @@
 package com.example.sermonindex.data.mapper
 
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
-import com.example.sermonindex.data.local.entities.FtsSermonResult
 import com.example.sermonindex.data.local.entities.HistoryEntity
 import com.example.sermonindex.data.model.FaqItemDto
 import com.example.sermonindex.data.model.OutlineItemDto
@@ -19,7 +18,6 @@ import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.FaqItem
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
-import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.domain.model.OutlineItem
 import com.example.sermonindex.domain.model.QuoteItem
 import com.example.sermonindex.domain.model.Sermon
@@ -28,7 +26,17 @@ import com.example.sermonindex.domain.model.Speaker
 import com.example.sermonindex.domain.model.SpeakerPagedSermons
 import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.domain.model.TopicDetail
+import com.example.sermonindex.data.model.AvailableTranslationsResponse
+import com.example.sermonindex.data.model.BibleChapterResponse
+import com.example.sermonindex.data.model.BibleTranslationDto
+import com.example.sermonindex.domain.model.BibleTranslation
 import com.example.sermonindex.domain.model.TopicScripture
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 
 fun SermonDto.toDomain(): Sermon = Sermon(
     id = id,
@@ -37,6 +45,7 @@ fun SermonDto.toDomain(): Sermon = Sermon(
     speakerImage = speakerImage,
     mp3Url = mp3Url,
     cdnMp3Url = cdnMp3Url,
+    vttUrl = vttUrl,
     hasAudio = hasAudio,
     duration = duration,
     thumbnailUrl = thumbnailUrl,
@@ -52,6 +61,7 @@ fun SermonDetailDto.toDomain(): SermonDetail = SermonDetail(
     speakerSlug = speakerSlug,
     mp3Url = mp3Url,
     cdnMp3Url = cdnMp3Url,
+    vttUrl = vttUrl,
     hasAudio = hasAudio,
     duration = duration,
     thumbnailUrl = thumbnailUrl,
@@ -159,13 +169,6 @@ fun HistoryEntity.toDomain(): ListeningHistory = ListeningHistory(
     completed = completed
 )
 
-fun FtsSermonResult.toDomain(): OfflineSearchResult = OfflineSearchResult(
-    sermonId = id,
-    title = title,
-    speaker = speaker,
-    summary = summary
-)
-
 fun Sermon.toFavoriteEntity(): FavoriteSermonEntity = FavoriteSermonEntity(
     id = id,
     title = title,
@@ -198,4 +201,42 @@ fun com.example.sermonindex.domain.model.DownloadedSermon.toEntity(): com.exampl
         fileSizeBytes = fileSizeBytes,
         downloadedAt = downloadedAt
     )
+
+fun BibleTranslationDto.toDomain(): BibleTranslation = BibleTranslation(
+    id = id,
+    name = name.ifBlank { englishName },
+    englishName = englishName,
+    shortName = shortName.ifBlank { id },
+    language = language,
+    languageName = languageName,
+    languageEnglishName = languageEnglishName,
+    numberOfBooks = numberOfBooks
+)
+
+fun BibleChapterResponse.extractVerseMap(): Map<Int, String> {
+    val items = chapter?.content ?: return emptyMap()
+    val verseMap = mutableMapOf<Int, String>()
+    for (item in items) {
+        val obj = item as? JsonObject ?: continue
+        val type = obj["type"]?.jsonPrimitive?.contentOrNull
+        val number = obj["number"]?.jsonPrimitive?.intOrNull
+        if (type == "verse" && number != null) {
+            val contentArray = obj["content"]?.jsonArray ?: continue
+            val parts = mutableListOf<String>()
+            for (part in contentArray) {
+                if (part is JsonPrimitive && part.isString) {
+                    val s = part.content.trim()
+                    if (s.isNotEmpty()) parts.add(s)
+                } else if (part is JsonObject) {
+                    val text = part["text"]?.jsonPrimitive?.contentOrNull?.trim()
+                    if (!text.isNullOrEmpty()) parts.add(text)
+                }
+            }
+            if (parts.isNotEmpty()) {
+                verseMap[number] = parts.joinToString(" ").replace("\\s+".toRegex(), " ")
+            }
+        }
+    }
+    return verseMap
+}
 

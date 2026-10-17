@@ -1,11 +1,11 @@
 package com.example.sermonindex.domain.repository
 
 import com.example.sermonindex.domain.model.BibleBook
+import com.example.sermonindex.domain.model.BibleTranslation
 import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
-import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.model.Speaker
@@ -31,6 +31,7 @@ interface SermonRepository {
     suspend fun downloadSermon(sermon: Sermon)
     suspend fun cancelDownload(sermonId: String)
     suspend fun deleteDownload(sermonId: String)
+    suspend fun deleteAllDownloads()
     suspend fun getLocalAudioPath(sermonId: String): String?
 
     suspend fun updateHistory(
@@ -46,15 +47,15 @@ interface SermonRepository {
     suspend fun getScriptureBooks(): Result<List<BibleBook>>
     suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails>
     suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>>
+    suspend fun getAvailableBibleTranslations(): Result<List<BibleTranslation>>
+    suspend fun getBibleVerseText(translationId: String, bookId: String, chapter: Int, verse: Int): Result<String>
     suspend fun getSpeakers(): Result<List<Speaker>>
     suspend fun getSpeakerDetails(slug: String): Result<Speaker>
     suspend fun getSpeakerSermonsPage(slug: String, page: Int): Result<SpeakerPagedSermons>
     suspend fun getTopics(): Result<List<Topic>>
     suspend fun getTopicDetails(slug: String): Result<TopicDetail>
     suspend fun getSermonDetails(id: String): Result<SermonDetail>
+    suspend fun getTranscriptCues(vttUrl: String): Result<List<com.example.sermonindex.domain.model.TranscriptCue>>
 
-    val ftsIndexedCount: Flow<Int>
-    suspend fun searchOffline(query: String): List<OfflineSearchResult>
-    suspend fun clearOfflineIndex()
     suspend fun clearHistory()
 }

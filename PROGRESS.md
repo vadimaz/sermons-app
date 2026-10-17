@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.2.0` | **Version Code:** `6`
+> **Current Version:** `1.3.0` | **Version Code:** `7`
 
 ---
 
@@ -15,33 +15,33 @@
 - **Position Tracking**: Periodic sync of playback position into `HistoryDao` every 2 seconds.
 - **`PlaybackManager`**: Singleton client wrapping `MediaController`, exposing reactive `playbackState: StateFlow<PlaybackState>`.
 - **`MiniPlayer`**: Persistent floating bar above bottom navigation across all primary tabs with dismiss/stop button.
-- **`FullscreenPlayerScreen`**: Fullscreen player with scrubber, speed selection (0.75x–2.0x), seek 15s/30s, Sleep Timer dialog & countdown badge, local audio badge, download action, dedicated inline full-text Transcript reading, and empty-state handling with auto-exit.
+- **`FullscreenPlayerScreen`**:
+  - Fullscreen player with scrubber, speed selection (0.75x–2.0x with icon-only button and active color accent), seek 15s/30s, Sleep Timer dialog & countdown badge, local audio badge, download action, and empty-state handling with auto-exit.
+  - **Synchronized Transcript Reading Mode (Karaoke Style)**: WebVTT cues parsing, unified 22sp typography with smooth color/weight highlight transitions, sticky playback controls header, auto-scroll anchoring keeping 3–4 preceding lines visible, instant deactivation on manual touch scroll (`NestedScrollConnection` + `DragInteraction`), and tap-to-seek functionality.
 
 ### 1.2 Screens & Presentation (Jetpack Compose + Navigation 3)
 - **Navigation 3 Architecture**: 3 primary top-level tabs (Home, Scripture, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator`; bottom bar reselection dispatches scroll-to-top; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
-| **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, verse sermons list, pop-to-root on reselect. |
+| **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, dual Scripture Verse quote card (default BSB + system language / KJV fallback), searchable translation picker bottom sheet (`ModalBottomSheet`), verse sermons list, pop-to-root on reselect. |
 | **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, sermon count badges, and back navigation when opened from Home. |
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, infinite scrolling paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`). |
 | **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges, shortened search placeholder, and back navigation when opened from Home. |
 | **Topic Detail** | `TopicDetailViewModel` | Thematic description, Berean Standard Bible scripture correlations (`topScriptures`), related sermons. |
-| **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, 3-in-a-row action layout (Favorite heart, Play pill capsule, Download with progress), 3 tabs for Overview, Outline, and Study Notes. |
-| **Library** | `LibraryViewModel` | Four single-word tabs with Material 3 `BadgedBox` count badges (Favorites, Downloads, History, Search), storage badge & delete action, instant offline search. |
-| **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, and dedicated inline transcript reading. |
+| **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, reactive Play/Pause state synced with `PlaybackManager` (displays `Pause` icon when active), 3-in-a-row action layout (Favorite heart, Play pill capsule, Download with progress), 3 tabs for Overview, Outline, and Study Notes. |
+| **Library** | `LibraryViewModel` | 3 primary tabs with count badges (Favorites, Downloads, History), storage size indicator, "Clear Downloads" action with confirmation dialog removing local files and database records, "Clear History" action. |
+| **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, synchronized WebVTT karaoke transcript reading mode. |
 | **Offline Banner** | N/A (Global) | Animated non-intrusive banner indicating offline mode when internet connection is lost. |
 
-### 1.3 Offline Capabilities & Background Sync (WorkManager)
+### 1.3 Downloads & Local Storage
 - **`AudioDownloadWorker`**: WorkManager worker streaming MP3 files to app-specific internal storage (`audio_downloads/{id}.mp3`) with live progress reporting, network retry, and BunnyCDN fallback.
-- **`CatalogSyncWorker`**: GZIP streaming worker downloading `https://api.sermonindex.net/downloads/sermons.json.gz` (~27MB) directly into local SQLite FTS4 virtual table (`sermon_fts`) in batches.
-- **Offline Search**: Instant full-text prefix and keyword search across thousands of indexed sermons without internet connection.
+- **Downloads Deletion**: Clean architecture pipeline for single download deletion or clearing all downloads (`DeleteAllDownloadsUseCase` $\rightarrow$ `SermonRepository.deleteAllDownloads()` $\rightarrow$ `DownloadsDao.deleteAllDownloads()`), physically deleting files from disk.
 - **HTTP 404 Resilience**: `Http404EmptyInterceptor` handles empty verse queries without crashing.
 
 ### 1.4 Architecture & Testing
-- Pure domain models (`domain/model/Models.kt`), 20 UseCases (`domain/usecase/UseCases.kt`), and pure repository interface (`SermonRepository`).
+- Pure domain models (`domain/model/Models.kt`), UseCases (`domain/usecase/UseCases.kt`), and pure repository interface (`SermonRepository`).
 - Full Dagger Hilt DI with modules for Database, Network, Media, Dispatchers, and Repositories.
-- SQLite `AppDatabase` v2 schema migration supporting `favorites`, `history`, `downloads`, and `sermon_fts`.
 - Complete string extraction in `res/values/strings.xml` for internationalization and accessibility.
 - Domain UseCase test suite (`UseCasesTest.kt`) passing via `./gradlew testDebugUnitTest`.
 
@@ -55,7 +55,6 @@ interface SermonRepository {
     val favorites: Flow<List<FavoriteSermon>>
     val history: Flow<List<ListeningHistory>>
     val downloads: Flow<List<DownloadedSermon>>
-    val ftsIndexedCount: Flow<Int>
 
     fun isFavorite(id: String): Flow<Boolean>
     suspend fun toggleFavorite(sermon: Sermon)
@@ -65,6 +64,7 @@ interface SermonRepository {
     suspend fun downloadSermon(sermon: Sermon)
     suspend fun cancelDownload(sermonId: String)
     suspend fun deleteDownload(sermonId: String)
+    suspend fun deleteAllDownloads()
     suspend fun getLocalAudioPath(sermonId: String): String?
 
     suspend fun updateHistory(sermonId: String, title: String, speaker: String, speakerImage: String, positionMs: Long, durationMs: Long)
@@ -73,15 +73,16 @@ interface SermonRepository {
     suspend fun getScriptureBooks(): Result<List<BibleBook>>
     suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails>
     suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>>
+    suspend fun getAvailableBibleTranslations(): Result<List<BibleTranslation>>
+    suspend fun getBibleVerseText(translationId: String, bookId: String, chapter: Int, verse: Int): Result<String>
     suspend fun getSpeakers(): Result<List<Speaker>>
     suspend fun getSpeakerDetails(slug: String): Result<Speaker>
     suspend fun getSpeakerSermonsPage(slug: String, page: Int): Result<SpeakerPagedSermons>
     suspend fun getTopics(): Result<List<Topic>>
     suspend fun getTopicDetails(slug: String): Result<TopicDetail>
     suspend fun getSermonDetails(id: String): Result<SermonDetail>
+    suspend fun getTranscriptCues(vttUrl: String): Result<List<TranscriptCue>>
 
-    suspend fun searchOffline(query: String): List<OfflineSearchResult>
-    suspend fun clearOfflineIndex()
     suspend fun clearHistory()
 }
 ```
@@ -116,23 +117,17 @@ class PlaybackManager(context: Context) {
 
 ## 3. Next Steps (Immediate Priorities)
 
-1. **Stage 2: Scripture Verse Text, Translation Chip & Parallel View**:
-   - Display biblical scripture quote card directly above sermon results when a verse is selected in Scripture Explorer.
-   - Translation selection chip (`[ 🇷🇺 Синодальный ▾ ]`) with `ModalBottomSheet` and fast search across available translations (`/v2/bible/available_translations.json`).
-   - Parallel View mode: side-by-side / dual column reading (native translation e.g. Synodal/Ukrainian + English BSB or KJV) with chapter text fetching (`/v2/bible/{translation}/{bookId}/{chapter}.json`).
+1. **Audio Focus & Headset Integration**:
+   - Duck audio on brief notifications and handle phone calls gracefully via AudioFocusManager.
+   - Wire media button receiver events for wired and Bluetooth headsets (double click forward, triple click rewind).
 
-2. **Stage 3: Offline Database Primary Source & Version Notifications**:
-   - Download precompiled `sermonindex.db` (172 MB) into app SQLite database storage.
-   - Dual-Source data layer: fetch from local SQLite when offline DB is present; fallback to remote API when absent.
-   - Version polling via `/v2/stats.json` (`generated` timestamp) and local push notifications on database updates.
-
-3. **Stage 4: Synchronized Transcript in Fullscreen Player (Karaoke Style)**:
-   - WebVTT cue parsing (`vttUrl`) with sentence-level millisecond timestamps.
-   - Auto-scrolling active sentence highlight, lyrics-style karaoke display, and seek-on-tap.
+2. **Adaptive Layouts & Window Sizes**:
+   - Two-pane player and scripture explorer layouts on foldable and tablet form factors.
+   - Dynamic Material You theming based on speaker portraits.
 
 ---
 
 ## 4. Backlog & Technical Debt
 
-- **Room Entity Migration**: `AppDatabase.kt` currently uses `SQLiteOpenHelper` directly for FTS4 speed and simplicity. Evaluate migrating to Room `@Database` with Room `@Fts4` entity once KSP Room schema export configuration is finalized.
+- **Room Entity Migration**: `AppDatabase.kt` currently uses `SQLiteOpenHelper` directly. Evaluate migrating to Room `@Database` once KSP Room schema export configuration is finalized.
 - **Audio Focus Transition**: Smoothly duck audio on brief notifications and pause on audio focus loss (phone calls).

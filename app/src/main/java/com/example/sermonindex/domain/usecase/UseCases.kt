@@ -1,10 +1,10 @@
 package com.example.sermonindex.domain.usecase
 
 import com.example.sermonindex.domain.model.BibleBook
+import com.example.sermonindex.domain.model.BibleTranslation
 import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
-import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.model.Speaker
@@ -53,6 +53,19 @@ class GetScriptureVerseUseCase @Inject constructor(private val repository: Sermo
         repository.getScriptureVerse(bookId, chapter, verse)
 }
 
+class GetBibleTranslationsUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(): Result<List<BibleTranslation>> = repository.getAvailableBibleTranslations()
+}
+
+class GetBibleVerseTextUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(
+        translationId: String,
+        bookId: String,
+        chapter: Int,
+        verse: Int
+    ): Result<String> = repository.getBibleVerseText(translationId, bookId, chapter, verse)
+}
+
 class GetSpeakersUseCase @Inject constructor(private val repository: SermonRepository) {
     suspend operator fun invoke(): Result<List<Speaker>> = repository.getSpeakers()
 }
@@ -74,9 +87,9 @@ class GetTopicDetailsUseCase @Inject constructor(private val repository: SermonR
     suspend operator fun invoke(slug: String): Result<TopicDetail> = repository.getTopicDetails(slug)
 }
 
-class OfflineSearchUseCase @Inject constructor(private val repository: SermonRepository) {
-    suspend operator fun invoke(query: String): List<OfflineSearchResult> =
-        repository.searchOffline(query)
+class GetTranscriptCuesUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(vttUrl: String): Result<List<com.example.sermonindex.domain.model.TranscriptCue>> =
+        repository.getTranscriptCues(vttUrl)
 }
 
 class GetDownloadsUseCase @Inject constructor(private val repository: SermonRepository) {
@@ -101,5 +114,9 @@ class CancelDownloadUseCase @Inject constructor(private val repository: SermonRe
 
 class DeleteDownloadUseCase @Inject constructor(private val repository: SermonRepository) {
     suspend operator fun invoke(sermonId: String) = repository.deleteDownload(sermonId)
+}
+
+class DeleteAllDownloadsUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke() = repository.deleteAllDownloads()
 }
 

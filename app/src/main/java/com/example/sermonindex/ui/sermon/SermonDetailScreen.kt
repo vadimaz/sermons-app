@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
@@ -230,8 +231,8 @@ fun SermonDetailContent(
                             .height(56.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PlayArrow,
-                            contentDescription = stringResource(R.string.play),
+                            imageVector = if (state.isPlaying) Icons.Filled.Pause else Icons.Default.PlayArrow,
+                            contentDescription = stringResource(if (state.isPlaying) R.string.pause else R.string.play),
                             modifier = Modifier.size(32.dp)
                         )
                     }

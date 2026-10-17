@@ -1,10 +1,10 @@
 package com.example.sermonindex.domain.usecase
 
 import com.example.sermonindex.domain.model.BibleBook
+import com.example.sermonindex.domain.model.BibleTranslation
 import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
-import com.example.sermonindex.domain.model.OfflineSearchResult
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.model.Speaker
@@ -46,7 +46,6 @@ class  UseCasesTest {
             )
         )
         override val history: Flow<List<ListeningHistory>> = emptyFlow()
-        override val ftsIndexedCount: Flow<Int> = flowOf(0)
 
         override suspend fun getPopularSermons(): Result<List<Sermon>> =
             Result.success(listOf(fakeSermon))
@@ -81,6 +80,7 @@ class  UseCasesTest {
 
         var downloadedSermonPassed: Sermon? = null
         var deletedDownloadId: String? = null
+        var deleteAllDownloadsCalled: Boolean = false
 
         override val downloads: Flow<List<com.example.sermonindex.domain.model.DownloadedSermon>> = flowOf(listOf(fakeDownloaded))
         override fun isDownloaded(sermonId: String): Flow<Boolean> = flowOf(sermonId == "1")
@@ -92,18 +92,22 @@ class  UseCasesTest {
         override suspend fun deleteDownload(sermonId: String) {
             deletedDownloadId = sermonId
         }
+        override suspend fun deleteAllDownloads() {
+            deleteAllDownloadsCalled = true
+        }
         override suspend fun getLocalAudioPath(sermonId: String): String? = if (sermonId == "1") "/fake/path/1.mp3" else null
 
         override suspend fun getScriptureBooks(): Result<List<BibleBook>> = Result.success(emptyList())
         override suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails> = Result.failure(NotImplementedError())
         override suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>> = Result.failure(NotImplementedError())
+        override suspend fun getAvailableBibleTranslations(): Result<List<BibleTranslation>> = Result.success(emptyList())
+        override suspend fun getBibleVerseText(translationId: String, bookId: String, chapter: Int, verse: Int): Result<String> = Result.success("For God so loved the world")
         override suspend fun getSpeakers(): Result<List<Speaker>> = Result.success(emptyList())
         override suspend fun getSpeakerDetails(slug: String): Result<Speaker> = Result.failure(NotImplementedError())
         override suspend fun getSpeakerSermonsPage(slug: String, page: Int): Result<SpeakerPagedSermons> = Result.failure(NotImplementedError())
         override suspend fun getTopics(): Result<List<Topic>> = Result.success(emptyList())
         override suspend fun getTopicDetails(slug: String): Result<TopicDetail> = Result.failure(NotImplementedError())
-        override suspend fun searchOffline(query: String): List<OfflineSearchResult> = emptyList()
-        override suspend fun clearOfflineIndex() = Unit
+        override suspend fun getTranscriptCues(vttUrl: String): Result<List<com.example.sermonindex.domain.model.TranscriptCue>> = Result.success(emptyList())
     }
 
     @Test
@@ -165,8 +169,30 @@ class  UseCasesTest {
     }
 
     @Test
+    fun deleteAllDownloadsUseCase_delegatesToRepository() = runTest {
+        val useCase = DeleteAllDownloadsUseCase(fakeRepository)
+        useCase()
+        assertTrue(fakeRepository.deleteAllDownloadsCalled)
+    }
+
+    @Test
     fun getDownloadProgressUseCase_emitsProgress() = runTest {
         val useCase = GetDownloadProgressUseCase(fakeRepository)
         assertEquals(50, useCase("1").first())
+    }
+
+    @Test
+    fun getBibleTranslationsUseCase_returnsSuccess() = runTest {
+        val useCase = GetBibleTranslationsUseCase(fakeRepository)
+        val result = useCase()
+        assertTrue(result.isSuccess)
+    }
+
+    @Test
+    fun getBibleVerseTextUseCase_returnsVerseText() = runTest {
+        val useCase = GetBibleVerseTextUseCase(fakeRepository)
+        val result = useCase("rus_syn", "JHN", 3, 16)
+        assertTrue(result.isSuccess)
+        assertEquals("For God so loved the world", result.getOrNull())
     }
 }

@@ -170,26 +170,56 @@ fun ScriptureContent(
             }
         }
 
-        // LEVEL 4: Sermons for selected verse
+        // LEVEL 4: Sermons & Scripture Quote for selected verse
         if (state.selectedBook != null && state.selectedChapter != null && state.selectedVerse != null) {
-            if (state.isLoadingVerseSermons) {
-                LoadingView(text = stringResource(R.string.loading_verse_sermons, state.selectedBook.name, state.selectedChapter, state.selectedVerse))
-            } else if (state.verseSermons.isEmpty()) {
-                EmptyStateView(
-                    title = stringResource(R.string.no_sermons_found_title),
-                    subtitle = stringResource(R.string.no_sermons_found_subtitle)
-                )
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    item {
+            LazyColumn(
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                // Scripture Quote Card (Always visible at top of verse explorer)
+                item(key = "verse_quote_card") {
+                    ScriptureVerseQuoteCard(
+                        bookName = state.selectedBook.name,
+                        chapter = state.selectedChapter,
+                        verse = state.selectedVerse,
+                        firstTranslation = state.firstTranslation,
+                        secondTranslation = state.secondTranslation,
+                        firstVerseText = state.firstVerseText,
+                        secondVerseText = state.secondVerseText,
+                        isLoadingFirstText = state.isLoadingFirstVerseText,
+                        isLoadingSecondText = state.isLoadingSecondVerseText,
+                        onSelectFirstTranslation = { onEvent(ScriptureUiEvent.OpenTranslationPicker(TranslationPickerTarget.FIRST)) },
+                        onSelectSecondTranslation = { onEvent(ScriptureUiEvent.OpenTranslationPicker(TranslationPickerTarget.SECOND)) }
+                    )
+                }
+
+                if (state.isLoadingVerseSermons) {
+                    item(key = "loading_sermons") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            LoadingView(text = stringResource(R.string.loading_verse_sermons, state.selectedBook.name, state.selectedChapter, state.selectedVerse))
+                        }
+                    }
+                } else if (state.verseSermons.isEmpty()) {
+                    item(key = "empty_sermons") {
+                        EmptyStateView(
+                            title = stringResource(R.string.no_sermons_found_title),
+                            subtitle = stringResource(R.string.no_sermons_found_subtitle)
+                        )
+                    }
+                } else {
+                    item(key = "sermons_header") {
                         Text(
                             text = stringResource(R.string.sermons_referencing_verse, state.verseSermons.size, state.selectedBook.name, state.selectedChapter, state.selectedVerse),
                             style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                     items(state.verseSermons, key = { it.id }) { sermon ->
@@ -390,6 +420,22 @@ fun ScriptureContent(
                 }
             }
         }
+    }
+
+    if (state.isTranslationPickerOpen) {
+        TranslationPickerBottomSheet(
+            target = state.translationPickerTarget,
+            currentTranslationId = if (state.translationPickerTarget == TranslationPickerTarget.FIRST) {
+                state.firstTranslationId
+            } else {
+                state.secondTranslationId
+            },
+            availableTranslations = state.availableTranslations,
+            onSelectTranslation = { translation ->
+                onEvent(ScriptureUiEvent.SelectTranslation(translation, state.translationPickerTarget))
+            },
+            onDismiss = { onEvent(ScriptureUiEvent.DismissTranslationPicker) }
+        )
     }
 }
 

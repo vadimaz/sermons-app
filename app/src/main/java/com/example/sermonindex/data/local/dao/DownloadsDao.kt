@@ -9,5 +9,6 @@ interface DownloadsDao {
     fun isDownloaded(id: String): Flow<Boolean>
     suspend fun insertDownload(entity: DownloadedSermonEntity)
     suspend fun deleteDownload(id: String)
+    suspend fun deleteAllDownloads()
     suspend fun getTotalStorageBytes(): Long
 }

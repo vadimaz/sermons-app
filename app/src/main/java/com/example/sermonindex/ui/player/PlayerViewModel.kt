@@ -6,11 +6,13 @@ import androidx.lifecycle.viewModelScope
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.model.SleepTimerState
+import com.example.sermonindex.domain.model.TranscriptCue
 import com.example.sermonindex.domain.usecase.DeleteDownloadUseCase
 import com.example.sermonindex.domain.usecase.DownloadSermonUseCase
 import com.example.sermonindex.domain.usecase.GetDownloadProgressUseCase
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
+import com.example.sermonindex.domain.usecase.GetTranscriptCuesUseCase
 import com.example.sermonindex.domain.usecase.IsDownloadedUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
@@ -42,13 +44,23 @@ data class PlayerUiState(
     val showSleepTimerDialog: Boolean = false,
     val sliderPosition: Float = 0f,
     val isDraggingSlider: Boolean = false,
-    val showSpeedMenu: Boolean = false
+    val showSpeedMenu: Boolean = false,
+    val isReadingMode: Boolean = false,
+    val transcriptCues: List<TranscriptCue> = emptyList(),
+    val isLoadingCues: Boolean = false
 ) {
     val displayPositionMs: Long
         get() = if (isDraggingSlider) {
             (sliderPosition * durationMs).toLong()
         } else {
             currentPositionMs
+        }
+
+    val activeCueIndex: Int
+        get() {
+            if (transcriptCues.isEmpty()) return -1
+            val pos = displayPositionMs
+            return transcriptCues.indexOfLast { it.startMs <= pos }
         }
 }
 
@@ -67,6 +79,9 @@ sealed interface PlayerUiEvent {
     data class SetSleepTimerMinutes(val minutes: Int) : PlayerUiEvent
     data object SetSleepTimerEndOfSermon : PlayerUiEvent
     data object CancelSleepTimer : PlayerUiEvent
+    data object ToggleReadingMode : PlayerUiEvent
+    data class SetReadingMode(val active: Boolean) : PlayerUiEvent
+    data class SeekToCue(val startMs: Long) : PlayerUiEvent
 }
 
 /**
@@ -77,6 +92,7 @@ sealed interface PlayerUiEvent {
 class PlayerViewModel @Inject constructor(
     private val playbackManager: PlaybackManager,
     private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
+    private val getTranscriptCuesUseCase: GetTranscriptCuesUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val isDownloadedUseCase: IsDownloadedUseCase,
@@ -91,6 +107,7 @@ class PlayerViewModel @Inject constructor(
     private var currentFavoriteIds = emptySet<String>()
     private var downloadObserverJob: Job? = null
     private var progressObserverJob: Job? = null
+    private var cuesJob: Job? = null
 
     init {
         observePlaybackState()
@@ -119,9 +136,16 @@ class PlayerViewModel @Inject constructor(
                     )
                 }
 
-                if (sermonChanged && newSermon != null) {
-                    loadSermonDetails(newSermon.id)
-                    observeDownloadsForSermon(newSermon.id)
+                if (sermonChanged) {
+                    cuesJob?.cancel()
+                    _uiState.update { it.copy(transcriptCues = emptyList(), isReadingMode = false) }
+                    if (newSermon != null) {
+                        loadSermonDetails(newSermon.id)
+                        observeDownloadsForSermon(newSermon.id)
+                        if (newSermon.vttUrl.isNotBlank()) {
+                            loadTranscriptCues(newSermon.vttUrl)
+                        }
+                    }
                 }
             }
         }
@@ -160,9 +184,28 @@ class PlayerViewModel @Inject constructor(
             getSermonDetailsUseCase(id).fold(
                 onSuccess = { detail ->
                     _uiState.update { it.copy(sermonDetail = detail, isLoadingDetail = false) }
+                    if (_uiState.value.transcriptCues.isEmpty() && detail.vttUrl.isNotBlank()) {
+                        loadTranscriptCues(detail.vttUrl)
+                    }
                 },
                 onFailure = {
                     _uiState.update { it.copy(isLoadingDetail = false) }
+                }
+            )
+        }
+    }
+
+    private fun loadTranscriptCues(vttUrl: String) {
+        if (vttUrl.isBlank()) return
+        cuesJob?.cancel()
+        cuesJob = viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingCues = true) }
+            getTranscriptCuesUseCase(vttUrl).fold(
+                onSuccess = { cues ->
+                    _uiState.update { it.copy(transcriptCues = cues, isLoadingCues = false) }
+                },
+                onFailure = {
+                    _uiState.update { it.copy(isLoadingCues = false) }
                 }
             )
         }
@@ -220,6 +263,19 @@ class PlayerViewModel @Inject constructor(
                         downloadSermonUseCase(s)
                     }
                 }
+            }
+            is PlayerUiEvent.ToggleReadingMode -> {
+                if (_uiState.value.transcriptCues.isNotEmpty()) {
+                    _uiState.update { it.copy(isReadingMode = !it.isReadingMode) }
+                }
+            }
+            is PlayerUiEvent.SetReadingMode -> {
+                if (_uiState.value.transcriptCues.isNotEmpty()) {
+                    _uiState.update { it.copy(isReadingMode = event.active) }
+                }
+            }
+            is PlayerUiEvent.SeekToCue -> {
+                playbackManager.seekTo(event.startMs)
             }
         }
     }
