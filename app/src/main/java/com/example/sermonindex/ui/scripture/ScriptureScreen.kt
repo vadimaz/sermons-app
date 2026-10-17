@@ -1,5 +1,6 @@
 package com.example.sermonindex.ui.scripture
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,6 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -64,11 +67,18 @@ import kotlinx.coroutines.flow.Flow
 fun ScriptureScreen(
     onSermonClick: (Sermon) -> Unit,
     reselectEvents: Flow<NavKey>? = null,
+    onIsAtRootChanged: ((Boolean) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val viewModel: ScriptureViewModel = hiltViewModel()
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    val isAtRoot = state.selectedBook == null
+    DisposableEffect(isAtRoot) {
+        onIsAtRootChanged?.invoke(isAtRoot)
+        onDispose { }
+    }
 
     ScriptureContent(
         state = state,
@@ -94,16 +104,29 @@ fun ScriptureContent(
     modifier: Modifier = Modifier
 ) {
     val booksListState = rememberLazyListState()
+    val chaptersGridState = rememberLazyGridState()
+    val versesGridState = rememberLazyGridState()
+    val verseSermonsListState = rememberLazyListState()
+
+    BackHandler(enabled = state.selectedBook != null) {
+        if (state.selectedVerse != null) {
+            onEvent(ScriptureUiEvent.ClearVerse)
+        } else if (state.selectedChapter != null) {
+            onEvent(ScriptureUiEvent.ClearChapter)
+        } else {
+            onEvent(ScriptureUiEvent.ClearBook)
+        }
+    }
 
     LaunchedEffect(reselectEvents) {
         reselectEvents?.collect { route ->
             if (route == ScriptureRoute) {
-                if (state.selectedVerse != null) {
-                    onEvent(ScriptureUiEvent.ClearVerse)
-                } else if (state.selectedChapter != null) {
-                    onEvent(ScriptureUiEvent.ClearChapter)
+                if (state.selectedBook != null && state.selectedChapter != null && state.selectedVerse != null) {
+                    verseSermonsListState.animateScrollToItem(0)
+                } else if (state.selectedBook != null && state.selectedChapter != null) {
+                    versesGridState.animateScrollToItem(0)
                 } else if (state.selectedBook != null) {
-                    onEvent(ScriptureUiEvent.ClearBook)
+                    chaptersGridState.animateScrollToItem(0)
                 } else {
                     booksListState.animateScrollToItem(0)
                 }
@@ -173,6 +196,7 @@ fun ScriptureContent(
         // LEVEL 4: Sermons & Scripture Quote for selected verse
         if (state.selectedBook != null && state.selectedChapter != null && state.selectedVerse != null) {
             LazyColumn(
+                state = verseSermonsListState,
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.fillMaxSize()
@@ -262,6 +286,7 @@ fun ScriptureContent(
                         )
                     } else {
                         LazyVerticalGrid(
+                            state = versesGridState,
                             columns = GridCells.Adaptive(minSize = 64.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -293,6 +318,7 @@ fun ScriptureContent(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 LazyVerticalGrid(
+                    state = chaptersGridState,
                     columns = GridCells.Adaptive(minSize = 56.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)

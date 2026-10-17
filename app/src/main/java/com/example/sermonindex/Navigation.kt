@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
@@ -80,14 +81,7 @@ class Navigator(val state: NavigationState) {
     }
 
     fun onReselect(route: NavKey) {
-        val currentStack = state.backStacks[state.topLevelRoute]
-        if (currentStack != null && currentStack.size > 1) {
-            while (currentStack.size > 1) {
-                currentStack.removeLastOrNull()
-            }
-        } else {
-            _reselectEvents.tryEmit(route)
-        }
+        _reselectEvents.tryEmit(route)
     }
 
     fun goBack() {
@@ -189,13 +183,27 @@ fun MainNavigation(
 
     val currentRoute = navigationState.currentRoute
     val isFullscreenPlayer = currentRoute is PlayerRoute
+    var isScriptureAtRoot by rememberSaveable { mutableStateOf(true) }
+
+    val isAtTopLevel = when (currentRoute) {
+        HomeRoute -> true
+        LibraryRoute -> true
+        ScriptureRoute -> isScriptureAtRoot
+        else -> false
+    }
+    val showBottomBar = isAtTopLevel
+    val showMiniPlayer = !isFullscreenPlayer && playbackState.hasActiveMedia
 
     Scaffold(
         bottomBar = {
-            if (!isFullscreenPlayer) {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    // Persistent MiniPlayer floating above bottom navigation
-                    if (playbackState.hasActiveMedia) {
+            if (showBottomBar || showMiniPlayer) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (!showBottomBar) Modifier.navigationBarsPadding() else Modifier)
+                ) {
+                    // Persistent MiniPlayer floating above bottom navigation or anchored above system nav bar
+                    if (showMiniPlayer) {
                         MiniPlayer(
                             playbackState = playbackState,
                             onTogglePlayPause = { playbackManager.togglePlayPause() },
@@ -205,71 +213,73 @@ fun MainNavigation(
                     }
 
                     // Bottom Navigation Bar
-                    NavigationBar(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        tonalElevation = 8.dp
-                    ) {
-                        val isHome = navigationState.topLevelRoute == HomeRoute
-                        val isScripture = navigationState.topLevelRoute == ScriptureRoute
-                        val isLibrary = navigationState.topLevelRoute == LibraryRoute
+                    if (showBottomBar) {
+                        NavigationBar(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 8.dp
+                        ) {
+                            val isHome = navigationState.topLevelRoute == HomeRoute
+                            val isScripture = navigationState.topLevelRoute == ScriptureRoute
+                            val isLibrary = navigationState.topLevelRoute == LibraryRoute
 
-                        val homeLabel = stringResource(R.string.nav_home)
-                        val scriptureLabel = stringResource(R.string.nav_scripture)
-                        val libraryLabel = stringResource(R.string.nav_library)
+                            val homeLabel = stringResource(R.string.nav_home)
+                            val scriptureLabel = stringResource(R.string.nav_scripture)
+                            val libraryLabel = stringResource(R.string.nav_library)
 
-                        NavigationBarItem(
-                            selected = isHome,
-                            onClick = {
-                                if (isHome) {
-                                    navigator.onReselect(HomeRoute)
-                                } else {
-                                    navigator.navigate(HomeRoute)
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (isHome) Icons.Filled.Home else Icons.Outlined.Home,
-                                    contentDescription = homeLabel
-                                )
-                            },
-                            label = { Text(homeLabel) }
-                        )
+                            NavigationBarItem(
+                                selected = isHome,
+                                onClick = {
+                                    if (isHome) {
+                                        navigator.onReselect(HomeRoute)
+                                    } else {
+                                        navigator.navigate(HomeRoute)
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isHome) Icons.Filled.Home else Icons.Outlined.Home,
+                                        contentDescription = homeLabel
+                                    )
+                                },
+                                label = { Text(homeLabel) }
+                            )
 
-                        NavigationBarItem(
-                            selected = isScripture,
-                            onClick = {
-                                if (isScripture) {
-                                    navigator.onReselect(ScriptureRoute)
-                                } else {
-                                    navigator.navigate(ScriptureRoute)
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (isScripture) Icons.AutoMirrored.Filled.MenuBook else Icons.AutoMirrored.Outlined.MenuBook,
-                                    contentDescription = scriptureLabel
-                                )
-                            },
-                            label = { Text(scriptureLabel) }
-                        )
+                            NavigationBarItem(
+                                selected = isScripture,
+                                onClick = {
+                                    if (isScripture) {
+                                        navigator.onReselect(ScriptureRoute)
+                                    } else {
+                                        navigator.navigate(ScriptureRoute)
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isScripture) Icons.AutoMirrored.Filled.MenuBook else Icons.AutoMirrored.Outlined.MenuBook,
+                                        contentDescription = scriptureLabel
+                                    )
+                                },
+                                label = { Text(scriptureLabel) }
+                            )
 
-                        NavigationBarItem(
-                            selected = isLibrary,
-                            onClick = {
-                                if (isLibrary) {
-                                    navigator.onReselect(LibraryRoute)
-                                } else {
-                                    navigator.navigate(LibraryRoute)
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = if (isLibrary) Icons.Filled.Bookmarks else Icons.Outlined.Bookmarks,
-                                    contentDescription = libraryLabel
-                                )
-                            },
-                            label = { Text(libraryLabel) }
-                        )
+                            NavigationBarItem(
+                                selected = isLibrary,
+                                onClick = {
+                                    if (isLibrary) {
+                                        navigator.onReselect(LibraryRoute)
+                                    } else {
+                                        navigator.navigate(LibraryRoute)
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isLibrary) Icons.Filled.Bookmarks else Icons.Outlined.Bookmarks,
+                                        contentDescription = libraryLabel
+                                    )
+                                },
+                                label = { Text(libraryLabel) }
+                            )
+                        }
                     }
                 }
             }
@@ -316,7 +326,8 @@ fun MainNavigation(
                                 onSermonClick = { sermon ->
                                     navigator.navigate(SermonDetailRoute(sermon.id))
                                 },
-                                reselectEvents = navigator.reselectEvents
+                                reselectEvents = navigator.reselectEvents,
+                                onIsAtRootChanged = { isScriptureAtRoot = it }
                             )
                         }
 
