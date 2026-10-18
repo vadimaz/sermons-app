@@ -19,6 +19,7 @@
 | **Networking** | Retrofit 2.11.0 + OkHttp 4.12.0 | `kotlinx.serialization.json`, custom 404-safe interceptor |
 | **Database & Search** | SQLiteOpenHelper + FTS4 | `AppDatabase.kt` with full-text search (`sermon_fts`), Room runtime/ktx |
 | **Image Loading** | Coil 3.1.0 | `coil-compose`, `coil-network-okhttp` |
+| **Paging** | AndroidX Paging 3 (3.3.6) | `androidx.paging:paging-runtime`, `androidx.paging:paging-compose` |
 | **Background Work** | AndroidX WorkManager 2.10.0 | `CoroutineWorker`, Hilt `@EntryPoint` integration |
 
 ---
@@ -132,6 +133,7 @@ com.example.sermonindex
    - **Stateless Content**: Inner Composable accepting `state: FooUiState` and `onEvent: (FooUiEvent) -> Unit`.
 5. **No Direct I/O in UI**: No repository queries, network calls, or database operations directly inside `LaunchedEffect` in Composables. Everything flows through the ViewModel.
 6. **Assisted Injection**: For screens requiring route arguments (e.g. `sermonId`, `slug`), use `@HiltViewModel(assistedFactory = ...)` and `@AssistedInject`.
+7. **Paging 3 Integration**: When paginating large collections, bridge pure domain UseCases into `Flow<PagingData<T>>` via a dedicated `PagingSource` without polluting the domain layer. Collect via `collectAsLazyPagingItems()` and render append/refresh `LoadState` (loading spinners and error retry actions).
 
 ### 4.2 Domain Layer
 1. **Zero External Dependencies**: `domain/model/Models.kt` and `domain/usecase/UseCases.kt` must remain pure Kotlin. Never import Room, Retrofit, Android SDK, or Compose in Domain.

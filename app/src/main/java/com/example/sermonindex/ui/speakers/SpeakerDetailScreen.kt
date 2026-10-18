@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -29,10 +30,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -66,9 +68,11 @@ fun SpeakerDetailScreen(
     }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val pagedSermons = viewModel.sermonsPagingFlow.collectAsLazyPagingItems()
 
     SpeakerDetailContent(
         state = state,
+        sermons = pagedSermons,
         onEvent = { event ->
             when (event) {
                 is SpeakerDetailUiEvent.ClickSermon -> onSermonClick(event.sermon)
@@ -88,25 +92,12 @@ fun SpeakerDetailScreen(
 @Composable
 fun SpeakerDetailContent(
     state: SpeakerDetailUiState,
+    sermons: LazyPagingItems<Sermon>,
     onEvent: (SpeakerDetailUiEvent) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
-
-    val shouldLoadMore by remember {
-        derivedStateOf {
-            val totalItemCount = listState.layoutInfo.totalItemsCount
-            val lastVisibleItemIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            totalItemCount > 0 && lastVisibleItemIndex >= totalItemCount - 3 && !state.isLoadingMore && state.currentPage < state.totalPages
-        }
-    }
-
-    LaunchedEffect(shouldLoadMore) {
-        if (shouldLoadMore) {
-            onEvent(SpeakerDetailUiEvent.LoadMore)
-        }
-    }
 
     if (state.isLoadingSpeaker) {
         LoadingView(modifier = modifier, text = stringResource(R.string.loading_preacher_profile))
@@ -116,7 +107,10 @@ fun SpeakerDetailContent(
     if (state.errorMessage != null && state.speaker == null) {
         ErrorView(
             message = state.errorMessage,
-            onRetry = { onEvent(SpeakerDetailUiEvent.Retry) },
+            onRetry = {
+                onEvent(SpeakerDetailUiEvent.Retry)
+                sermons.retry()
+            },
             modifier = modifier
         )
         return
@@ -243,33 +237,31 @@ fun SpeakerDetailContent(
             // Sermons header
             item {
                 Spacer(modifier = Modifier.height(8.dp))
+                val totalSermonCount = currentSpeaker.sermonCount
+                val countText = if (totalSermonCount > 0) {
+                    stringResource(
+                        R.string.sermons_header_count,
+                        sermons.itemCount,
+                        if (sermons.itemCount < totalSermonCount) "+" else ""
+                    )
+                } else {
+                    stringResource(R.string.sermons_header_count, sermons.itemCount, "")
+                }
                 Text(
-                    text = stringResource(R.string.sermons_header_count, state.sermons.size, if (state.currentPage < state.totalPages) "+" else ""),
+                    text = countText,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            // Sermon list items
-            items(state.sermons, key = { it.id }) { sermon ->
-                SermonListItem(
-                    sermon = sermon,
-                    onPlayClick = { onEvent(SpeakerDetailUiEvent.PlaySermon(sermon)) },
-                    onReadClick = { onEvent(SpeakerDetailUiEvent.ReadSermon(sermon)) },
-                    onItemClick = { onEvent(SpeakerDetailUiEvent.ClickSermon(sermon)) },
-                    onFavoriteToggle = { onEvent(SpeakerDetailUiEvent.ToggleFavorite(sermon)) },
-                    isFavorite = state.favoriteIds.contains(sermon.id)
-                )
-            }
-
-            // Loading more footer
-            if (state.isLoadingMore) {
+            // Initial refresh loading for sermons
+            if (sermons.itemCount == 0 && sermons.loadState.refresh is LoadState.Loading) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
@@ -278,6 +270,86 @@ fun SpeakerDetailContent(
                         )
                     }
                 }
+            }
+
+            // Initial refresh error for sermons
+            if (sermons.itemCount == 0 && sermons.loadState.refresh is LoadState.Error) {
+                item {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.failed_to_load_more_sermons),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Button(onClick = { sermons.retry() }) {
+                            Text(stringResource(R.string.try_again))
+                        }
+                    }
+                }
+            }
+
+            // Sermon list items
+            items(
+                count = sermons.itemCount,
+                key = sermons.itemKey { it.id }
+            ) { index ->
+                val sermon = sermons[index]
+                if (sermon != null) {
+                    SermonListItem(
+                        sermon = sermon,
+                        onPlayClick = { onEvent(SpeakerDetailUiEvent.PlaySermon(sermon)) },
+                        onReadClick = { onEvent(SpeakerDetailUiEvent.ReadSermon(sermon)) },
+                        onItemClick = { onEvent(SpeakerDetailUiEvent.ClickSermon(sermon)) },
+                        onFavoriteToggle = { onEvent(SpeakerDetailUiEvent.ToggleFavorite(sermon)) },
+                        isFavorite = state.favoriteIds.contains(sermon.id)
+                    )
+                }
+            }
+
+            // Loading more or error footer during pagination
+            when (sermons.loadState.append) {
+                is LoadState.Loading -> {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+                is LoadState.Error -> {
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = stringResource(R.string.failed_to_load_more_sermons),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Button(onClick = { sermons.retry() }) {
+                                Text(stringResource(R.string.try_again))
+                            }
+                        }
+                    }
+                }
+                else -> Unit
             }
         }
     }

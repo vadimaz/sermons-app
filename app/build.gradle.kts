@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.sermonindex"
         minSdk = 26
         targetSdk = 36
-        versionCode = 9
-        versionName = "1.4.0"
+        versionCode = 10
+        versionName = "1.5.0"
     }
 
     buildTypes {
@@ -112,4 +112,8 @@ dependencies {
   implementation(libs.hilt.android)
   ksp(libs.hilt.compiler)
   implementation(libs.androidx.hilt.navigation.compose)
+
+  // Paging 3
+  implementation(libs.androidx.paging.runtime)
+  implementation(libs.androidx.paging.compose)
 }

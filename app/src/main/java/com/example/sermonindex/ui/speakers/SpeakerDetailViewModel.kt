@@ -3,6 +3,10 @@ package com.example.sermonindex.ui.speakers
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
+import androidx.paging.cachedIn
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.Speaker
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
@@ -10,10 +14,12 @@ import com.example.sermonindex.domain.usecase.GetSpeakerDetailsUseCase
 import com.example.sermonindex.domain.usecase.GetSpeakerSermonsPageUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
+import com.example.sermonindex.ui.speakers.paging.SpeakerSermonsPagingSource
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,18 +29,13 @@ import kotlinx.coroutines.launch
 @Immutable
 data class SpeakerDetailUiState(
     val speaker: Speaker? = null,
-    val sermons: List<Sermon> = emptyList(),
-    val currentPage: Int = 1,
-    val totalPages: Int = 1,
     val isLoadingSpeaker: Boolean = true,
-    val isLoadingMore: Boolean = false,
     val favoriteIds: Set<String> = emptySet(),
     val errorMessage: String? = null
 )
 
 sealed interface SpeakerDetailUiEvent {
     data object Retry : SpeakerDetailUiEvent
-    data object LoadMore : SpeakerDetailUiEvent
     data class PlaySermon(val sermon: Sermon) : SpeakerDetailUiEvent
     data class ReadSermon(val sermon: Sermon) : SpeakerDetailUiEvent
     data class ToggleFavorite(val sermon: Sermon) : SpeakerDetailUiEvent
@@ -60,9 +61,18 @@ class SpeakerDetailViewModel @AssistedInject constructor(
     private val _uiState = MutableStateFlow(SpeakerDetailUiState())
     val uiState: StateFlow<SpeakerDetailUiState> = _uiState.asStateFlow()
 
+    val sermonsPagingFlow: Flow<PagingData<Sermon>> = Pager(
+        config = PagingConfig(
+            pageSize = 50,
+            enablePlaceholders = false,
+            prefetchDistance = 5
+        ),
+        pagingSourceFactory = { SpeakerSermonsPagingSource(getSpeakerSermonsPageUseCase, slug) }
+    ).flow.cachedIn(viewModelScope)
+
     init {
         observeFavorites()
-        loadSpeakerAndPage1()
+        loadSpeaker()
     }
 
     private fun observeFavorites() {
@@ -76,8 +86,7 @@ class SpeakerDetailViewModel @AssistedInject constructor(
 
     fun onEvent(event: SpeakerDetailUiEvent) {
         when (event) {
-            is SpeakerDetailUiEvent.Retry -> loadSpeakerAndPage1()
-            is SpeakerDetailUiEvent.LoadMore -> loadNextPage()
+            is SpeakerDetailUiEvent.Retry -> loadSpeaker()
             is SpeakerDetailUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
             is SpeakerDetailUiEvent.ReadSermon -> Unit
             is SpeakerDetailUiEvent.ToggleFavorite -> {
@@ -90,7 +99,7 @@ class SpeakerDetailViewModel @AssistedInject constructor(
         }
     }
 
-    private fun loadSpeakerAndPage1() {
+    private fun loadSpeaker() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingSpeaker = true, errorMessage = null) }
             getSpeakerDetailsUseCase(slug)
@@ -98,24 +107,10 @@ class SpeakerDetailViewModel @AssistedInject constructor(
                     _uiState.update {
                         it.copy(
                             speaker = sp,
-                            totalPages = sp.totalPages.coerceAtLeast(1)
+                            isLoadingSpeaker = false,
+                            errorMessage = null
                         )
                     }
-                    getSpeakerSermonsPageUseCase(slug, 1)
-                        .onSuccess { paged ->
-                            _uiState.update {
-                                it.copy(
-                                    sermons = paged.sermons,
-                                    totalPages = paged.totalPages,
-                                    currentPage = 1,
-                                    isLoadingSpeaker = false,
-                                    errorMessage = null
-                                )
-                            }
-                        }
-                        .onFailure {
-                            _uiState.update { it.copy(isLoadingSpeaker = false) }
-                        }
                 }
                 .onFailure { error ->
                     _uiState.update {
@@ -124,30 +119,6 @@ class SpeakerDetailViewModel @AssistedInject constructor(
                             errorMessage = error.localizedMessage ?: "Failed to load preacher profile."
                         )
                     }
-                }
-        }
-    }
-
-    private fun loadNextPage() {
-        val state = _uiState.value
-        if (state.isLoadingMore || state.currentPage >= state.totalPages) return
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoadingMore = true) }
-            val nextPage = state.currentPage + 1
-            getSpeakerSermonsPageUseCase(slug, nextPage)
-                .onSuccess { paged ->
-                    _uiState.update {
-                        it.copy(
-                            sermons = it.sermons + paged.sermons,
-                            currentPage = nextPage,
-                            totalPages = paged.totalPages,
-                            isLoadingMore = false
-                        )
-                    }
-                }
-                .onFailure {
-                    _uiState.update { it.copy(isLoadingMore = false) }
                 }
         }
     }
