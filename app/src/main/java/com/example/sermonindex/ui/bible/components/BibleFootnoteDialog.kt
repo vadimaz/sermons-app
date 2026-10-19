@@ -20,8 +20,13 @@ fun BibleFootnoteDialog(
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
+            val titleText = if (footnote.verse > 0) {
+                "${stringResource(R.string.footnote_title)} (${footnote.verse})"
+            } else {
+                stringResource(R.string.footnote_title)
+            }
             Text(
-                text = stringResource(R.string.footnote_title),
+                text = titleText,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )

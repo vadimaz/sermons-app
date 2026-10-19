@@ -297,7 +297,8 @@ fun BibleChapterResponse.toDomain(
         }
     }
 
-    val mappedFootnotes = footnotes.map { it.toDomain() }
+    val allFootnotes = footnotes.ifEmpty { chapter?.footnotes ?: emptyList() }
+    val mappedFootnotes = allFootnotes.map { it.toDomain() }
     val resolvedBookName = book?.name?.ifBlank { bookName } ?: bookName
 
     return com.example.sermonindex.domain.model.BibleChapter(

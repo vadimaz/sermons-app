@@ -62,7 +62,8 @@ data class BibleBookHeaderDto(
 @Serializable
 data class BibleChapterContentDto(
     val number: Int = 0,
-    val content: List<JsonElement> = emptyList()
+    val content: List<JsonElement> = emptyList(),
+    val footnotes: List<BibleFootnoteDto> = emptyList()
 )
 
 @Serializable

@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.6.0` | **Version Code:** `11`
+> **Current Version:** `1.6.1` | **Version Code:** `12`
 
 ---
 
@@ -65,6 +65,7 @@
 - **Reading Typography Customization**: User preferences for font size (14sp–30sp slider), font family toggle (Serif vs Sans-Serif), and line height spacing (1.3x, 1.5x, 1.8x) with live sentence preview.
 - **Table of Contents**: Modal bottom sheet with Old Testament (39) / New Testament (27) tabs, quick book search, and chapter selector grid.
 - **Official Chapter Audio Narration**: Seamless integration with Media3 `PlaybackManager` streaming audio for chapters with narrator links (BSB with Gilbert, Hays, Souer); circular tonal playback button with high-contrast active state; instant audio cancellation upon chapter or language change.
+- **Interactive Textual Footnotes**: Fixed API DTO parser to capture `chapter.footnotes` from SermonIndex CDN; superscript blue asterisks `*` styled with `tertiary` color without underline (`TextDecoration.None`); tap-to-inspect opens `BibleFootnoteDialog` with verse number and combined comments for verses with multiple notes, also accessible via verse tooltip button.
 - **In-Chapter Search**: Real-time client-side text search highlighting matches and allowing quick navigation between occurrences.
 - **Verse Tooltip & Cross-Linking**: Simple tap on any verse marker opens a tooltip with direct navigation to a dedicated `BibleVerseSermonsRoute` screen (displaying the verse in primary and secondary translations alongside related sermons) with standard back navigation.
 - **Pure Isolated Navigation 3 Backstacks**: Removed artificial "exit through home" route nesting. Each top-level tab (Home, Bible, Scripture, Library) maintains its own independent backstack. Top-level screens cleanly delegate back presses to the OS for native minimization (Predictive Back on Android 12+).
