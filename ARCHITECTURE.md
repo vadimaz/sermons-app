@@ -63,12 +63,13 @@ com.example.sermonindex
 │
 ├── data/
 │   ├── local/
-│   │   ├── AppDatabase.kt        # SQLiteOpenHelper + FTS4 virtual table + downloads/favorites/history
-│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao
-│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, FtsSermonResult
+│   │   ├── AppDatabase.kt        # SQLiteOpenHelper + FTS4 virtual table + downloads/favorites/history/bible state
+│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao, BibleDao
+│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, BibleReadingStateEntity, FtsSermonResult
 │   ├── mapper/
 │   │   └── Mappers.kt            # DTO/Entity <-> Domain mapping extensions
 │   ├── model/
+│   │   ├── BibleDtos.kt          # @Serializable Bible network DTOs
 │   │   └── SermonDtos.kt         # @Serializable network DTOs
 │   ├── network/
 │   │   ├── ConnectivityNetworkMonitor.kt # Android ConnectivityManager network callback
@@ -82,7 +83,7 @@ com.example.sermonindex
 │       └── CatalogSyncWorker.kt  # WorkManager CoroutineWorker for streaming gzip catalog
 │
 ├── di/
-│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao
+│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao, BibleDao
 │   ├── DispatchersModule.kt      # Qualifiers: @IoDispatcher, @DefaultDispatcher, @MainDispatcher
 │   ├── MediaModule.kt            # Provides PlaybackManager as @Singleton
 │   ├── NetworkModule.kt          # Provides OkHttpClient, Retrofit, SermonIndexApiService
@@ -95,7 +96,7 @@ com.example.sermonindex
 │   │   ├── NetworkMonitor.kt     # Pure network connectivity contract
 │   │   └── SermonRepository.kt   # Pure domain repository interface
 │   └── usecase/
-│       └── UseCases.kt           # 20 single-responsibility UseCase classes
+│       └── UseCases.kt           # 26 single-responsibility UseCase classes
 │
 ├── playback/
 │   ├── PlaybackManager.kt        # MediaController wrapper, playbackState StateFlow, sleep timer
@@ -106,6 +107,7 @@ com.example.sermonindex
 │   ├── Color.kt, Theme.kt, Type.kt # Material 3 Design System
 │
 └── ui/
+    ├── bible/                    # BibleScreen.kt, BibleViewModel.kt, BibleUiState.kt, components/
     ├── components/
     │   ├── CommonComponents.kt   # TopBar, LoadingView, EmptyStateView, ErrorView
     │   ├── MiniPlayer.kt         # Persistent floating audio bar

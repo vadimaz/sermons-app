@@ -139,7 +139,51 @@ data class BibleBook(
     val id: String,
     val name: String,
     val testament: String,
-    val chapterCount: Int
+    val chapterCount: Int,
+    val order: Int = 0
+)
+
+data class BibleChapter(
+    val translationId: String,
+    val bookId: String,
+    val bookName: String,
+    val chapterNumber: Int,
+    val numberOfVerses: Int,
+    val items: List<BibleChapterItem>,
+    val footnotes: List<BibleFootnote>,
+    val audioLinks: Map<String, String> = emptyMap(),
+    val hasNextChapter: Boolean = false,
+    val hasPreviousChapter: Boolean = false
+)
+
+sealed interface BibleChapterItem {
+    data class Heading(val text: String) : BibleChapterItem
+    data class HebrewSubtitle(val text: String) : BibleChapterItem
+    data class Verse(
+        val number: Int,
+        val text: String,
+        val footnoteIds: List<Int> = emptyList()
+    ) : BibleChapterItem
+    data object LineBreak : BibleChapterItem
+}
+
+data class BibleFootnote(
+    val noteId: Int,
+    val caller: String,
+    val text: String,
+    val chapter: Int,
+    val verse: Int
+)
+
+data class BibleReadingPreferences(
+    val translationId: String = "rus_syn",
+    val bookId: String = "GEN",
+    val chapter: Int = 1,
+    val verse: Int = 1,
+    val fontSizeSp: Float = 18f,
+    val isSerif: Boolean = true,
+    val lineSpacingMultiplier: Float = 1.5f,
+    val selectedNarrator: String? = null
 )
 
 data class BibleTranslation(

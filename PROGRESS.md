@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.5.0` | **Version Code:** `10`
+> **Current Version:** `1.6.0` | **Version Code:** `11`
 
 ---
 
@@ -20,10 +20,11 @@
   - **Synchronized Transcript Reading Mode (Karaoke Style)**: WebVTT cues parsing, unified 22sp typography with smooth color/weight highlight transitions, sticky playback controls header, auto-scroll anchoring keeping 3–4 preceding lines visible, instant deactivation on manual touch scroll (`NestedScrollConnection` + `DragInteraction`), and tap-to-seek functionality.
 
 ### 1.2 Screens & Presentation (Jetpack Compose + Navigation 3)
-- **Navigation 3 Architecture**: 3 primary top-level tabs (Home, Scripture books directory, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator`; bottom bar strictly hidden on all sub-screens/detail routes and when drilled down into scripture chapters/verses; bottom bar reselection dispatches scroll-to-top without popping stacks or clearing state; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
+- **Navigation 3 Architecture**: 4 primary top-level tabs (Home, Bible Reader, Scripture Explorer, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator`; bottom bar strictly hidden on all sub-screens/detail routes and when drilled down into scripture chapters/verses; bottom bar reselection dispatches scroll-to-top without popping stacks or clearing state; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
+| **Bible Reader** | `BibleViewModel` | Distraction-free Holy Scripture reader with 1,250+ translations, localized book titles, chapter continuous text with headings, verse markers, poetic stanzas, Hebrew subtitles, footnotes popups, table of contents sheet with OT/NT tabs and book search, reading typography settings (font size slider, Serif vs Sans toggle, line spacing), BSB audio narration streaming via Media3, in-chapter search with match navigation, and direct cross-link to Scripture sermons. |
 | **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, dual Scripture Verse quote card (default BSB + system language / KJV fallback), searchable translation picker bottom sheet (`ModalBottomSheet`), verse sermons list, navigation bar hidden on chapter/verse levels, synchronized back gesture handling via `BackHandler`, scroll-to-top on reselect without resetting selection. |
 | **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, sermon count badges, and back navigation when opened from Home. |
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, AndroidX Paging 3 paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`) with `LazyPagingItems`, prefetching, loading indicator, and inline retry on failure. |
@@ -56,6 +57,18 @@
 - **`SpeakerSermonsPagingSource`**: PagingSource implementation connecting `androidx.paging:paging-runtime` and `androidx.paging:paging-compose` (version 3.3.6) with pure Kotlin domain UseCase `GetSpeakerSermonsPageUseCase`.
 - **UI Integration**: `collectAsLazyPagingItems()` in `SpeakerDetailScreen` with prefetch distance, centered loading indicator during initial and append fetches, and inline error retry view on failure.
 - **Unit Testing**: Complete unit test suite (`SpeakerSermonsPagingSourceTest.kt`) verifying first page, last page, and network failure mappings.
+
+### 1.7 Holy Scripture Bible Reader Module
+- **1,250+ Translations Mirror**: Integration with SermonIndex `/v2/bible/...` CDN mirror for translations across dozens of languages with locale-aware default selection (Russian Synodal `rus_syn`, Ukrainian `ukr_1996`/`ukr_pan`, English `BSB`/`eng_kjv`, Spanish `spa_r09`).
+- **Structured Chapter Reader**: Continuous reading flow with section headings, verse markers with superscript numbering, poetic stanzas, Hebrew subtitles (psalms), footnotes popups, comfortable 40dp footer clearance, and next/prev chapter navigation with scroll reset to top.
+- **Synchronized Auto-Hiding Toolbars**: Top bar and bottom navigation bar smoothly slide out of view when scrolling down and return when scrolling up, using identical `FastOutSlowInEasing` 250ms animation specs for seamless immersive reading.
+- **Reading Typography Customization**: User preferences for font size (14sp–30sp slider), font family toggle (Serif vs Sans-Serif), and line height spacing (1.3x, 1.5x, 1.8x) with live sentence preview.
+- **Table of Contents**: Modal bottom sheet with Old Testament (39) / New Testament (27) tabs, quick book search, and chapter selector grid.
+- **Official Chapter Audio Narration**: Seamless integration with Media3 `PlaybackManager` streaming audio for chapters with narrator links (BSB with Gilbert, Hays, Souer); circular tonal playback button with high-contrast active state; instant audio cancellation upon chapter or language change.
+- **In-Chapter Search**: Real-time client-side text search highlighting matches and allowing quick navigation between occurrences.
+- **Verse Tooltip & Cross-Linking**: Simple tap on any verse marker opens a tooltip with direct navigation to a dedicated `BibleVerseSermonsRoute` screen (displaying the verse in primary and secondary translations alongside related sermons) with standard back navigation.
+- **Pure Isolated Navigation 3 Backstacks**: Removed artificial "exit through home" route nesting. Each top-level tab (Home, Bible, Scripture, Library) maintains its own independent backstack. Top-level screens cleanly delegate back presses to the OS for native minimization (Predictive Back on Android 12+).
+- **Persistent State**: SQLite storage in `bible_reading_state` table for last read translation, book, chapter, verse, and typography settings.
 
 ---
 
@@ -94,6 +107,13 @@ interface SermonRepository {
     suspend fun getTopicDetails(slug: String): Result<TopicDetail>
     suspend fun getSermonDetails(id: String): Result<SermonDetail>
     suspend fun getTranscriptCues(vttUrl: String): Result<List<TranscriptCue>>
+
+    val bibleReadingPreferences: Flow<BibleReadingPreferences>
+    suspend fun getBibleChapter(translationId: String, bookId: String, chapter: Int): Result<BibleChapter>
+    suspend fun getBibleBooksForTranslation(translationId: String): Result<List<BibleBook>>
+    suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int = 1)
+    suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
+    suspend fun saveBibleNarrator(narrator: String?)
 
     suspend fun clearHistory()
 }
@@ -141,5 +161,6 @@ class PlaybackManager(context: Context) {
 
 ## 4. Backlog & Technical Debt
 
+- **UI Component Decomposition & Reusability (Scripture & Explorers)**: Refactor complex, multi-level screen monoliths (e.g., the 4-level navigation in `ScriptureScreen`) into decoupled, stateless UI building blocks (`ScriptureBookPicker`, `ScriptureChapterPicker`, `ScriptureVerseHeatMapGrid`, `ScriptureVerseQuoteCard`). This prevents tight coupling to single ViewModels, simplifies testing, and enables flexible composition across different sections (e.g. Bible reader, search, topic studies).
 - **Room Entity Migration**: `AppDatabase.kt` currently uses `SQLiteOpenHelper` directly. Evaluate migrating to Room `@Database` once KSP Room schema export configuration is finalized.
 - **Audio Focus Transition**: Smoothly duck audio on brief notifications and pause on audio focus loss (phone calls).

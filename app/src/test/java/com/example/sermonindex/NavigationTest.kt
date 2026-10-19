@@ -127,7 +127,7 @@ class NavigationTest {
     }
 
     @Test
-    fun goBackReturnsToStartRouteFromSecondaryTabRoot() {
+    fun goBackDoesNotChangeTopLevelRouteFromSecondaryTabRoot() {
         val topLevelState = mutableStateOf<NavKey>(ScriptureRoute)
         val homeStack = NavBackStack<NavKey>(HomeRoute)
         val scriptureStack = NavBackStack<NavKey>(ScriptureRoute)
@@ -146,6 +146,9 @@ class NavigationTest {
 
         navigator.goBack()
 
-        assertEquals(HomeRoute, navState.topLevelRoute)
+        // At top-level route, navigator does not redirect back to HomeRoute;
+        // top-level back press is handled to finish activity instead of bouncing to Home.
+        assertEquals(ScriptureRoute, navState.topLevelRoute)
+        assertEquals(1, scriptureStack.size)
     }
 }

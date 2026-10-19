@@ -108,6 +108,16 @@ class  UseCasesTest {
         override suspend fun getTopics(): Result<List<Topic>> = Result.success(emptyList())
         override suspend fun getTopicDetails(slug: String): Result<TopicDetail> = Result.failure(NotImplementedError())
         override suspend fun getTranscriptCues(vttUrl: String): Result<List<com.example.sermonindex.domain.model.TranscriptCue>> = Result.success(emptyList())
+
+        override val bibleReadingPreferences: Flow<com.example.sermonindex.domain.model.BibleReadingPreferences> =
+            flowOf(com.example.sermonindex.domain.model.BibleReadingPreferences())
+        override suspend fun getBibleChapter(translationId: String, bookId: String, chapter: Int): Result<com.example.sermonindex.domain.model.BibleChapter> =
+            Result.failure(NotImplementedError())
+        override suspend fun getBibleBooksForTranslation(translationId: String): Result<List<BibleBook>> =
+            Result.success(emptyList())
+        override suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int) = Unit
+        override suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float) = Unit
+        override suspend fun saveBibleNarrator(narrator: String?) = Unit
     }
 
     @Test

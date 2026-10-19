@@ -7,7 +7,18 @@ import kotlinx.serialization.Serializable
 data object HomeRoute : NavKey
 
 @Serializable
+data object BibleRoute : NavKey
+
+@Serializable
 data object ScriptureRoute : NavKey
+
+@Serializable
+data class BibleVerseSermonsRoute(
+    val bookId: String,
+    val bookName: String,
+    val chapter: Int,
+    val verse: Int
+) : NavKey
 
 @Serializable
 data object SpeakersRoute : NavKey

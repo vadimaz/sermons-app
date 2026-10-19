@@ -296,6 +296,88 @@ class SermonRepositoryImpl @Inject constructor(
         }
     }
 
+    private val translationBooksCache = java.util.concurrent.ConcurrentHashMap<String, List<BibleBook>>()
+
+    override val bibleReadingPreferences: Flow<com.example.sermonindex.domain.model.BibleReadingPreferences> =
+        database.bibleDao.getReadingState()
+            .map { entity ->
+                entity?.toDomain() ?: defaultBibleReadingPreferences()
+            }
+            .flowOn(ioDispatcher)
+
+    private fun defaultBibleReadingPreferences(): com.example.sermonindex.domain.model.BibleReadingPreferences {
+        val language = java.util.Locale.getDefault().language
+        val defaultTranslation = when (language) {
+            "ru" -> "rus_syn"
+            "uk" -> "ukr_1996"
+            "es" -> "spa_r09"
+            else -> "BSB"
+        }
+        return com.example.sermonindex.domain.model.BibleReadingPreferences(
+            translationId = defaultTranslation,
+            bookId = "GEN",
+            chapter = 1,
+            verse = 1,
+            fontSizeSp = 18f,
+            isSerif = true,
+            lineSpacingMultiplier = 1.5f,
+            selectedNarrator = null
+        )
+    }
+
+    override suspend fun getBibleBooksForTranslation(translationId: String): Result<List<BibleBook>> =
+        withContext(ioDispatcher) {
+            runCatching {
+                translationBooksCache[translationId]?.let { return@runCatching it }
+                val books = apiService.getBibleTranslationBooks(translationId).books.map { it.toDomain() }
+                translationBooksCache[translationId] = books
+                books
+            }
+        }
+
+    override suspend fun getBibleChapter(
+        translationId: String,
+        bookId: String,
+        chapter: Int
+    ): Result<com.example.sermonindex.domain.model.BibleChapter> = withContext(ioDispatcher) {
+        runCatching {
+            val booksResult = getBibleBooksForTranslation(translationId).getOrNull()
+            val bookName = booksResult?.firstOrNull { it.id.equals(bookId, ignoreCase = true) }?.name ?: bookId
+            val response = apiService.getBibleChapter(translationId, bookId, chapter)
+
+            val key = "$translationId:$bookId:$chapter"
+            chapterVerseCache[key] = response.extractVerseMap()
+
+            response.toDomain(
+                translationId = translationId,
+                bookId = bookId,
+                bookName = bookName,
+                chapterNumber = chapter
+            )
+        }
+    }
+
+    override suspend fun saveBibleReadingPosition(
+        translationId: String,
+        bookId: String,
+        chapter: Int,
+        verse: Int
+    ) = withContext(ioDispatcher) {
+        database.bibleDao.saveReadingPosition(translationId, bookId, chapter, verse)
+    }
+
+    override suspend fun saveBibleTypographyPreferences(
+        fontSizeSp: Float,
+        isSerif: Boolean,
+        lineSpacingMultiplier: Float
+    ) = withContext(ioDispatcher) {
+        database.bibleDao.saveTypography(fontSizeSp, isSerif, lineSpacingMultiplier)
+    }
+
+    override suspend fun saveBibleNarrator(narrator: String?) = withContext(ioDispatcher) {
+        database.bibleDao.saveNarrator(narrator)
+    }
+
     override suspend fun clearHistory() = withContext(ioDispatcher) {
         database.historyDao.clearHistory()
     }

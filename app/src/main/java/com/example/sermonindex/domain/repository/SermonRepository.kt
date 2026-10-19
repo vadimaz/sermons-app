@@ -57,5 +57,12 @@ interface SermonRepository {
     suspend fun getSermonDetails(id: String): Result<SermonDetail>
     suspend fun getTranscriptCues(vttUrl: String): Result<List<com.example.sermonindex.domain.model.TranscriptCue>>
 
+    val bibleReadingPreferences: Flow<com.example.sermonindex.domain.model.BibleReadingPreferences>
+    suspend fun getBibleChapter(translationId: String, bookId: String, chapter: Int): Result<com.example.sermonindex.domain.model.BibleChapter>
+    suspend fun getBibleBooksForTranslation(translationId: String): Result<List<BibleBook>>
+    suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int = 1)
+    suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
+    suspend fun saveBibleNarrator(narrator: String?)
+
     suspend fun clearHistory()
 }

@@ -1,20 +1,31 @@
 package com.example.sermonindex
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Icon
@@ -45,6 +56,8 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.sermonindex.domain.repository.NetworkMonitor
 import com.example.sermonindex.playback.PlaybackManager
+import com.example.sermonindex.ui.bible.BibleScreen
+import com.example.sermonindex.ui.bible.sermons.BibleVerseSermonsScreen
 import com.example.sermonindex.ui.components.MiniPlayer
 import com.example.sermonindex.ui.components.OfflineBanner
 import com.example.sermonindex.ui.home.HomeScreen
@@ -62,6 +75,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 private val TOP_LEVEL_ROUTES = setOf<NavKey>(
     HomeRoute,
+    BibleRoute,
     ScriptureRoute,
     LibraryRoute
 )
@@ -88,11 +102,7 @@ class Navigator(val state: NavigationState) {
     fun goBack() {
         val currentStack = state.backStacks[state.topLevelRoute] ?: return
         val currentRoute = currentStack.lastOrNull()
-        if (currentRoute == state.topLevelRoute) {
-            if (state.topLevelRoute != state.startRoute) {
-                state.topLevelRoute = state.startRoute
-            }
-        } else {
+        if (currentRoute != state.topLevelRoute) {
             currentStack.removeLastOrNull()
         }
     }
@@ -127,15 +137,8 @@ class NavigationState(
             )
         }
 
-        return getTopLevelRoutesInUse().flatMap { decoratedEntries[it] ?: emptyList() }
+        return decoratedEntries[topLevelRoute] ?: emptyList()
     }
-
-    private fun getTopLevelRoutesInUse(): List<NavKey> =
-        if (topLevelRoute == startRoute) {
-            listOf(startRoute)
-        } else {
-            listOf(startRoute, topLevelRoute)
-        }
 }
 
 @Composable
@@ -185,15 +188,34 @@ fun MainNavigation(
     val currentRoute = navigationState.currentRoute
     val isFullscreenPlayer = currentRoute is PlayerRoute || currentRoute is TextSermonRoute
     var isScriptureAtRoot by rememberSaveable { mutableStateOf(true) }
+    var isBibleBottomBarVisible by rememberSaveable { mutableStateOf(true) }
 
     val isAtTopLevel = when (currentRoute) {
         HomeRoute -> true
+        BibleRoute -> true
         LibraryRoute -> true
         ScriptureRoute -> isScriptureAtRoot
         else -> false
     }
+    val isBibleTrack = playbackState.currentSermon?.id?.startsWith("bible_") == true
+    val isBibleTab = navigationState.topLevelRoute == BibleRoute
+    val effectivelyShowBottomBar = if (isBibleTab) isBibleBottomBarVisible else true
+
     val showBottomBar = isAtTopLevel
-    val showMiniPlayer = !isFullscreenPlayer && playbackState.hasActiveMedia
+    val showMiniPlayer = !isFullscreenPlayer && playbackState.hasActiveMedia && !isBibleTrack
+
+    val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val totalBottomBarHeight = 80.dp + navBarInset
+    val animatedHeight by animateDpAsState(
+        targetValue = if (effectivelyShowBottomBar) totalBottomBarHeight else 0.dp,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "bottomBarHeight"
+    )
+    val animatedTranslationY by animateDpAsState(
+        targetValue = if (effectivelyShowBottomBar) 0.dp else totalBottomBarHeight,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "bottomBarTranslationY"
+    )
 
     Scaffold(
         bottomBar = {
@@ -215,15 +237,29 @@ fun MainNavigation(
 
                     // Bottom Navigation Bar
                     if (showBottomBar) {
-                        NavigationBar(
-                            containerColor = MaterialTheme.colorScheme.surface,
-                            tonalElevation = 8.dp
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(animatedHeight)
+                                .clipToBounds()
                         ) {
+                            NavigationBar(
+                                containerColor = MaterialTheme.colorScheme.surface,
+                                tonalElevation = 8.dp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(totalBottomBarHeight)
+                                    .graphicsLayer {
+                                        translationY = animatedTranslationY.toPx()
+                                    }
+                            ) {
                             val isHome = navigationState.topLevelRoute == HomeRoute
+                            val isBible = navigationState.topLevelRoute == BibleRoute
                             val isScripture = navigationState.topLevelRoute == ScriptureRoute
                             val isLibrary = navigationState.topLevelRoute == LibraryRoute
 
                             val homeLabel = stringResource(R.string.nav_home)
+                            val bibleLabel = stringResource(R.string.nav_bible)
                             val scriptureLabel = stringResource(R.string.nav_scripture)
                             val libraryLabel = stringResource(R.string.nav_library)
 
@@ -246,6 +282,24 @@ fun MainNavigation(
                             )
 
                             NavigationBarItem(
+                                selected = isBible,
+                                onClick = {
+                                    if (isBible) {
+                                        navigator.onReselect(BibleRoute)
+                                    } else {
+                                        navigator.navigate(BibleRoute)
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isBible) Icons.AutoMirrored.Filled.MenuBook else Icons.AutoMirrored.Outlined.MenuBook,
+                                        contentDescription = bibleLabel
+                                    )
+                                },
+                                label = { Text(bibleLabel) }
+                            )
+
+                            NavigationBarItem(
                                 selected = isScripture,
                                 onClick = {
                                     if (isScripture) {
@@ -256,7 +310,7 @@ fun MainNavigation(
                                 },
                                 icon = {
                                     Icon(
-                                        imageVector = if (isScripture) Icons.AutoMirrored.Filled.MenuBook else Icons.AutoMirrored.Outlined.MenuBook,
+                                        imageVector = if (isScripture) Icons.Filled.Explore else Icons.Outlined.Explore,
                                         contentDescription = scriptureLabel
                                     )
                                 },
@@ -280,6 +334,7 @@ fun MainNavigation(
                                 },
                                 label = { Text(libraryLabel) }
                             )
+                        }
                         }
                     }
                 }
@@ -322,6 +377,32 @@ fun MainNavigation(
                                     navigator.navigate(TopicsRoute)
                                 },
                                 reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<BibleRoute> {
+                            BibleScreen(
+                                onNavigateToVerseSermons = { bookId, bookName, chapter, verse ->
+                                    navigator.navigate(BibleVerseSermonsRoute(bookId, bookName, chapter, verse))
+                                },
+                                onBottomBarVisibilityChange = { isBibleBottomBarVisible = it },
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<BibleVerseSermonsRoute> { route ->
+                            BibleVerseSermonsScreen(
+                                bookId = route.bookId,
+                                bookName = route.bookName,
+                                chapter = route.chapter,
+                                verse = route.verse,
+                                onBack = { navigator.goBack() },
+                                onSermonClick = { sermon ->
+                                    navigator.navigate(SermonDetailRoute(sermon.id))
+                                },
+                                onTextSermonClick = { sermon ->
+                                    navigator.navigate(TextSermonRoute(sermon.id))
+                                }
                             )
                         }
 

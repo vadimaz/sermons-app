@@ -3,6 +3,7 @@
 
     <!-- Navigation -->
     <string name="nav_home">Home</string>
+    <string name="nav_bible">Bible</string>
     <string name="nav_scripture">Scripture</string>
     <string name="nav_speakers">Speakers</string>
     <string name="nav_topics">Topics</string>
@@ -208,4 +209,32 @@
     <string name="loading_text_sermon">Loading sermon text…</string>
     <string name="text_only_sermon_badge">Text Sermon</string>
     <string name="no_text_content_available">No text content is available for this sermon.</string>
+
+    <!-- Bible Screen -->
+    <string name="bible_reader">Bible</string>
+    <string name="table_of_contents">Table of Contents</string>
+    <string name="old_testament">Old Testament</string>
+    <string name="new_testament">New Testament</string>
+    <string name="old_testament_count">Old Testament (%1$d)</string>
+    <string name="new_testament_count">New Testament (%1$d)</string>
+    <string name="search_books">Search books…</string>
+    <string name="search_in_chapter">Search in chapter…</string>
+    <string name="reading_settings">Reading Settings</string>
+    <string name="font_size">Font Size</string>
+    <string name="font_serif">Serif</string>
+    <string name="font_sans">Sans-Serif</string>
+    <string name="line_spacing">Line Spacing</string>
+    <string name="audio_narration">Audio Narration</string>
+    <string name="narrator">Narrator</string>
+    <string name="previous_chapter">Previous Chapter</string>
+    <string name="next_chapter">Next Chapter</string>
+    <string name="loading_bible_chapter">Loading %1$s %2$d…</string>
+    <string name="footnote_title">Footnote</string>
+    <string name="sermons_on_verse">Sermons on this verse</string>
+    <string name="sermons_on_chapter">Sermons on this chapter (%1$d)</string>
+    <string name="read_in_bible">Read chapter in Bible</string>
+    <string name="no_search_results">No matching text found</string>
+    <string name="search_results_count">%1$d of %2$d matches</string>
+    <string name="sermons_on_verse_tooltip">Sermons on this verse</string>
+    <string name="verse_sermons_pill">Sermons on verse %1$d</string>
 </resources>

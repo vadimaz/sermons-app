@@ -120,3 +120,33 @@ class DeleteAllDownloadsUseCase @Inject constructor(private val repository: Serm
     suspend operator fun invoke() = repository.deleteAllDownloads()
 }
 
+class GetBibleChapterUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(translationId: String, bookId: String, chapter: Int): Result<com.example.sermonindex.domain.model.BibleChapter> =
+        repository.getBibleChapter(translationId, bookId, chapter)
+}
+
+class GetBibleBooksForTranslationUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(translationId: String): Result<List<BibleBook>> =
+        repository.getBibleBooksForTranslation(translationId)
+}
+
+class GetBibleReadingPreferencesUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(): Flow<com.example.sermonindex.domain.model.BibleReadingPreferences> =
+        repository.bibleReadingPreferences
+}
+
+class SaveBibleReadingPositionUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(translationId: String, bookId: String, chapter: Int, verse: Int = 1) =
+        repository.saveBibleReadingPosition(translationId, bookId, chapter, verse)
+}
+
+class SaveBibleTypographyPreferencesUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float) =
+        repository.saveBibleTypographyPreferences(fontSizeSp, isSerif, lineSpacingMultiplier)
+}
+
+class SaveBibleNarratorUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(narrator: String?) =
+        repository.saveBibleNarrator(narrator)
+}
+

@@ -213,6 +213,107 @@ fun BibleTranslationDto.toDomain(): BibleTranslation = BibleTranslation(
     numberOfBooks = numberOfBooks
 )
 
+fun com.example.sermonindex.data.model.BibleTranslationBookDto.toDomain(): BibleBook = BibleBook(
+    id = id,
+    name = name.ifBlank { commonName.ifBlank { title } },
+    testament = if (order <= 39) "OT" else "NT",
+    chapterCount = numberOfChapters,
+    order = order
+)
+
+fun com.example.sermonindex.data.model.BibleFootnoteDto.toDomain(): com.example.sermonindex.domain.model.BibleFootnote =
+    com.example.sermonindex.domain.model.BibleFootnote(
+        noteId = noteId,
+        caller = caller,
+        text = text,
+        chapter = reference?.chapter ?: 0,
+        verse = reference?.verse ?: 0
+    )
+
+fun com.example.sermonindex.data.local.entities.BibleReadingStateEntity.toDomain(): com.example.sermonindex.domain.model.BibleReadingPreferences =
+    com.example.sermonindex.domain.model.BibleReadingPreferences(
+        translationId = translationId,
+        bookId = bookId,
+        chapter = chapter,
+        verse = verse,
+        fontSizeSp = fontSizeSp,
+        isSerif = isSerif,
+        lineSpacingMultiplier = lineSpacingMultiplier,
+        selectedNarrator = selectedNarrator
+    )
+
+fun BibleChapterResponse.toDomain(
+    translationId: String,
+    bookId: String,
+    bookName: String,
+    chapterNumber: Int
+): com.example.sermonindex.domain.model.BibleChapter {
+    val items = mutableListOf<com.example.sermonindex.domain.model.BibleChapterItem>()
+    val contentArray = chapter?.content ?: emptyList()
+    for (item in contentArray) {
+        val obj = item as? JsonObject ?: continue
+        val type = obj["type"]?.jsonPrimitive?.contentOrNull
+        when (type) {
+            "heading" -> {
+                val h = obj["content"]?.jsonArray?.joinToString(" ") {
+                    if (it is JsonPrimitive) it.content else it.toString()
+                } ?: ""
+                if (h.isNotBlank()) items.add(com.example.sermonindex.domain.model.BibleChapterItem.Heading(h))
+            }
+            "hebrew_subtitle" -> {
+                val s = obj["content"]?.jsonArray?.joinToString(" ") {
+                    if (it is JsonPrimitive) it.content else it.toString()
+                } ?: ""
+                if (s.isNotBlank()) items.add(com.example.sermonindex.domain.model.BibleChapterItem.HebrewSubtitle(s))
+            }
+            "line_break" -> {
+                items.add(com.example.sermonindex.domain.model.BibleChapterItem.LineBreak)
+            }
+            "verse" -> {
+                val num = obj["number"]?.jsonPrimitive?.intOrNull ?: 0
+                val verseContent = obj["content"]?.jsonArray
+                val textParts = mutableListOf<String>()
+                val noteIds = mutableListOf<Int>()
+                if (verseContent != null) {
+                    for (part in verseContent) {
+                        if (part is JsonPrimitive && part.isString) {
+                            val text = part.content.trim()
+                            if (text.isNotEmpty()) textParts.add(text)
+                        } else if (part is JsonObject) {
+                            val noteId = part["noteId"]?.jsonPrimitive?.intOrNull
+                            if (noteId != null) {
+                                noteIds.add(noteId)
+                            }
+                            val text = part["text"]?.jsonPrimitive?.contentOrNull?.trim()
+                            if (!text.isNullOrEmpty()) {
+                                textParts.add(text)
+                            }
+                        }
+                    }
+                }
+                val fullText = textParts.joinToString(" ").replace("\\s+".toRegex(), " ")
+                items.add(com.example.sermonindex.domain.model.BibleChapterItem.Verse(number = num, text = fullText, footnoteIds = noteIds))
+            }
+        }
+    }
+
+    val mappedFootnotes = footnotes.map { it.toDomain() }
+    val resolvedBookName = book?.name?.ifBlank { bookName } ?: bookName
+
+    return com.example.sermonindex.domain.model.BibleChapter(
+        translationId = translationId,
+        bookId = bookId,
+        bookName = resolvedBookName,
+        chapterNumber = chapterNumber,
+        numberOfVerses = numberOfVerses,
+        items = items,
+        footnotes = mappedFootnotes,
+        audioLinks = thisChapterAudioLinks,
+        hasNextChapter = nextChapterApiLink != null,
+        hasPreviousChapter = previousChapterApiLink != null
+    )
+}
+
 fun BibleChapterResponse.extractVerseMap(): Map<Int, String> {
     val items = chapter?.content ?: return emptyMap()
     val verseMap = mutableMapOf<Int, String>()

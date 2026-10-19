@@ -35,4 +35,9 @@ object DatabaseModule {
     fun provideDownloadsDao(database: AppDatabase): com.example.sermonindex.data.local.dao.DownloadsDao {
         return database.downloadsDao
     }
+
+    @Provides
+    fun provideBibleDao(database: AppDatabase): com.example.sermonindex.data.local.dao.BibleDao {
+        return database.bibleDao
+    }
 }

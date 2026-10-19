@@ -67,6 +67,12 @@ class SpeakerSermonsPagingSourceTest {
             override suspend fun getTopicDetails(slug: String): Result<TopicDetail> = Result.failure(NotImplementedError())
             override suspend fun getSermonDetails(id: String): Result<SermonDetail> = Result.failure(NotImplementedError())
             override suspend fun getTranscriptCues(vttUrl: String): Result<List<TranscriptCue>> = Result.success(emptyList())
+            override val bibleReadingPreferences: Flow<com.example.sermonindex.domain.model.BibleReadingPreferences> = emptyFlow()
+            override suspend fun getBibleChapter(translationId: String, bookId: String, chapter: Int): Result<com.example.sermonindex.domain.model.BibleChapter> = Result.failure(NotImplementedError())
+            override suspend fun getBibleBooksForTranslation(translationId: String): Result<List<BibleBook>> = Result.success(emptyList())
+            override suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int) {}
+            override suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float) {}
+            override suspend fun saveBibleNarrator(narrator: String?) {}
             override suspend fun clearHistory() {}
         }
     }
