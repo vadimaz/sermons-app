@@ -53,6 +53,7 @@ class NavigationTest {
     fun navigateSwitchesTopLevelRoute() {
         val topLevelState = mutableStateOf<NavKey>(HomeRoute)
         val homeStack = NavBackStack<NavKey>(HomeRoute)
+        val searchStack = NavBackStack<NavKey>(SearchRoute)
         val scriptureStack = NavBackStack<NavKey>(ScriptureRoute)
         val libraryStack = NavBackStack<NavKey>(LibraryRoute)
 
@@ -61,11 +62,15 @@ class NavigationTest {
             topLevelRoute = topLevelState,
             backStacks = mapOf(
                 HomeRoute to homeStack,
+                SearchRoute to searchStack,
                 ScriptureRoute to scriptureStack,
                 LibraryRoute to libraryStack
             )
         )
         val navigator = Navigator(navState)
+
+        navigator.navigate(SearchRoute)
+        assertEquals(SearchRoute, navState.topLevelRoute)
 
         navigator.navigate(ScriptureRoute)
         assertEquals(ScriptureRoute, navState.topLevelRoute)

@@ -118,6 +118,45 @@ class  UseCasesTest {
         override suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int) = Unit
         override suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float) = Unit
         override suspend fun saveBibleNarrator(narrator: String?) = Unit
+
+        override fun search(
+            query: String,
+            category: com.example.sermonindex.domain.model.SearchCategory
+        ): Flow<com.example.sermonindex.domain.model.SearchAggregateResult> =
+            flowOf(com.example.sermonindex.domain.model.SearchAggregateResult(query = query))
+
+        override val catalogSyncState: Flow<com.example.sermonindex.domain.model.CatalogSyncState> =
+            flowOf(com.example.sermonindex.domain.model.CatalogSyncState.NotDownloaded)
+
+        var downloadCatalogCalled = false
+        override suspend fun downloadOrUpdateCatalog() {
+            downloadCatalogCalled = true
+        }
+
+        var updateAvailable = false
+        override suspend fun checkForCatalogUpdate(): Boolean = updateAvailable
+
+        var recentQueriesList = listOf("tozer", "prayer")
+        override val recentSearchQueries: Flow<List<String>>
+            get() = flowOf(recentQueriesList)
+
+        var addedRecentQuery: String? = null
+        override suspend fun addRecentSearchQuery(query: String) {
+            addedRecentQuery = query
+        }
+
+        var deletedRecentQuery: String? = null
+        override suspend fun deleteRecentSearchQuery(query: String) {
+            deletedRecentQuery = query
+        }
+
+        var clearedRecentQueries = false
+        override suspend fun clearRecentSearchQueries() {
+            clearedRecentQueries = true
+        }
+
+        override val isCatalogReadyBannerDismissed: Flow<Boolean> = flowOf(false)
+        override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {}
     }
 
     @Test
@@ -224,5 +263,52 @@ class  UseCasesTest {
 
         assertTrue(textDetail.isTextOnly)
         org.junit.Assert.assertFalse(audioDetail.isTextOnly)
+    }
+
+    @Test
+    fun searchUseCase_returnsMatchingResults() = runTest {
+        val useCase = SearchUseCase(fakeRepository)
+        val result = useCase("tozer", com.example.sermonindex.domain.model.SearchCategory.ALL).first()
+        assertEquals("tozer", result.query)
+    }
+
+    @Test
+    fun getCatalogSyncStateUseCase_returnsState() = runTest {
+        val useCase = GetCatalogSyncStateUseCase(fakeRepository)
+        val state = useCase().first()
+        assertEquals(com.example.sermonindex.domain.model.CatalogSyncState.NotDownloaded, state)
+    }
+
+    @Test
+    fun downloadOrUpdateCatalogUseCase_triggersRepository() = runTest {
+        val useCase = DownloadOrUpdateCatalogUseCase(fakeRepository)
+        useCase()
+        assertTrue(fakeRepository.downloadCatalogCalled)
+    }
+
+    @Test
+    fun checkCatalogUpdateUseCase_returnsUpdateStatus() = runTest {
+        val useCase = CheckCatalogUpdateUseCase(fakeRepository)
+        fakeRepository.updateAvailable = true
+        assertTrue(useCase())
+    }
+
+    @Test
+    fun manageRecentQueriesUseCase_handlesAddDeleteClear() = runTest {
+        val getQueries = GetRecentSearchQueriesUseCase(fakeRepository)
+        val addQuery = AddRecentSearchQueryUseCase(fakeRepository)
+        val deleteQuery = DeleteRecentSearchQueryUseCase(fakeRepository)
+        val clearQueries = ClearRecentSearchQueriesUseCase(fakeRepository)
+
+        assertEquals(listOf("tozer", "prayer"), getQueries().first())
+
+        addQuery("holiness")
+        assertEquals("holiness", fakeRepository.addedRecentQuery)
+
+        deleteQuery("prayer")
+        assertEquals("prayer", fakeRepository.deletedRecentQuery)
+
+        clearQueries()
+        assertTrue(fakeRepository.clearedRecentQueries)
     }
 }

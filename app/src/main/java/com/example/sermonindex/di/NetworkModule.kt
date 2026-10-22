@@ -16,6 +16,12 @@ object NetworkModule {
 
     @Provides
     @Singleton
+    fun provideOkHttpClient(@ApplicationContext context: Context): okhttp3.OkHttpClient {
+        return NetworkClient.createOkHttpClient(context)
+    }
+
+    @Provides
+    @Singleton
     fun provideSermonIndexApiService(@ApplicationContext context: Context): SermonIndexApiService {
         return NetworkClient.createApiService(context)
     }

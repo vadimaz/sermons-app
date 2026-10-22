@@ -74,6 +74,17 @@ class SpeakerSermonsPagingSourceTest {
             override suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float) {}
             override suspend fun saveBibleNarrator(narrator: String?) {}
             override suspend fun clearHistory() {}
+
+            override fun search(query: String, category: com.example.sermonindex.domain.model.SearchCategory) = emptyFlow<com.example.sermonindex.domain.model.SearchAggregateResult>()
+            override val catalogSyncState = emptyFlow<com.example.sermonindex.domain.model.CatalogSyncState>()
+            override suspend fun downloadOrUpdateCatalog() {}
+            override suspend fun checkForCatalogUpdate(): Boolean = false
+            override val recentSearchQueries = emptyFlow<List<String>>()
+            override suspend fun addRecentSearchQuery(query: String) {}
+            override suspend fun deleteRecentSearchQuery(query: String) {}
+            override suspend fun clearRecentSearchQueries() {}
+            override val isCatalogReadyBannerDismissed: Flow<Boolean> = emptyFlow()
+            override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {}
         }
     }
 

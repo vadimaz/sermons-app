@@ -342,3 +342,12 @@ fun BibleChapterResponse.extractVerseMap(): Map<Int, String> {
     return verseMap
 }
 
+fun com.example.sermonindex.data.model.ApiStatsDto.toDomain(): com.example.sermonindex.domain.model.ApiStats =
+    com.example.sermonindex.domain.model.ApiStats(
+        sermonsCount = sermons,
+        speakersCount = speakers,
+        topicsCount = topics,
+        generatedAt = generated
+    )
+
+

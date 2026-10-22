@@ -237,4 +237,36 @@
     <string name="search_results_count">%1$d of %2$d matches</string>
     <string name="sermons_on_verse_tooltip">Sermons on this verse</string>
     <string name="verse_sermons_pill">Sermons on verse %1$d</string>
+
+    <!-- Search Section -->
+    <string name="nav_search">Search</string>
+    <string name="search_hint">Search sermons, speakers, topics…</string>
+    <string name="search_filter_all">All</string>
+    <string name="search_filter_sermons">Sermons</string>
+    <string name="search_filter_speakers">Speakers</string>
+    <string name="search_filter_topics">Topics</string>
+    <string name="search_recent_title">Recent Searches</string>
+    <string name="search_clear_recent">Clear All</string>
+    <string name="search_speakers_section">Speakers</string>
+    <string name="search_topics_section">Topics</string>
+    <string name="search_sermons_section">Sermons</string>
+    <string name="search_see_all">See all %1$d</string>
+    <string name="search_empty_title">No results found</string>
+    <string name="search_empty_desc">Try searching with different keywords or author names.</string>
+    <string name="search_catalog_banner_title">Offline Sermon Catalog</string>
+    <string name="search_catalog_banner_desc">Download full 70,000+ sermons catalog (26.7 MB) for instant offline search.</string>
+    <string name="search_catalog_download_action">Download (26.7 MB)</string>
+    <string name="search_catalog_downloading">Indexing catalog… %1$d%%</string>
+    <string name="search_catalog_ready">Offline catalog ready (%1$s sermons)</string>
+    <string name="search_catalog_dismiss">Dismiss</string>
+    <string name="search_catalog_update_available">Catalog update available</string>
+    <string name="search_catalog_update_action">Update</string>
+    <string name="search_catalog_error">Sync error: %1$s</string>
+    <string name="search_catalog_retry">Retry</string>
+    <string name="search_matches_count">%1$d of %2$d</string>
+    <string name="search_matches_badge">%1$d matches</string>
+    <string name="search_prev_match">Previous match</string>
+    <string name="search_next_match">Next match</string>
+    <string name="search_dismiss_highlight">Dismiss highlights</string>
+    <string name="search_see_all_count">See all (%1$d)</string>
 </resources>

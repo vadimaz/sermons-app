@@ -1,5 +1,6 @@
 package com.example.sermonindex.data.network
 
+import com.example.sermonindex.data.model.ApiStatsDto
 import com.example.sermonindex.data.model.AvailableTranslationsResponse
 import com.example.sermonindex.data.model.BibleChapterResponse
 import com.example.sermonindex.data.model.BibleTranslationBooksResponse
@@ -17,6 +18,9 @@ import retrofit2.http.GET
 import retrofit2.http.Path
 
 interface SermonIndexApiService {
+
+    @GET("stats")
+    suspend fun getStats(): ApiStatsDto
 
     @GET("sermons/popular")
     suspend fun getPopularSermons(): PopularSermonsResponse

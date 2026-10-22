@@ -72,6 +72,7 @@ fun SermonDetailScreen(
     onBack: () -> Unit,
     onSpeakerClick: (String) -> Unit,
     onReadClick: (String) -> Unit = {},
+    highlightQuery: String? = null,
     modifier: Modifier = Modifier
 ) {
     val viewModel: SermonDetailViewModel = hiltViewModel(key = "sermon_$sermonId") { factory: SermonDetailViewModel.Factory ->
@@ -82,6 +83,7 @@ fun SermonDetailScreen(
 
     SermonDetailContent(
         state = state,
+        highlightQuery = highlightQuery,
         onEvent = { event ->
             when (event) {
                 is SermonDetailUiEvent.ClickSpeaker -> onSpeakerClick(event.slug)
@@ -103,6 +105,7 @@ fun SermonDetailContent(
     onEvent: (SermonDetailUiEvent) -> Unit,
     onBack: () -> Unit,
     onReadClick: (String) -> Unit = {},
+    highlightQuery: String? = null,
     modifier: Modifier = Modifier
 ) {
     if (state.isLoading) {
@@ -367,7 +370,7 @@ fun SermonDetailContent(
             // Tab Content
             item {
                 when (state.selectedTab) {
-                    0 -> SermonOverviewSection(detail = detail)
+                    0 -> SermonOverviewSection(detail = detail, highlightQuery = highlightQuery)
                     1 -> SermonOutlineSection(outline = detail.outline)
                     2 -> SermonNotesSection(
                         quotes = detail.quotes,
@@ -381,7 +384,7 @@ fun SermonDetailContent(
 }
 
 @Composable
-private fun SermonOverviewSection(detail: SermonDetail) {
+private fun SermonOverviewSection(detail: SermonDetail, highlightQuery: String? = null) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -401,7 +404,17 @@ private fun SermonOverviewSection(detail: SermonDetail) {
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(text = detail.summary, style = MaterialTheme.typography.bodyMedium)
+                    if (highlightQuery.isNullOrBlank()) {
+                        Text(text = detail.summary, style = MaterialTheme.typography.bodyMedium)
+                    } else {
+                        val annotated = com.example.sermonindex.ui.search.components.TextHighlightUtils.buildHighlightedText(
+                            text = detail.summary,
+                            query = highlightQuery,
+                            highlightColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                            activeHighlightColor = MaterialTheme.colorScheme.primaryContainer
+                        )
+                        Text(text = annotated, style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
         }

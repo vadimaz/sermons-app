@@ -30,3 +30,22 @@ data class DownloadedSermonEntity(
     val fileSizeBytes: Long,
     val downloadedAt: Long = System.currentTimeMillis()
 )
+
+data class CatalogMetadataEntity(
+    val sermonCount: Int,
+    val generatedAt: String,
+    val downloadedAt: Long
+)
+
+data class FtsSermonRecord(
+    val id: String,
+    val title: String,
+    val speaker: String,
+    val summary: String,
+    val duration: String,
+    val speakerImage: String,
+    val hasAudio: Boolean,
+    val mp3Url: String = "",
+    val cdnMp3Url: String = ""
+)
+

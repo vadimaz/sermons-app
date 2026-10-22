@@ -72,6 +72,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import com.example.sermonindex.ui.search.components.TextHighlightUtils
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
@@ -387,14 +389,19 @@ fun PlayerContent(
         }
 
         // Scrollable content with sticky controls row
-        LazyColumn(
-            state = listState,
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .nestedScroll(nestedScrollConnection)
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .weight(1f)
+                .fillMaxWidth()
         ) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .nestedScroll(nestedScrollConnection)
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             // Header: Artwork, Title, Badges, Slider, Time
             item(key = "player_header") {
                 Column(
@@ -685,8 +692,11 @@ fun PlayerContent(
                     key = { _, cue -> "cue_${cue.index}" }
                 ) { index, cue ->
                     val isActive = index == state.activeCueIndex
+                    val isMatch = state.matchingCueIndices.contains(index)
                     val targetColor = if (isActive) {
                         MaterialTheme.colorScheme.primary
+                    } else if (isMatch) {
+                        MaterialTheme.colorScheme.tertiary
                     } else {
                         MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                     }
@@ -699,14 +709,32 @@ fun PlayerContent(
                             .clickable { onEvent(PlayerUiEvent.SeekToCue(cue.startMs)) }
                             .padding(vertical = 8.dp, horizontal = 4.dp)
                     ) {
-                        Text(
-                            text = cue.text,
-                            fontSize = 22.sp,
-                            lineHeight = 30.sp,
-                            fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                            color = animatedColor,
-                            textAlign = TextAlign.Start
-                        )
+                        if (state.highlightQuery.isNullOrBlank()) {
+                            Text(
+                                text = cue.text,
+                                fontSize = 22.sp,
+                                lineHeight = 30.sp,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                color = animatedColor,
+                                textAlign = TextAlign.Start
+                            )
+                        } else {
+                            val annotated = remember(cue.text, state.highlightQuery) {
+                                TextHighlightUtils.buildHighlightedText(
+                                    text = cue.text,
+                                    query = state.highlightQuery,
+                                    highlightColor = Color(0x66FFC107)
+                                )
+                            }
+                            Text(
+                                text = annotated,
+                                fontSize = 22.sp,
+                                lineHeight = 30.sp,
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                                color = animatedColor,
+                                textAlign = TextAlign.Start
+                            )
+                        }
                     }
                 }
             } else if (state.isLoadingCues) {
@@ -732,10 +760,11 @@ fun PlayerContent(
             }
 
             item(key = "bottom_spacer") {
-                Spacer(modifier = Modifier.navigationBarsPadding().height(48.dp))
+                Spacer(modifier = Modifier.navigationBarsPadding().height(72.dp))
             }
         }
     }
+}
 }
 
 @Composable

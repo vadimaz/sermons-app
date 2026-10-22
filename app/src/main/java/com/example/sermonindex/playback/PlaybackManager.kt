@@ -24,7 +24,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @OptIn(UnstableApi::class)
-class PlaybackManager(private val context: Context) {
+open class PlaybackManager(private val context: Context? = null) {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var controllerFuture: ListenableFuture<MediaController>? = null
@@ -32,22 +32,30 @@ class PlaybackManager(private val context: Context) {
     private var positionPollJob: Job? = null
 
     private val _playbackState = MutableStateFlow(PlaybackState())
-    val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
+    open val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
     private var activeSermon: Sermon? = null
+    private var pendingPlay: Pair<Sermon, Long>? = null
 
     init {
-        connectToService()
+        if (context != null) {
+            connectToService()
+        }
     }
 
     private fun connectToService() {
-        val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
-        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        val ctx = context ?: return
+        val sessionToken = SessionToken(ctx, ComponentName(ctx, PlaybackService::class.java))
+        controllerFuture = MediaController.Builder(ctx, sessionToken).buildAsync()
         controllerFuture?.addListener({
             try {
                 mediaController = controllerFuture?.get()?.apply {
                     addListener(PlayerListener())
                     syncStateWithPlayer(this)
+                    pendingPlay?.let { (pendingSermon, pos) ->
+                        pendingPlay = null
+                        playSermon(pendingSermon, pos)
+                    }
                 }
             } catch (e: Exception) {
                 _playbackState.value = _playbackState.value.copy(errorMessage = e.message)
@@ -55,28 +63,36 @@ class PlaybackManager(private val context: Context) {
         }, MoreExecutors.directExecutor())
     }
 
-    fun playSermon(sermon: Sermon, startPositionMs: Long = 0L) {
+    open fun playSermon(sermon: Sermon, startPositionMs: Long = 0L) {
         if (!sermon.hasAudio && sermon.mp3Url.isBlank() && sermon.cdnMp3Url.isBlank()) {
             _playbackState.value = _playbackState.value.copy(
-                errorMessage = context.getString(R.string.no_audio_stream_available)
+                errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio stream available"
             )
             return
         }
 
         activeSermon = sermon
         val controller = mediaController ?: run {
+            pendingPlay = sermon to startPositionMs
             connectToService()
             return
         }
 
-        val localFile = java.io.File(context.filesDir, "audio_downloads/${sermon.id}.mp3")
-        val isLocal = localFile.exists() && localFile.length() > 0
+        val localFile = context?.filesDir?.let { java.io.File(it, "audio_downloads/${sermon.id}.mp3") }
+        val isLocal = localFile != null && localFile.exists() && localFile.length() > 0
         val playUrl = if (isLocal) {
             "file://${localFile.absolutePath}"
         } else {
             sermon.mp3Url.ifBlank { sermon.cdnMp3Url }
         }
         val cdnUrl = sermon.cdnMp3Url
+
+        if (playUrl.isBlank()) {
+            _playbackState.value = _playbackState.value.copy(
+                errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio stream available"
+            )
+            return
+        }
 
         val mediaItem = PlaybackService.buildMediaItem(
             url = playUrl,

@@ -47,7 +47,9 @@ data class PlayerUiState(
     val showSpeedMenu: Boolean = false,
     val isReadingMode: Boolean = false,
     val transcriptCues: List<TranscriptCue> = emptyList(),
-    val isLoadingCues: Boolean = false
+    val isLoadingCues: Boolean = false,
+    val highlightQuery: String? = null,
+    val matchingCueIndices: List<Int> = emptyList()
 ) {
     val displayPositionMs: Long
         get() = if (isDraggingSlider) {
@@ -82,6 +84,7 @@ sealed interface PlayerUiEvent {
     data object ToggleReadingMode : PlayerUiEvent
     data class SetReadingMode(val active: Boolean) : PlayerUiEvent
     data class SeekToCue(val startMs: Long) : PlayerUiEvent
+    data class SetHighlightQuery(val query: String?) : PlayerUiEvent
 }
 
 /**
@@ -202,7 +205,18 @@ class PlayerViewModel @Inject constructor(
             _uiState.update { it.copy(isLoadingCues = true) }
             getTranscriptCuesUseCase(vttUrl).fold(
                 onSuccess = { cues ->
-                    _uiState.update { it.copy(transcriptCues = cues, isLoadingCues = false) }
+                    val query = _uiState.value.highlightQuery
+                    val matching = if (query.isNullOrBlank()) emptyList()
+                    else cues.mapIndexedNotNull { idx, cue ->
+                        if (cue.text.contains(query, ignoreCase = true)) idx else null
+                    }
+                    _uiState.update {
+                        it.copy(
+                            transcriptCues = cues,
+                            matchingCueIndices = matching,
+                            isLoadingCues = false
+                        )
+                    }
                 },
                 onFailure = {
                     _uiState.update { it.copy(isLoadingCues = false) }
@@ -276,6 +290,19 @@ class PlayerViewModel @Inject constructor(
             }
             is PlayerUiEvent.SeekToCue -> {
                 playbackManager.seekTo(event.startMs)
+            }
+            is PlayerUiEvent.SetHighlightQuery -> {
+                val query = event.query?.trim()?.ifBlank { null }
+                val matching = if (query == null) emptyList()
+                else _uiState.value.transcriptCues.mapIndexedNotNull { idx, cue ->
+                    if (cue.text.contains(query, ignoreCase = true)) idx else null
+                }
+                _uiState.update {
+                    it.copy(
+                        highlightQuery = query,
+                        matchingCueIndices = matching
+                    )
+                }
             }
         }
     }

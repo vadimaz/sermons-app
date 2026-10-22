@@ -103,6 +103,24 @@ class BibleUseCasesTest {
         override suspend fun saveBibleNarrator(narrator: String?) {
             savedNarrator = narrator
         }
+
+        override fun search(
+            query: String,
+            category: com.example.sermonindex.domain.model.SearchCategory
+        ): Flow<com.example.sermonindex.domain.model.SearchAggregateResult> =
+            flowOf(com.example.sermonindex.domain.model.SearchAggregateResult())
+
+        override val catalogSyncState: Flow<com.example.sermonindex.domain.model.CatalogSyncState> =
+            flowOf(com.example.sermonindex.domain.model.CatalogSyncState.NotDownloaded)
+
+        override suspend fun downloadOrUpdateCatalog() {}
+        override suspend fun checkForCatalogUpdate(): Boolean = false
+        override val recentSearchQueries: Flow<List<String>> = flowOf(emptyList())
+        override suspend fun addRecentSearchQuery(query: String) {}
+        override suspend fun deleteRecentSearchQuery(query: String) {}
+        override suspend fun clearRecentSearchQueries() {}
+        override val isCatalogReadyBannerDismissed: Flow<Boolean> = flowOf(false)
+        override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {}
     }
 
     @Test

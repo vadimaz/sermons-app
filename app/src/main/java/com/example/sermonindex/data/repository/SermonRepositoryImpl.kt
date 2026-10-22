@@ -14,12 +14,16 @@ import com.example.sermonindex.data.mapper.toDomain
 import com.example.sermonindex.data.mapper.toFavoriteEntity
 import com.example.sermonindex.data.network.SermonIndexApiService
 import com.example.sermonindex.data.sync.AudioDownloadWorker
+import com.example.sermonindex.data.sync.CatalogSyncWorker
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.BibleTranslation
+import com.example.sermonindex.domain.model.CatalogSyncState
 import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
+import com.example.sermonindex.domain.model.SearchAggregateResult
+import com.example.sermonindex.domain.model.SearchCategory
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.model.Speaker
@@ -33,6 +37,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -50,10 +56,15 @@ class SermonRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val apiService: SermonIndexApiService,
     private val database: AppDatabase,
+    private val searchPreferences: com.example.sermonindex.data.local.SearchPreferences,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : SermonRepository {
 
     private var cachedTranslations: List<BibleTranslation>? = null
+    private var cachedSpeakers: List<Speaker>? = null
+    private var cachedTopics: List<Topic>? = null
+    private var cachedPopularSermons: List<Sermon>? = null
+    private val hasCatalogUpdateState = MutableStateFlow(false)
     private val chapterVerseCache = java.util.concurrent.ConcurrentHashMap<String, Map<Int, String>>()
 
     override val favorites: Flow<List<FavoriteSermon>> =
@@ -185,8 +196,11 @@ class SermonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getPopularSermons(): Result<List<Sermon>> = withContext(ioDispatcher) {
+        cachedPopularSermons?.let { return@withContext Result.success(it) }
         runCatching {
-            apiService.getPopularSermons().sermons.map { it.toDomain() }
+            val sermons = apiService.getPopularSermons().sermons.map { it.toDomain() }
+            cachedPopularSermons = sermons
+            sermons
         }
     }
 
@@ -244,8 +258,11 @@ class SermonRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getSpeakers(): Result<List<Speaker>> = withContext(ioDispatcher) {
+        cachedSpeakers?.let { return@withContext Result.success(it) }
         runCatching {
-            apiService.getSpeakers().speakers.map { it.toDomain() }
+            val speakers = apiService.getSpeakers().speakers.map { it.toDomain() }
+            cachedSpeakers = speakers
+            speakers
         }
     }
 
@@ -263,8 +280,11 @@ class SermonRepositoryImpl @Inject constructor(
         }
 
     override suspend fun getTopics(): Result<List<Topic>> = withContext(ioDispatcher) {
+        cachedTopics?.let { return@withContext Result.success(it) }
         runCatching {
-            apiService.getTopics().topics.map { it.toDomain() }
+            val topics = apiService.getTopics().topics.map { it.toDomain() }
+            cachedTopics = topics
+            topics
         }
     }
 
@@ -381,4 +401,148 @@ class SermonRepositoryImpl @Inject constructor(
     override suspend fun clearHistory() = withContext(ioDispatcher) {
         database.historyDao.clearHistory()
     }
+
+    override val catalogSyncState: Flow<CatalogSyncState> = combine(
+        database.getCatalogMetadataFlow(),
+        WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow(CatalogSyncWorker.WORK_NAME),
+        hasCatalogUpdateState
+    ) { meta, workInfos, hasUpdate ->
+        val activeWork = workInfos.firstOrNull()
+        if (activeWork != null) {
+            when (activeWork.state) {
+                WorkInfo.State.RUNNING -> {
+                    val progress = activeWork.progress.getFloat(CatalogSyncWorker.KEY_PROGRESS, 0f)
+                    return@combine CatalogSyncState.Downloading(progress)
+                }
+                WorkInfo.State.ENQUEUED -> {
+                    return@combine CatalogSyncState.Downloading(0f)
+                }
+                WorkInfo.State.FAILED -> {
+                    val error = activeWork.outputData.getString(CatalogSyncWorker.KEY_ERROR) ?: "Sync failed"
+                    return@combine CatalogSyncState.Error(error)
+                }
+                else -> { /* fall through to inspect database */ }
+            }
+        }
+
+        val meta = database.getCatalogMetadata()
+        val ftsCount = database.getFtsSermonCount()
+        if (meta != null && meta.sermonCount > 0 && ftsCount > 0) {
+            CatalogSyncState.Ready(
+                sermonCount = ftsCount,
+                generatedAt = meta.generatedAt,
+                hasUpdate = hasUpdate
+            )
+        } else {
+            CatalogSyncState.NotDownloaded
+        }
+    }.flowOn(ioDispatcher)
+
+    override suspend fun downloadOrUpdateCatalog(): Unit = withContext(ioDispatcher) {
+        val workRequest = OneTimeWorkRequestBuilder<CatalogSyncWorker>()
+            .addTag(CatalogSyncWorker.TAG)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            CatalogSyncWorker.WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
+        Unit
+    }
+
+    override suspend fun checkForCatalogUpdate(): Boolean = withContext(ioDispatcher) {
+        runCatching {
+            val meta = database.getCatalogMetadata() ?: return@withContext false
+            val stats = apiService.getStats()
+            if (stats.generated.isNotBlank() && stats.generated != meta.generatedAt) {
+                hasCatalogUpdateState.value = true
+                true
+            } else {
+                hasCatalogUpdateState.value = false
+                false
+            }
+        }.getOrDefault(false)
+    }
+
+    override val recentSearchQueries: Flow<List<String>> =
+        database.getRecentSearchQueries().flowOn(ioDispatcher)
+
+    override suspend fun addRecentSearchQuery(query: String) = withContext(ioDispatcher) {
+        database.addRecentSearchQuery(query)
+    }
+
+    override suspend fun deleteRecentSearchQuery(query: String) = withContext(ioDispatcher) {
+        database.deleteRecentSearchQuery(query)
+    }
+
+    override suspend fun clearRecentSearchQueries() = withContext(ioDispatcher) {
+        database.clearRecentSearchQueries()
+    }
+
+    override val isCatalogReadyBannerDismissed: Flow<Boolean> =
+        searchPreferences.isCatalogReadyBannerDismissed
+
+    override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {
+        searchPreferences.setCatalogReadyBannerDismissed(dismissed)
+    }
+
+    override fun search(query: String, category: SearchCategory): Flow<SearchAggregateResult> = kotlinx.coroutines.flow.flow {
+        val cleanQuery = query.trim()
+        if (cleanQuery.isBlank()) {
+            emit(SearchAggregateResult(query = query))
+            return@flow
+        }
+        val q = cleanQuery.lowercase()
+
+        val allMatchingSpeakers = if (category == SearchCategory.ALL || category == SearchCategory.SPEAKERS) {
+            val allSpeakers = cachedSpeakers ?: getSpeakers().getOrDefault(emptyList())
+            allSpeakers.filter { speaker ->
+                speaker.name.lowercase().contains(q) || speaker.slug.lowercase().contains(q)
+            }
+        } else emptyList()
+        val totalSpeakerMatches = allMatchingSpeakers.size
+        val matchingSpeakers = if (category == SearchCategory.ALL) allMatchingSpeakers.take(5) else allMatchingSpeakers
+
+        val allMatchingTopics = if (category == SearchCategory.ALL || category == SearchCategory.TOPICS) {
+            val allTopics = cachedTopics ?: getTopics().getOrDefault(emptyList())
+            allTopics.filter { topic ->
+                topic.name.lowercase().contains(q) || topic.slug.lowercase().contains(q)
+            }
+        } else emptyList()
+        val totalTopicMatches = allMatchingTopics.size
+        val matchingTopics = if (category == SearchCategory.ALL) allMatchingTopics.take(8) else allMatchingTopics
+
+        val ftsCount = database.getFtsSermonCount()
+        val hasCatalog = ftsCount > 0
+
+        val (matchingSermons, totalSermonMatches) = if (category == SearchCategory.ALL || category == SearchCategory.SERMONS) {
+            if (hasCatalog) {
+                val list = database.searchSermonsFts(cleanQuery, limit = if (category == SearchCategory.ALL) 10 else 100)
+                val totalCount = database.countSermonsFts(cleanQuery)
+                Pair(list, totalCount)
+            } else {
+                val popular = cachedPopularSermons ?: getPopularSermons().getOrDefault(emptyList())
+                val favs = favorites.first().map { it.toSermon() }
+                val hist = history.first().map { it.toSermon() }
+                val combined = (popular + favs + hist).distinctBy { it.id }
+                val filtered = combined.filter { sermon ->
+                    sermon.title.lowercase().contains(q) || sermon.speaker.lowercase().contains(q)
+                }
+                val list = if (category == SearchCategory.ALL) filtered.take(10) else filtered
+                Pair(list, filtered.size)
+            }
+        } else Pair(emptyList(), 0)
+
+        emit(
+            SearchAggregateResult(
+                query = query,
+                speakers = matchingSpeakers,
+                totalSpeakerMatches = totalSpeakerMatches,
+                topics = matchingTopics,
+                totalTopicMatches = totalTopicMatches,
+                sermons = matchingSermons,
+                totalSermonMatches = totalSermonMatches
+            )
+        )
+    }.flowOn(ioDispatcher)
 }

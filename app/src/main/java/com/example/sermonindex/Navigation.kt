@@ -24,10 +24,12 @@ import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -64,6 +66,7 @@ import com.example.sermonindex.ui.home.HomeScreen
 import com.example.sermonindex.ui.library.LibraryScreen
 import com.example.sermonindex.ui.player.FullscreenPlayerScreen
 import com.example.sermonindex.ui.reader.TextSermonScreen
+import com.example.sermonindex.ui.search.SearchScreen
 import com.example.sermonindex.ui.scripture.ScriptureScreen
 import com.example.sermonindex.ui.sermon.SermonDetailScreen
 import com.example.sermonindex.ui.speakers.SpeakerDetailScreen
@@ -75,6 +78,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 
 private val TOP_LEVEL_ROUTES = setOf<NavKey>(
     HomeRoute,
+    SearchRoute,
     BibleRoute,
     ScriptureRoute,
     LibraryRoute
@@ -192,6 +196,7 @@ fun MainNavigation(
 
     val isAtTopLevel = when (currentRoute) {
         HomeRoute -> true
+        SearchRoute -> true
         BibleRoute -> true
         LibraryRoute -> true
         ScriptureRoute -> isScriptureAtRoot
@@ -254,11 +259,13 @@ fun MainNavigation(
                                     }
                             ) {
                             val isHome = navigationState.topLevelRoute == HomeRoute
+                            val isSearch = navigationState.topLevelRoute == SearchRoute
                             val isBible = navigationState.topLevelRoute == BibleRoute
                             val isScripture = navigationState.topLevelRoute == ScriptureRoute
                             val isLibrary = navigationState.topLevelRoute == LibraryRoute
 
                             val homeLabel = stringResource(R.string.nav_home)
+                            val searchLabel = stringResource(R.string.nav_search)
                             val bibleLabel = stringResource(R.string.nav_bible)
                             val scriptureLabel = stringResource(R.string.nav_scripture)
                             val libraryLabel = stringResource(R.string.nav_library)
@@ -279,6 +286,24 @@ fun MainNavigation(
                                     )
                                 },
                                 label = { Text(homeLabel) }
+                            )
+
+                            NavigationBarItem(
+                                selected = isSearch,
+                                onClick = {
+                                    if (isSearch) {
+                                        navigator.onReselect(SearchRoute)
+                                    } else {
+                                        navigator.navigate(SearchRoute)
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = if (isSearch) Icons.Filled.Search else Icons.Outlined.Search,
+                                        contentDescription = searchLabel
+                                    )
+                                },
+                                label = { Text(searchLabel) }
                             )
 
                             NavigationBarItem(
@@ -375,6 +400,24 @@ fun MainNavigation(
                                 },
                                 onSeeAllTopics = {
                                     navigator.navigate(TopicsRoute)
+                                },
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<SearchRoute> {
+                            SearchScreen(
+                                onSpeakerSelect = { slug ->
+                                    navigator.navigate(SpeakerDetailRoute(slug))
+                                },
+                                onTopicSelect = { slug ->
+                                    navigator.navigate(TopicDetailRoute(slug))
+                                },
+                                onSermonSelect = { sermonId, query ->
+                                    navigator.navigate(SermonDetailRoute(sermonId, highlightQuery = query))
+                                },
+                                onTextSermonSelect = { sermonId, query ->
+                                    navigator.navigate(TextSermonRoute(sermonId, highlightQuery = query))
                                 },
                                 reselectEvents = navigator.reselectEvents
                             )
@@ -480,12 +523,13 @@ fun MainNavigation(
                         entry<SermonDetailRoute> { route ->
                             SermonDetailScreen(
                                 sermonId = route.sermonId,
+                                highlightQuery = route.highlightQuery,
                                 onBack = { navigator.goBack() },
                                 onSpeakerClick = { slug ->
                                     navigator.navigate(SpeakerDetailRoute(slug))
                                 },
                                 onReadClick = { sermonId ->
-                                    navigator.navigate(TextSermonRoute(sermonId))
+                                    navigator.navigate(TextSermonRoute(sermonId, highlightQuery = route.highlightQuery))
                                 }
                             )
                         }
@@ -499,6 +543,7 @@ fun MainNavigation(
                         entry<TextSermonRoute> { route ->
                             TextSermonScreen(
                                 sermonId = route.sermonId,
+                                highlightQuery = route.highlightQuery,
                                 onBack = { navigator.goBack() },
                                 onSpeakerClick = { slug ->
                                     navigator.navigate(SpeakerDetailRoute(slug))

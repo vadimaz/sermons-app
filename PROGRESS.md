@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.6.1` | **Version Code:** `12`
+> **Current Version:** `1.7.0` | **Version Code:** `13`
 
 ---
 
@@ -24,6 +24,7 @@
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
+| **Search** | `SearchViewModel` | Global search across speakers, topics, and 70k+ offline sermon catalog with debounced FTS4 queries; dynamic category filter chips (All, Sermons, Speakers, Topics); dismissible catalog sync status banner; recent search history; sermon cards with Play pill, Favorite toggle, quote snippet with query highlights, and differentiated navigation (card body -> Sermon Details, book icon -> Text Reader). |
 | **Bible Reader** | `BibleViewModel` | Distraction-free Holy Scripture reader with 1,250+ translations, localized book titles, chapter continuous text with headings, verse markers, poetic stanzas, Hebrew subtitles, footnotes popups, table of contents sheet with OT/NT tabs and book search, reading typography settings (font size slider, Serif vs Sans toggle, line spacing), BSB audio narration streaming via Media3, in-chapter search with match navigation, and direct cross-link to Scripture sermons. |
 | **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, dual Scripture Verse quote card (default BSB + system language / KJV fallback), searchable translation picker bottom sheet (`ModalBottomSheet`), verse sermons list, navigation bar hidden on chapter/verse levels, synchronized back gesture handling via `BackHandler`, scroll-to-top on reselect without resetting selection. |
 | **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, sermon count badges, and back navigation when opened from Home. |
@@ -68,8 +69,34 @@
 - **Interactive Textual Footnotes**: Fixed API DTO parser to capture `chapter.footnotes` from SermonIndex CDN; superscript blue asterisks `*` styled with `tertiary` color without underline (`TextDecoration.None`); tap-to-inspect opens `BibleFootnoteDialog` with verse number and combined comments for verses with multiple notes, also accessible via verse tooltip button.
 - **In-Chapter Search**: Real-time client-side text search highlighting matches and allowing quick navigation between occurrences.
 - **Verse Tooltip & Cross-Linking**: Simple tap on any verse marker opens a tooltip with direct navigation to a dedicated `BibleVerseSermonsRoute` screen (displaying the verse in primary and secondary translations alongside related sermons) with standard back navigation.
-- **Pure Isolated Navigation 3 Backstacks**: Removed artificial "exit through home" route nesting. Each top-level tab (Home, Bible, Scripture, Library) maintains its own independent backstack. Top-level screens cleanly delegate back presses to the OS for native minimization (Predictive Back on Android 12+).
+- **Pure Isolated Navigation 3 Backstacks**: Removed artificial "exit through home" route nesting. Each top-level tab (Home, Search, Bible, Scripture, Library) maintains its own independent backstack. Top-level screens cleanly delegate back presses to the OS for native minimization (Predictive Back on Android 12+).
 - **Persistent State**: SQLite storage in `bible_reading_state` table for last read translation, book, chapter, verse, and typography settings.
+
+### 1.8 Search & Offline Catalog (SQLite FTS4 + REST API Fallback)
+- **Top-Level Navigation**: 5th primary destination added to bottom navigation bar (`SearchRoute`), positioned between Home and Bible Reader with persistent backstack support.
+- **Unified Search Interface (`SearchScreen`)**:
+  - Live search input with leading search icon, clear button, and recent search history with single/all query deletion.
+  - Multi-category filtering chips: **All** (Все), **Sermons** (Проповеди), **Preachers** (Проповедники), and **Topics** (Темы) displayed dynamically when query is present.
+  - Categorized results rendering: Speakers shelf/cards with avatar & sermon count, Topics chips with count badges, and Sermon items with duration, speaker, direct play/favorite interaction, and quote snippets.
+  - Differentiated card interactions: tapping the sermon card body navigates to `SermonDetailScreen` (overview, outline, scripture, notes), while tapping the book icon button navigates directly to `TextSermonScreen` reader.
+  - Keyboard action search triggering with IME hide.
+- **Zero-Download First Experience & Online Fallback**:
+  - Out of the box, searches across popular sermons, all preachers, and all topics downloaded via official REST API v2 endpoints with in-memory caching.
+  - Non-intrusive catalog download recommendation banner ("Unlock 70,000+ sermons offline" / 26.7 MB gzip) allowing voluntary download, with dismiss action persisted in `SearchPreferences`.
+- **High-Performance SQLite FTS4 Virtual Table (`sermon_fts`) & Self-Healing Architecture**:
+  - Native virtual table `sermon_fts USING fts4(sermon_id, title, speaker, summary, duration, speaker_image, has_audio, mp3_url, cdn_mp3_url, tokenize=unicode61)` in `AppDatabase.kt`.
+  - Sub-millisecond full-text queries matching prefix words (`term*`) across title, speaker, and summary.
+  - Multilingual `tokenize=unicode61` enabling case-insensitive search across Cyrillic and international alphabets.
+  - Adaptive column extraction via `SELECT *` preventing schema mismatch crashes across table revisions.
+  - Self-healing database lifecycle in `DatabaseHelper.onOpen`: clears orphaned `catalog_metadata` when `sermon_fts` is empty, accurately returning `CatalogSyncState.NotDownloaded`.
+- **Streaming Catalog Ingestion (`CatalogSyncWorker`)**:
+  - WorkManager `CoroutineWorker` streaming `https://api.sermonindex.net/downloads/sermons.json.gz` using `GZIPInputStream` and streaming JSON parser.
+  - Batched SQLite transactions (1,000 records/batch) preventing UI thread lock and memory pressure.
+  - Live progress reporting observed by `SearchViewModel`.
+  - Automatic `recreateSermonFtsTable()` at the start of syncing to ensure clean table initialization.
+- **Catalog Versioning & Update Detection**:
+  - `GET /v2/stats` integration fetching server dataset timestamp (`generated`).
+  - Compared with local `catalog_metadata` table; displays an update available badge/banner if a newer dataset is detected on the CDN.
 
 ---
 
@@ -115,6 +142,15 @@ interface SermonRepository {
     suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int = 1)
     suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
     suspend fun saveBibleNarrator(narrator: String?)
+
+    val catalogSyncState: Flow<CatalogSyncState>
+    fun search(query: String, category: SearchCategory): Flow<SearchAggregateResult>
+    suspend fun downloadOrUpdateCatalog()
+    suspend fun cancelCatalogDownload()
+    suspend fun checkForCatalogUpdate(): Result<Boolean>
+    val recentSearchQueries: Flow<List<String>>
+    suspend fun addRecentSearchQuery(query: String)
+    suspend fun clearRecentSearchQueries()
 
     suspend fun clearHistory()
 }
@@ -162,6 +198,8 @@ class PlaybackManager(context: Context) {
 
 ## 4. Backlog & Technical Debt
 
+- **Periodic Catalog Update Worker & Push Notifications**: Background WorkManager periodic check against `GET /v2/stats` (`generated` timestamp) compared to local `catalog_metadata.timestamp`. Notify user via system notification when a new version of the 70,000+ sermon catalog is released, with a one-tap background download action.
+- **Bible Full-Text Search (SQLite FTS)**: Pure offline indexing of active Bible translation verses into an SQLite FTS virtual table (`bible_fts`) for sub-millisecond Bible search across Old and New Testaments.
 - **UI Component Decomposition & Reusability (Scripture & Explorers)**: Refactor complex, multi-level screen monoliths (e.g., the 4-level navigation in `ScriptureScreen`) into decoupled, stateless UI building blocks (`ScriptureBookPicker`, `ScriptureChapterPicker`, `ScriptureVerseHeatMapGrid`, `ScriptureVerseQuoteCard`). This prevents tight coupling to single ViewModels, simplifies testing, and enables flexible composition across different sections (e.g. Bible reader, search, topic studies).
 - **Room Entity Migration**: `AppDatabase.kt` currently uses `SQLiteOpenHelper` directly. Evaluate migrating to Room `@Database` once KSP Room schema export configuration is finalized.
 - **Audio Focus Transition**: Smoothly duck audio on brief notifications and pause on audio focus loss (phone calls).

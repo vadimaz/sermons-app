@@ -65,4 +65,15 @@ interface SermonRepository {
     suspend fun saveBibleNarrator(narrator: String?)
 
     suspend fun clearHistory()
+
+    fun search(query: String, category: com.example.sermonindex.domain.model.SearchCategory): Flow<com.example.sermonindex.domain.model.SearchAggregateResult>
+    val catalogSyncState: Flow<com.example.sermonindex.domain.model.CatalogSyncState>
+    suspend fun downloadOrUpdateCatalog()
+    suspend fun checkForCatalogUpdate(): Boolean
+    val recentSearchQueries: Flow<List<String>>
+    suspend fun addRecentSearchQuery(query: String)
+    suspend fun deleteRecentSearchQuery(query: String)
+    suspend fun clearRecentSearchQueries()
+    val isCatalogReadyBannerDismissed: Flow<Boolean>
+    suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean)
 }

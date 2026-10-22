@@ -150,3 +150,49 @@ class SaveBibleNarratorUseCase @Inject constructor(private val repository: Sermo
         repository.saveBibleNarrator(narrator)
 }
 
+class SearchUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(
+        query: String,
+        category: com.example.sermonindex.domain.model.SearchCategory
+    ): Flow<com.example.sermonindex.domain.model.SearchAggregateResult> =
+        repository.search(query, category)
+}
+
+class GetCatalogSyncStateUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(): Flow<com.example.sermonindex.domain.model.CatalogSyncState> =
+        repository.catalogSyncState
+}
+
+class DownloadOrUpdateCatalogUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke() = repository.downloadOrUpdateCatalog()
+}
+
+class CheckCatalogUpdateUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(): Boolean = repository.checkForCatalogUpdate()
+}
+
+class GetRecentSearchQueriesUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(): Flow<List<String>> = repository.recentSearchQueries
+}
+
+class AddRecentSearchQueryUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(query: String) = repository.addRecentSearchQuery(query)
+}
+
+class DeleteRecentSearchQueryUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(query: String) = repository.deleteRecentSearchQuery(query)
+}
+
+class ClearRecentSearchQueriesUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke() = repository.clearRecentSearchQueries()
+}
+
+class GetCatalogReadyBannerDismissedUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(): Flow<Boolean> = repository.isCatalogReadyBannerDismissed
+}
+
+class SetCatalogReadyBannerDismissedUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(dismissed: Boolean) = repository.setCatalogReadyBannerDismissed(dismissed)
+}
+
+

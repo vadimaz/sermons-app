@@ -15,6 +15,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import com.example.sermonindex.ui.search.components.TextHighlightUtils
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -63,10 +68,11 @@ fun TextSermonScreen(
     sermonId: String,
     onBack: () -> Unit,
     onSpeakerClick: (String) -> Unit,
+    highlightQuery: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val viewModel: TextSermonViewModel = hiltViewModel(key = "text_sermon_$sermonId") { factory: TextSermonViewModel.Factory ->
-        factory.create(sermonId)
+    val viewModel: TextSermonViewModel = hiltViewModel(key = "text_sermon_${sermonId}_$highlightQuery") { factory: TextSermonViewModel.Factory ->
+        factory.create(sermonId, highlightQuery)
     }
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -145,14 +151,19 @@ fun TextSermonContent(
             }
         }
 
-        // Scrollable content
-        LazyColumn(
-            state = listState,
+        Box(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .weight(1f)
+                .fillMaxWidth()
         ) {
+            // Scrollable content
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             // Header: Artwork / Portrait, Titles, Badge
             item(key = "text_reader_header") {
                 Column(
@@ -286,18 +297,9 @@ fun TextSermonContent(
                 }
             }
 
-            // Main Sermon Text Body
-            item(key = "text_reader_body") {
-                val cleanText = remember(detail.transcript, detail.transcriptHtml, detail.description) {
-                    when {
-                        detail.transcript.isNotBlank() -> detail.transcript
-                        detail.transcriptHtml.isNotBlank() -> detail.transcriptHtml.replace(Regex("<[^>]*>"), "")
-                        detail.description.isNotBlank() -> detail.description
-                        else -> ""
-                    }
-                }
-
-                if (cleanText.isBlank()) {
+            // Main Sermon Text Body (Rendered as structured paragraphs)
+            if (state.paragraphs.isEmpty()) {
+                item(key = "text_reader_empty_body") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -311,10 +313,24 @@ fun TextSermonContent(
                             textAlign = TextAlign.Center
                         )
                     }
-                } else {
+                }
+            } else {
+                itemsIndexed(state.paragraphs, key = { idx, _ -> "para_$idx" }) { _, paragraph ->
+                    val annotatedText = remember(paragraph, state.highlightQuery) {
+                        if (state.highlightQuery.isNullOrBlank()) {
+                            AnnotatedString(paragraph)
+                        } else {
+                            TextHighlightUtils.buildHighlightedText(
+                                text = paragraph,
+                                query = state.highlightQuery,
+                                highlightColor = Color(0x66FFC107)
+                            )
+                        }
+                    }
+
                     SelectionContainer {
                         Text(
-                            text = cleanText,
+                            text = annotatedText,
                             fontSize = 18.sp,
                             lineHeight = 28.sp,
                             fontWeight = FontWeight.Normal,
@@ -322,7 +338,7 @@ fun TextSermonContent(
                             textAlign = TextAlign.Start,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 8.dp)
+                                .padding(vertical = 6.dp)
                         )
                     }
                 }
@@ -403,8 +419,10 @@ fun TextSermonContent(
             }
 
             item(key = "text_reader_bottom_spacer") {
-                Spacer(modifier = Modifier.navigationBarsPadding().height(48.dp))
+                Spacer(modifier = Modifier.navigationBarsPadding().height(72.dp))
             }
         }
     }
 }
+}
+

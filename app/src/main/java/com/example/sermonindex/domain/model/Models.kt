@@ -209,9 +209,9 @@ data class FavoriteSermon(
     val id: String,
     val title: String,
     val speaker: String,
-    val speakerImage: String,
-    val duration: String,
-    val addedAt: Long
+    val speakerImage: String = "",
+    val duration: String = "",
+    val addedAt: Long = 0L
 ) {
     fun toSermon(): Sermon = Sermon(
         id = id,
@@ -285,4 +285,52 @@ sealed interface SleepTimerState {
     data class Active(val remainingMillis: Long, val totalMillis: Long) : SleepTimerState
     data object EndOfSermon : SleepTimerState
 }
+
+/**
+ * Filter categories for app-wide search.
+ */
+enum class SearchCategory {
+    ALL,
+    SERMONS,
+    SPEAKERS,
+    TOPICS
+}
+
+/**
+ * Aggregated search result combining matches across categories.
+ */
+data class SearchAggregateResult(
+    val query: String = "",
+    val speakers: List<Speaker> = emptyList(),
+    val totalSpeakerMatches: Int = 0,
+    val topics: List<Topic> = emptyList(),
+    val totalTopicMatches: Int = 0,
+    val sermons: List<Sermon> = emptyList(),
+    val totalSermonMatches: Int = 0
+)
+
+/**
+ * State of the offline 70,000+ sermons catalog dataset.
+ */
+sealed interface CatalogSyncState {
+    data object NotDownloaded : CatalogSyncState
+    data class Downloading(val progress: Float) : CatalogSyncState
+    data class Ready(
+        val sermonCount: Int,
+        val generatedAt: String,
+        val hasUpdate: Boolean = false
+    ) : CatalogSyncState
+    data class Error(val message: String) : CatalogSyncState
+}
+
+/**
+ * API statistics metadata returned by /v2/stats.
+ */
+data class ApiStats(
+    val sermonsCount: Int = 0,
+    val speakersCount: Int = 0,
+    val topicsCount: Int = 0,
+    val generatedAt: String = ""
+)
+
 

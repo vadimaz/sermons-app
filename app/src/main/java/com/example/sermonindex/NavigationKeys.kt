@@ -7,6 +7,9 @@ import kotlinx.serialization.Serializable
 data object HomeRoute : NavKey
 
 @Serializable
+data object SearchRoute : NavKey
+
+@Serializable
 data object BibleRoute : NavKey
 
 @Serializable
@@ -36,10 +39,10 @@ data class SpeakerDetailRoute(val slug: String) : NavKey
 data class TopicDetailRoute(val slug: String) : NavKey
 
 @Serializable
-data class SermonDetailRoute(val sermonId: String) : NavKey
+data class SermonDetailRoute(val sermonId: String, val highlightQuery: String? = null) : NavKey
 
 @Serializable
 data object PlayerRoute : NavKey
 
 @Serializable
-data class TextSermonRoute(val sermonId: String) : NavKey
+data class TextSermonRoute(val sermonId: String, val highlightQuery: String? = null) : NavKey

@@ -22,7 +22,9 @@ data class TextSermonUiState(
     val detail: SermonDetail? = null,
     val isFavorite: Boolean = false,
     val isLoading: Boolean = true,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val paragraphs: List<String> = emptyList(),
+    val highlightQuery: String? = null
 )
 
 sealed interface TextSermonUiEvent {
@@ -33,7 +35,8 @@ sealed interface TextSermonUiEvent {
 
 @HiltViewModel(assistedFactory = TextSermonViewModel.Factory::class)
 class TextSermonViewModel @AssistedInject constructor(
-    @Assisted private val sermonId: String,
+    @Assisted("sermonId") private val sermonId: String,
+    @Assisted("highlightQuery") private val initialHighlightQuery: String?,
     private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
     private val isFavoriteUseCase: IsFavoriteUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase
@@ -41,10 +44,15 @@ class TextSermonViewModel @AssistedInject constructor(
 
     @AssistedFactory
     interface Factory {
-        fun create(sermonId: String): TextSermonViewModel
+        fun create(
+            @Assisted("sermonId") sermonId: String,
+            @Assisted("highlightQuery") initialHighlightQuery: String? = null
+        ): TextSermonViewModel
     }
 
-    private val _uiState = MutableStateFlow(TextSermonUiState())
+    private val _uiState = MutableStateFlow(
+        TextSermonUiState(highlightQuery = initialHighlightQuery?.trim()?.ifBlank { null })
+    )
     val uiState: StateFlow<TextSermonUiState> = _uiState.asStateFlow()
 
     init {
@@ -79,9 +87,18 @@ class TextSermonViewModel @AssistedInject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             getSermonDetailsUseCase(sermonId)
                 .onSuccess { detail ->
+                    val cleanText = when {
+                        detail.transcript.isNotBlank() -> detail.transcript
+                        detail.transcriptHtml.isNotBlank() -> detail.transcriptHtml.replace(Regex("<[^>]*>"), "")
+                        detail.description.isNotBlank() -> detail.description
+                        else -> ""
+                    }
+                    val paragraphs = cleanText.split(Regex("(\r?\n){2,}")).map { it.trim() }.filter { it.isNotBlank() }
+
                     _uiState.update {
                         it.copy(
                             detail = detail,
+                            paragraphs = paragraphs,
                             isLoading = false,
                             errorMessage = null
                         )
@@ -91,7 +108,7 @@ class TextSermonViewModel @AssistedInject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            errorMessage = error.localizedMessage ?: "Failed to load sermon."
+                            errorMessage = error.localizedMessage ?: "Failed to load sermon details"
                         )
                     }
                 }

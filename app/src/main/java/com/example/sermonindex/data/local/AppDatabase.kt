@@ -9,9 +9,12 @@ import com.example.sermonindex.data.local.dao.DownloadsDao
 import com.example.sermonindex.data.local.dao.FavoritesDao
 import com.example.sermonindex.data.local.dao.HistoryDao
 import com.example.sermonindex.data.local.entities.BibleReadingStateEntity
+import com.example.sermonindex.data.local.entities.CatalogMetadataEntity
 import com.example.sermonindex.data.local.entities.DownloadedSermonEntity
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
+import com.example.sermonindex.data.local.entities.FtsSermonRecord
 import com.example.sermonindex.data.local.entities.HistoryEntity
+import com.example.sermonindex.domain.model.Sermon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +29,8 @@ class AppDatabase private constructor(context: Context) {
     private val historyChangeSignal = MutableStateFlow(0L)
     private val downloadsChangeSignal = MutableStateFlow(0L)
     private val bibleChangeSignal = MutableStateFlow(0L)
+    private val catalogChangeSignal = MutableStateFlow(0L)
+    private val searchHistoryChangeSignal = MutableStateFlow(0L)
 
     val favoritesDao: FavoritesDao = object : FavoritesDao {
         override fun getAllFavorites(): Flow<List<FavoriteSermonEntity>> {
@@ -376,7 +381,239 @@ class AppDatabase private constructor(context: Context) {
         }
     }
 
-    private class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "sermonindex.db", null, 3) {
+    fun getRecentSearchQueries(limit: Int = 10): Flow<List<String>> {
+        return searchHistoryChangeSignal.asStateFlow().map {
+            queryRecentSearchQueries(limit)
+        }
+    }
+
+    suspend fun addRecentSearchQuery(query: String) = withContext(Dispatchers.IO) {
+        val clean = query.trim()
+        if (clean.isBlank()) return@withContext
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("query", clean)
+            put("timestamp", System.currentTimeMillis())
+        }
+        db.insertWithOnConflict("search_history", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        searchHistoryChangeSignal.value = System.currentTimeMillis()
+    }
+
+    suspend fun deleteRecentSearchQuery(query: String) = withContext(Dispatchers.IO) {
+        val db = dbHelper.writableDatabase
+        db.delete("search_history", "query = ?", arrayOf(query.trim()))
+        searchHistoryChangeSignal.value = System.currentTimeMillis()
+    }
+
+    suspend fun clearRecentSearchQueries() = withContext(Dispatchers.IO) {
+        val db = dbHelper.writableDatabase
+        db.delete("search_history", null, null)
+        searchHistoryChangeSignal.value = System.currentTimeMillis()
+    }
+
+    private suspend fun queryRecentSearchQueries(limit: Int): List<String> = withContext(Dispatchers.IO) {
+        val list = mutableListOf<String>()
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT query FROM search_history ORDER BY timestamp DESC LIMIT ?",
+            arrayOf(limit.toString())
+        )
+        cursor.use {
+            while (it.moveToNext()) {
+                list.add(it.getString(0))
+            }
+        }
+        list
+    }
+
+    fun getCatalogMetadataFlow(): Flow<CatalogMetadataEntity?> {
+        return catalogChangeSignal.asStateFlow().map {
+            getCatalogMetadata()
+        }
+    }
+
+    suspend fun getCatalogMetadata(): CatalogMetadataEntity? = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT sermon_count, generated_at, downloaded_at FROM catalog_metadata WHERE id = 1",
+            null
+        )
+        val meta = cursor.use {
+            if (it.moveToFirst()) {
+                CatalogMetadataEntity(
+                    sermonCount = it.getInt(0),
+                    generatedAt = it.getString(1),
+                    downloadedAt = it.getLong(2)
+                )
+            } else null
+        }
+        if (meta != null) {
+            val ftsCount = getFtsSermonCount()
+            if (ftsCount == 0) {
+                val writable = dbHelper.writableDatabase
+                writable.execSQL("DELETE FROM catalog_metadata")
+                return@withContext null
+            }
+        }
+        meta
+    }
+
+    suspend fun saveCatalogMetadata(
+        sermonCount: Int,
+        generatedAt: String,
+        downloadedAt: Long = System.currentTimeMillis()
+    ) = withContext(Dispatchers.IO) {
+        val db = dbHelper.writableDatabase
+        val values = ContentValues().apply {
+            put("id", 1)
+            put("sermon_count", sermonCount)
+            put("generated_at", generatedAt)
+            put("downloaded_at", downloadedAt)
+        }
+        db.insertWithOnConflict("catalog_metadata", null, values, SQLiteDatabase.CONFLICT_REPLACE)
+        catalogChangeSignal.value = System.currentTimeMillis()
+    }
+
+    suspend fun insertSermonsFtsBatch(records: List<FtsSermonRecord>) = withContext(Dispatchers.IO) {
+        if (records.isEmpty()) return@withContext
+        val db = dbHelper.writableDatabase
+        db.beginTransaction()
+        try {
+            val stmt = db.compileStatement(
+                "INSERT INTO sermon_fts (sermon_id, title, speaker, summary, duration, speaker_image, has_audio, mp3_url, cdn_mp3_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            for (rec in records) {
+                stmt.bindString(1, rec.id)
+                stmt.bindString(2, rec.title)
+                stmt.bindString(3, rec.speaker)
+                stmt.bindString(4, rec.summary)
+                stmt.bindString(5, rec.duration)
+                stmt.bindString(6, rec.speakerImage)
+                stmt.bindLong(7, if (rec.hasAudio) 1L else 0L)
+                stmt.bindString(8, rec.mp3Url)
+                stmt.bindString(9, rec.cdnMp3Url)
+                stmt.executeInsert()
+                stmt.clearBindings()
+            }
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
+    suspend fun clearSermonsFts() = withContext(Dispatchers.IO) {
+        val db = dbHelper.writableDatabase
+        DatabaseHelper.recreateSermonFtsTable(db)
+        db.execSQL("DELETE FROM catalog_metadata")
+        catalogChangeSignal.value = System.currentTimeMillis()
+    }
+
+    suspend fun getFtsSermonCount(): Int = withContext(Dispatchers.IO) {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM sermon_fts", null)
+        cursor.use {
+            if (it.moveToFirst()) it.getInt(0) else 0
+        }
+    }
+
+    suspend fun countSermonsFts(query: String): Int = withContext(Dispatchers.IO) {
+        val clean = query.trim()
+        if (clean.isBlank()) return@withContext 0
+        val tokens = clean.split(Regex("[^\\p{L}\\p{Nd}]+"))
+            .filter { it.isNotBlank() }
+        if (tokens.isEmpty()) return@withContext 0
+        val ftsMatch = tokens.joinToString(" ") { "$it*" }
+        val db = dbHelper.readableDatabase
+        try {
+            val cursor = db.rawQuery(
+                "SELECT COUNT(*) FROM sermon_fts WHERE sermon_fts MATCH ?",
+                arrayOf(ftsMatch)
+            )
+            cursor.use {
+                if (it.moveToFirst()) it.getInt(0) else 0
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AppDatabase", "countSermonsFts failed for query: $query", e)
+            0
+        }
+    }
+
+    suspend fun searchSermonsFts(query: String, limit: Int = 50): List<Sermon> = withContext(Dispatchers.IO) {
+        val clean = query.trim()
+        if (clean.isBlank()) return@withContext emptyList()
+        val tokens = clean.split(Regex("[^\\p{L}\\p{Nd}]+"))
+            .filter { it.isNotBlank() }
+        if (tokens.isEmpty()) return@withContext emptyList()
+        val ftsMatch = tokens.joinToString(" ") { "$it*" }
+
+        val list = mutableListOf<Sermon>()
+        val db = dbHelper.readableDatabase
+        try {
+            val cursor = db.rawQuery(
+                """
+                SELECT *
+                FROM sermon_fts
+                WHERE sermon_fts MATCH ?
+                LIMIT ?
+                """.trimIndent(),
+                arrayOf(ftsMatch, limit.toString())
+            )
+            cursor.use {
+                val idIdx = it.getColumnIndex("sermon_id")
+                val titleIdx = it.getColumnIndex("title")
+                val speakerIdx = it.getColumnIndex("speaker")
+                val summaryIdx = it.getColumnIndex("summary")
+                val durationIdx = it.getColumnIndex("duration")
+                val imgIdx = it.getColumnIndex("speaker_image")
+                val audioIdx = it.getColumnIndex("has_audio")
+                val mp3Idx = it.getColumnIndex("mp3_url")
+                val cdnIdx = it.getColumnIndex("cdn_mp3_url")
+
+                while (it.moveToNext()) {
+                    val id = if (idIdx >= 0) it.getString(idIdx).orEmpty() else ""
+                    val title = if (titleIdx >= 0) it.getString(titleIdx).orEmpty() else ""
+                    val speaker = if (speakerIdx >= 0) it.getString(speakerIdx).orEmpty() else ""
+                    val summary = if (summaryIdx >= 0) it.getString(summaryIdx).orEmpty() else ""
+                    val duration = if (durationIdx >= 0) it.getString(durationIdx).orEmpty() else ""
+                    val speakerImage = if (imgIdx >= 0) it.getString(imgIdx).orEmpty() else ""
+                    val hasAudio = if (audioIdx >= 0) it.getInt(audioIdx) == 1 else false
+                    val mp3 = if (mp3Idx >= 0) it.getString(mp3Idx).orEmpty() else ""
+                    val cdn = if (cdnIdx >= 0) it.getString(cdnIdx).orEmpty() else ""
+
+                    list.add(
+                        Sermon(
+                            id = id,
+                            title = title,
+                            speaker = speaker,
+                            summary = summary,
+                            duration = duration,
+                            speakerImage = speakerImage,
+                            hasAudio = hasAudio,
+                            mp3Url = mp3,
+                            cdnMp3Url = cdn
+                        )
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("AppDatabase", "searchSermonsFts failed for query: $query", e)
+        }
+        list
+    }
+
+    private class DatabaseHelper(context: Context) : SQLiteOpenHelper(context, "sermonindex.db", null, 6) {
+        override fun onOpen(db: SQLiteDatabase) {
+            super.onOpen(db)
+            try {
+                val cursor = db.rawQuery("SELECT COUNT(*) FROM sermon_fts", null)
+                val count = cursor.use { if (it.moveToFirst()) it.getInt(0) else 0 }
+                if (count == 0) {
+                    db.execSQL("DELETE FROM catalog_metadata")
+                }
+            } catch (_: Exception) {
+                // Ignore if table is being created
+            }
+        }
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL(
                 """
@@ -437,6 +674,28 @@ class AppDatabase private constructor(context: Context) {
                 )
                 """.trimIndent()
             )
+
+            db.execSQL(
+                """
+                CREATE TABLE catalog_metadata (
+                    id INTEGER PRIMARY KEY CHECK (id = 1),
+                    sermon_count INTEGER NOT NULL,
+                    generated_at TEXT NOT NULL,
+                    downloaded_at INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+
+            db.execSQL(
+                """
+                CREATE TABLE search_history (
+                    query TEXT PRIMARY KEY NOT NULL,
+                    timestamp INTEGER NOT NULL
+                )
+                """.trimIndent()
+            )
+
+            recreateSermonFtsTable(db)
         }
 
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -474,7 +733,65 @@ class AppDatabase private constructor(context: Context) {
                     """.trimIndent()
                 )
             }
-            db.execSQL("DROP TABLE IF EXISTS sermon_fts")
+            if (oldVersion < 4) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS catalog_metadata (
+                        id INTEGER PRIMARY KEY CHECK (id = 1),
+                        sermon_count INTEGER NOT NULL,
+                        generated_at TEXT NOT NULL,
+                        downloaded_at INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS search_history (
+                        query TEXT PRIMARY KEY NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                recreateSermonFtsTable(db)
+            }
+            if (oldVersion < 5) {
+                recreateSermonFtsTable(db)
+            }
+            if (oldVersion < 6) {
+                try {
+                    val cursor = db.rawQuery("SELECT COUNT(*) FROM sermon_fts", null)
+                    val count = cursor.use { if (it.moveToFirst()) it.getInt(0) else 0 }
+                    if (count == 0) {
+                        recreateSermonFtsTable(db)
+                        db.execSQL("DELETE FROM catalog_metadata")
+                    }
+                } catch (_: Exception) {
+                    recreateSermonFtsTable(db)
+                    db.execSQL("DELETE FROM catalog_metadata")
+                }
+            }
+        }
+
+        companion object {
+            fun recreateSermonFtsTable(db: SQLiteDatabase) {
+                db.execSQL("DROP TABLE IF EXISTS sermon_fts")
+                db.execSQL(
+                    """
+                    CREATE VIRTUAL TABLE sermon_fts USING fts4(
+                        sermon_id TEXT,
+                        title TEXT,
+                        speaker TEXT,
+                        summary TEXT,
+                        duration TEXT,
+                        speaker_image TEXT,
+                        has_audio INTEGER,
+                        mp3_url TEXT,
+                        cdn_mp3_url TEXT,
+                        tokenize=unicode61
+                    )
+                    """.trimIndent()
+                )
+            }
         }
     }
 
