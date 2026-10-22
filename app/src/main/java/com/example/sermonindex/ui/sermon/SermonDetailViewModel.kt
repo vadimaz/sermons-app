@@ -29,6 +29,7 @@ data class SermonDetailUiState(
     val isDownloaded: Boolean = false,
     val downloadProgress: Int? = null,
     val isPlaying: Boolean = false,
+    val isActiveInPlayer: Boolean = false,
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val selectedTab: Int = 0
@@ -74,8 +75,9 @@ class SermonDetailViewModel @AssistedInject constructor(
     private fun observePlayback() {
         viewModelScope.launch {
             playbackManager.playbackState.collect { pbState ->
-                val playing = pbState.currentSermon?.id == sermonId && pbState.isPlaying
-                _uiState.update { it.copy(isPlaying = playing) }
+                val isActive = pbState.currentSermon?.id == sermonId
+                val playing = isActive && pbState.isPlaying
+                _uiState.update { it.copy(isPlaying = playing, isActiveInPlayer = isActive) }
             }
         }
     }

@@ -105,6 +105,34 @@ class NavigationTest {
     }
 
     @Test
+    fun navigatePushesPlayerRouteFromSermonDetailAndPopsCleanly() {
+        val topLevelState = mutableStateOf<NavKey>(HomeRoute)
+        val homeStack = NavBackStack<NavKey>(HomeRoute).apply {
+            add(SermonDetailRoute("sermon-42"))
+        }
+        val navState = NavigationState(
+            startRoute = HomeRoute,
+            topLevelRoute = topLevelState,
+            backStacks = mapOf(HomeRoute to homeStack)
+        )
+        val navigator = Navigator(navState)
+
+        // Act: User taps Play from Sermon Details
+        navigator.navigate(PlayerRoute)
+
+        // Assert: Player is current route, stack size is 3 (HomeRoute, SermonDetailRoute, PlayerRoute)
+        assertEquals(3, homeStack.size)
+        assertEquals(PlayerRoute, navState.currentRoute)
+
+        // Act: User exits Player screen
+        navigator.goBack()
+
+        // Assert: Restored to Sermon Details
+        assertEquals(2, homeStack.size)
+        assertEquals(SermonDetailRoute("sermon-42"), navState.currentRoute)
+    }
+
+    @Test
     fun goBackPopsSubRoute() {
         val topLevelState = mutableStateOf<NavKey>(HomeRoute)
         val homeStack = NavBackStack<NavKey>(HomeRoute).apply {

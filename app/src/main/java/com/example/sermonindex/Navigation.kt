@@ -530,6 +530,9 @@ fun MainNavigation(
                                 },
                                 onReadClick = { sermonId ->
                                     navigator.navigate(TextSermonRoute(sermonId, highlightQuery = route.highlightQuery))
+                                },
+                                onPlayClick = {
+                                    navigator.navigate(PlayerRoute)
                                 }
                             )
                         }

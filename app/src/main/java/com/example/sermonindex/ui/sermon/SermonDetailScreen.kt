@@ -72,6 +72,7 @@ fun SermonDetailScreen(
     onBack: () -> Unit,
     onSpeakerClick: (String) -> Unit,
     onReadClick: (String) -> Unit = {},
+    onPlayClick: () -> Unit = {},
     highlightQuery: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -92,6 +93,7 @@ fun SermonDetailScreen(
         },
         onBack = onBack,
         onReadClick = onReadClick,
+        onPlayClick = onPlayClick,
         modifier = modifier
     )
 }
@@ -105,6 +107,7 @@ fun SermonDetailContent(
     onEvent: (SermonDetailUiEvent) -> Unit,
     onBack: () -> Unit,
     onReadClick: (String) -> Unit = {},
+    onPlayClick: () -> Unit = {},
     highlightQuery: String? = null,
     modifier: Modifier = Modifier
 ) {
@@ -285,7 +288,13 @@ fun SermonDetailContent(
                         }
                     } else {
                         Button(
-                            onClick = { onEvent(SermonDetailUiEvent.Play) },
+                            onClick = {
+                                val shouldNavigate = !state.isActiveInPlayer
+                                onEvent(SermonDetailUiEvent.Play)
+                                if (shouldNavigate) {
+                                    onPlayClick()
+                                }
+                            },
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,

@@ -181,7 +181,7 @@ open class PlaybackManager(private val context: Context? = null) {
         mediaController?.pause()
     }
 
-    fun togglePlayPause() {
+    open fun togglePlayPause() {
         val controller = mediaController ?: return
         if (controller.isPlaying) {
             controller.pause()
