@@ -1,7 +1,9 @@
 package com.example.sermonindex.data.mapper
 
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
+import com.example.sermonindex.data.local.entities.FtsSermonRecord
 import com.example.sermonindex.data.local.entities.HistoryEntity
+import com.example.sermonindex.data.local.entities.SermonFtsEntity
 import com.example.sermonindex.data.model.FaqItemDto
 import com.example.sermonindex.data.model.OutlineItemDto
 import com.example.sermonindex.data.model.ScriptureBookDto
@@ -201,6 +203,30 @@ fun com.example.sermonindex.domain.model.DownloadedSermon.toEntity(): com.exampl
         fileSizeBytes = fileSizeBytes,
         downloadedAt = downloadedAt
     )
+
+fun SermonFtsEntity.toDomain(): Sermon = Sermon(
+    id = sermonId,
+    title = title,
+    speaker = speaker,
+    summary = summary,
+    duration = duration,
+    speakerImage = speakerImage,
+    hasAudio = hasAudio == 1,
+    mp3Url = mp3Url,
+    cdnMp3Url = cdnMp3Url
+)
+
+fun FtsSermonRecord.toEntity(): SermonFtsEntity = SermonFtsEntity(
+    sermonId = id,
+    title = title,
+    speaker = speaker,
+    summary = summary,
+    duration = duration,
+    speakerImage = speakerImage,
+    hasAudio = if (hasAudio) 1 else 0,
+    mp3Url = mp3Url,
+    cdnMp3Url = cdnMp3Url
+)
 
 fun BibleTranslationDto.toDomain(): BibleTranslation = BibleTranslation(
     id = id,

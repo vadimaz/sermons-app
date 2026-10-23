@@ -17,7 +17,7 @@
 | **Async / Reactive** | Coroutines 1.10.2 & Flow | `StateFlow`, `SharedFlow`, `flowOn(ioDispatcher)` |
 | **Media Player** | AndroidX Media3 1.5.1 | `ExoPlayer`, `MediaSessionService`, `MediaController` |
 | **Networking** | Retrofit 2.11.0 + OkHttp 4.12.0 | `kotlinx.serialization.json`, custom 404-safe interceptor |
-| **Database & Search** | SQLiteOpenHelper + FTS4 | `AppDatabase.kt` with full-text search (`sermon_fts`), Room runtime/ktx |
+| **Database & Search** | Android Room 2.8.5 + FTS4 | `AppDatabase.kt` with full-text search (`sermon_fts`), DAOs (`FavoritesDao`, `HistoryDao`, `DownloadsDao`, `SearchDao`), schema export |
 | **Preferences** | Jetpack DataStore 1.1.3 | Preferences DataStore (`UserPreferencesRepositoryImpl`) |
 | **Image Loading** | Coil 3.1.0 | `coil-compose`, `coil-network-okhttp` |
 | **Paging** | AndroidX Paging 3 (3.3.6) | `androidx.paging:paging-runtime`, `androidx.paging:paging-compose` |
@@ -64,9 +64,9 @@ com.example.sermonindex
 │
 ├── data/
 │   ├── local/
-│   │   ├── AppDatabase.kt        # SQLiteOpenHelper + FTS4 virtual table + downloads/favorites/history
-│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao
-│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, FtsSermonResult
+│   │   ├── AppDatabase.kt        # Room @Database + FTS4 virtual table + downloads/favorites/history/search
+│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao, SearchDao
+│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, SermonFtsEntity, SearchHistoryEntity, CatalogMetadataEntity
 │   ├── mapper/
 │   │   └── Mappers.kt            # DTO/Entity <-> Domain mapping extensions
 │   ├── model/

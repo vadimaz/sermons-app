@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.8.0` | **Version Code:** `15`
+> **Current Version:** `1.9.0` | **Version Code:** `16`
 
 ---
 
@@ -105,6 +105,13 @@
 - **Removed SQLite Tech Debt**: Dropped `bibleChangeSignal` flow polling, `bible_reading_state` SQLite table, and `BibleReadingStateEntity` completely.
 
 
+### 1.10 Android Room Database & Local Storage Architecture
+- **Room v2.8.5 Migration**: Completely replaced 670 lines of low-level `SQLiteOpenHelper`, raw SQL queries, and manual `ContentValues` with canonical Modern Android Development (MAD) Room `@Database` (version 1) and KSP2 code generation.
+- **Full-Text Search FTS4 Virtual Table**: Integrated `@Entity(tableName = "sermon_fts")` with `@Fts4(tokenizer = FtsOptions.TOKENIZER_UNICODE61)` with explicit `rowid` handling, preserving sub-millisecond search performance across 70,000+ sermon titles, speakers, and transcripts.
+- **Automatic Reactive Invalidation Tracker**: Eliminated 5 manual `MutableStateFlow` change signals (`favoritesChangeSignal`, `historyChangeSignal`, `downloadsChangeSignal`, `catalogChangeSignal`, `searchHistoryChangeSignal`). Room's SQLite `InvalidationTracker` automatically emits fresh data to `Flow<T>` on any table mutation from UI or background workers.
+- **Clean Architecture Repository Decoupling**: Refactored `SermonRepositoryImpl` to inject pure DAO interfaces (`FavoritesDao`, `HistoryDao`, `DownloadsDao`, `SearchDao`) instead of depending directly on `AppDatabase`.
+- **KSP Schema Export**: Automated Room JSON schema export to `app/schemas/` for rigorous compile-time verification and future migration testing.
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -205,6 +212,54 @@ class PlaybackManager(context: Context) {
 }
 ```
 
+### 2.5 Room Local Data Access Contracts (DAOs)
+```kotlin
+@Dao
+interface FavoritesDao {
+    fun getAllFavorites(): Flow<List<FavoriteSermonEntity>>
+    fun isFavorite(id: String): Flow<Boolean>
+    suspend fun insertFavorite(entity: FavoriteSermonEntity)
+    suspend fun deleteFavorite(id: String): Int
+}
+
+@Dao
+interface HistoryDao {
+    fun getRecentHistory(limit: Int = 30): Flow<List<HistoryEntity>>
+    suspend fun getHistory(sermonId: String): HistoryEntity?
+    suspend fun upsertHistory(entity: HistoryEntity)
+    suspend fun deleteHistory(sermonId: String): Int
+    suspend fun clearHistory(): Int
+}
+
+@Dao
+interface DownloadsDao {
+    fun getAllDownloads(): Flow<List<DownloadedSermonEntity>>
+    suspend fun getDownload(id: String): DownloadedSermonEntity?
+    fun isDownloaded(id: String): Flow<Boolean>
+    suspend fun insertDownload(entity: DownloadedSermonEntity)
+    suspend fun deleteDownload(id: String): Int
+    suspend fun deleteAllDownloads(): Int
+    suspend fun getTotalStorageBytes(): Long
+}
+
+@Dao
+interface SearchDao {
+    suspend fun searchSermonsFts(query: String, limit: Int): List<SermonFtsEntity>
+    suspend fun countSermonsFts(query: String): Int
+    suspend fun getFtsSermonCount(): Int
+    suspend fun insertSermonsFtsBatch(records: List<SermonFtsEntity>)
+    suspend fun clearSermonsFts(): Int
+    fun getCatalogMetadataFlow(): Flow<CatalogMetadataEntity?>
+    suspend fun getCatalogMetadata(): CatalogMetadataEntity?
+    suspend fun saveCatalogMetadata(metadata: CatalogMetadataEntity)
+    suspend fun clearCatalogMetadata(): Int
+    fun getRecentSearchQueries(limit: Int = 10): Flow<List<String>>
+    suspend fun insertSearchQuery(query: SearchHistoryEntity)
+    suspend fun deleteSearchQuery(query: String): Int
+    suspend fun clearSearchHistory(): Int
+}
+```
+
 ---
 
 ## 3. Next Steps (Immediate Priorities)
@@ -224,5 +279,4 @@ class PlaybackManager(context: Context) {
 - **Periodic Catalog Update Worker & Push Notifications**: Background WorkManager periodic check against `GET /v2/stats` (`generated` timestamp) compared to local `catalog_metadata.timestamp`. Notify user via system notification when a new version of the 70,000+ sermon catalog is released, with a one-tap background download action.
 - **Bible Full-Text Search (SQLite FTS)**: Pure offline indexing of active Bible translation verses into an SQLite FTS virtual table (`bible_fts`) for sub-millisecond Bible search across Old and New Testaments.
 - **UI Component Decomposition & Reusability (Scripture & Explorers)**: Refactor complex, multi-level screen monoliths (e.g., the 4-level navigation in `ScriptureScreen`) into decoupled, stateless UI building blocks (`ScriptureBookPicker`, `ScriptureChapterPicker`, `ScriptureVerseHeatMapGrid`, `ScriptureVerseQuoteCard`). This prevents tight coupling to single ViewModels, simplifies testing, and enables flexible composition across different sections (e.g. Bible reader, search, topic studies).
-- **Room Entity Migration**: `AppDatabase.kt` currently uses `SQLiteOpenHelper` directly. Evaluate migrating to Room `@Database` once KSP Room schema export configuration is finalized.
 - **Audio Focus Transition**: Smoothly duck audio on brief notifications and pause on audio focus loss (phone calls).

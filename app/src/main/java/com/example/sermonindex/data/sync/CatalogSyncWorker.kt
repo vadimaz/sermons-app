@@ -5,8 +5,9 @@ import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.example.sermonindex.data.local.AppDatabase
-import com.example.sermonindex.data.local.entities.FtsSermonRecord
+import com.example.sermonindex.data.local.dao.SearchDao
+import com.example.sermonindex.data.local.entities.CatalogMetadataEntity
+import com.example.sermonindex.data.local.entities.SermonFtsEntity
 import com.example.sermonindex.data.network.SermonIndexApiService
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -25,7 +26,7 @@ import java.util.zip.GZIPInputStream
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface CatalogSyncWorkerEntryPoint {
-    fun getAppDatabase(): AppDatabase
+    fun getSearchDao(): SearchDao
     fun getApiService(): SermonIndexApiService
     fun getOkHttpClient(): OkHttpClient
 }
@@ -38,30 +39,33 @@ private data class CatalogSermonJson(
     val summary: String = "",
     val duration: String = "",
     val speakerImage: String = "",
-    val hasAudio: Boolean = true,
+    val hasAudio: Boolean = false,
     val mp3Url: String = "",
     val cdnMp3Url: String = ""
 )
 
+/**
+ * Background WorkManager worker that downloads the compressed 70,000+ sermon catalog
+ * (sermons.json.gz) and streams it directly into the Room SQLite FTS4 virtual table.
+ */
 class CatalogSyncWorker(
     context: Context,
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
     companion object {
-        const val TAG = "CatalogSyncWorker"
         const val WORK_NAME = "catalog_sync_work"
+        const val TAG = "CatalogSyncWorker"
         const val KEY_PROGRESS = "progress"
         const val KEY_ERROR = "error"
-        const val CATALOG_URL = "https://api.sermonindex.net/downloads/sermons.json.gz"
+        private const val CATALOG_URL = "https://api.sermonindex.net/downloads/sermons.json.gz"
         private const val BATCH_SIZE = 1000
-        private const val ESTIMATED_TOTAL_SERMONS = 70419
+        private const val ESTIMATED_TOTAL_SERMONS = 70_000
     }
 
     private val json = Json {
         ignoreUnknownKeys = true
         isLenient = true
-        coerceInputValues = true
     }
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -69,7 +73,7 @@ class CatalogSyncWorker(
             applicationContext,
             CatalogSyncWorkerEntryPoint::class.java
         )
-        val appDatabase = entryPoint.getAppDatabase()
+        val searchDao = entryPoint.getSearchDao()
         val apiService = entryPoint.getApiService()
         val okHttpClient = entryPoint.getOkHttpClient()
 
@@ -98,12 +102,12 @@ class CatalogSyncWorker(
             }
 
             // Clear previous index before populating fresh catalog
-            appDatabase.clearSermonsFts()
+            searchDao.clearSermonsFts()
 
             val gzipStream = GZIPInputStream(body.byteStream())
             val reader = BufferedReader(InputStreamReader(gzipStream, Charsets.UTF_8), 32 * 1024)
 
-            val batch = ArrayList<FtsSermonRecord>(BATCH_SIZE)
+            val batch = ArrayList<SermonFtsEntity>(BATCH_SIZE)
             var processedCount = 0
 
             reader.use { bufferedReader ->
@@ -120,14 +124,14 @@ class CatalogSyncWorker(
                             val sermon = json.decodeFromString<CatalogSermonJson>(cleanLine)
                             if (sermon.id.isNotBlank()) {
                                 batch.add(
-                                    FtsSermonRecord(
-                                        id = sermon.id,
+                                    SermonFtsEntity(
+                                        sermonId = sermon.id,
                                         title = sermon.title,
                                         speaker = sermon.speaker,
                                         summary = sermon.summary,
                                         duration = sermon.duration,
                                         speakerImage = sermon.speakerImage,
-                                        hasAudio = sermon.hasAudio,
+                                        hasAudio = if (sermon.hasAudio) 1 else 0,
                                         mp3Url = sermon.mp3Url,
                                         cdnMp3Url = sermon.cdnMp3Url
                                     )
@@ -137,7 +141,7 @@ class CatalogSyncWorker(
                         }
 
                         if (batch.size >= BATCH_SIZE) {
-                            appDatabase.insertSermonsFtsBatch(batch)
+                            searchDao.insertSermonsFtsBatch(batch)
                             batch.clear()
 
                             val progress = (processedCount.toFloat() / totalExpected).coerceIn(0.02f, 0.98f)
@@ -149,16 +153,19 @@ class CatalogSyncWorker(
 
                 // Insert remaining records
                 if (batch.isNotEmpty()) {
-                    appDatabase.insertSermonsFtsBatch(batch)
+                    searchDao.insertSermonsFtsBatch(batch)
                     batch.clear()
                 }
             }
 
             // 3. Save catalog metadata in database
-            appDatabase.saveCatalogMetadata(
-                sermonCount = processedCount,
-                generatedAt = generatedAt,
-                downloadedAt = System.currentTimeMillis()
+            searchDao.saveCatalogMetadata(
+                CatalogMetadataEntity(
+                    id = 1,
+                    sermonCount = processedCount,
+                    generatedAt = generatedAt,
+                    downloadedAt = System.currentTimeMillis()
+                )
             )
 
             setProgress(workDataOf(KEY_PROGRESS to 1.0f))

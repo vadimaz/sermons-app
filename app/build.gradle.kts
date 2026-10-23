@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.sermonindex"
         minSdk = 26
         targetSdk = 36
-        versionCode = 15
-        versionName = "1.8.0"
+        versionCode = 16
+        versionName = "1.9.0"
     }
 
     buildTypes {
@@ -43,6 +43,10 @@ android {
 
 kotlin {
     jvmToolchain(17)
+}
+
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
 
 dependencies {
@@ -104,6 +108,7 @@ dependencies {
   // Room
   implementation(libs.room.runtime)
   implementation(libs.room.ktx)
+  ksp(libs.room.compiler)
 
   // WorkManager
   implementation(libs.androidx.work.runtime.ktx)

@@ -6,9 +6,13 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.example.sermonindex.data.local.AppDatabase
+import com.example.sermonindex.data.local.dao.DownloadsDao
+import com.example.sermonindex.data.local.dao.FavoritesDao
+import com.example.sermonindex.data.local.dao.HistoryDao
+import com.example.sermonindex.data.local.dao.SearchDao
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
 import com.example.sermonindex.data.local.entities.HistoryEntity
+import com.example.sermonindex.data.local.entities.SearchHistoryEntity
 import com.example.sermonindex.data.mapper.extractVerseMap
 import com.example.sermonindex.data.mapper.toDomain
 import com.example.sermonindex.data.mapper.toFavoriteEntity
@@ -56,7 +60,10 @@ import javax.inject.Inject
 class SermonRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val apiService: SermonIndexApiService,
-    private val database: AppDatabase,
+    private val favoritesDao: FavoritesDao,
+    private val historyDao: HistoryDao,
+    private val downloadsDao: DownloadsDao,
+    private val searchDao: SearchDao,
     private val userPreferencesRepository: UserPreferencesRepository,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : SermonRepository {
@@ -69,25 +76,25 @@ class SermonRepositoryImpl @Inject constructor(
     private val chapterVerseCache = java.util.concurrent.ConcurrentHashMap<String, Map<Int, String>>()
 
     override val favorites: Flow<List<FavoriteSermon>> =
-        database.favoritesDao.getAllFavorites()
+        favoritesDao.getAllFavorites()
             .map { list -> list.map { it.toDomain() } }
             .flowOn(ioDispatcher)
 
     override val history: Flow<List<ListeningHistory>> =
-        database.historyDao.getRecentHistory()
+        historyDao.getRecentHistory()
             .map { list -> list.map { it.toDomain() } }
             .flowOn(ioDispatcher)
 
     override val downloads: Flow<List<DownloadedSermon>> =
-        database.downloadsDao.getAllDownloads()
+        downloadsDao.getAllDownloads()
             .map { list -> list.map { it.toDomain() } }
             .flowOn(ioDispatcher)
 
     override fun isFavorite(id: String): Flow<Boolean> =
-        database.favoritesDao.isFavorite(id).flowOn(ioDispatcher)
+        favoritesDao.isFavorite(id).flowOn(ioDispatcher)
 
     override fun isDownloaded(sermonId: String): Flow<Boolean> =
-        database.downloadsDao.isDownloaded(sermonId).flowOn(ioDispatcher)
+        downloadsDao.isDownloaded(sermonId).flowOn(ioDispatcher)
 
     override fun getDownloadProgress(sermonId: String): Flow<Int?> {
         val workManager = WorkManager.getInstance(context)
@@ -132,30 +139,30 @@ class SermonRepositoryImpl @Inject constructor(
         Unit
     }
 
-    override suspend fun deleteDownload(sermonId: String) = withContext(ioDispatcher) {
-        val entity = database.downloadsDao.getDownload(sermonId)
+    override suspend fun deleteDownload(sermonId: String): Unit = withContext(ioDispatcher) {
+        val entity = downloadsDao.getDownload(sermonId)
         if (entity != null) {
             val file = File(entity.localPath)
             if (file.exists()) {
                 file.delete()
             }
-            database.downloadsDao.deleteDownload(sermonId)
+            downloadsDao.deleteDownload(sermonId)
         }
     }
 
-    override suspend fun deleteAllDownloads() = withContext(ioDispatcher) {
-        val allDownloads = database.downloadsDao.getAllDownloads().first()
+    override suspend fun deleteAllDownloads(): Unit = withContext(ioDispatcher) {
+        val allDownloads = downloadsDao.getAllDownloads().first()
         for (entity in allDownloads) {
             val file = File(entity.localPath)
             if (file.exists()) {
                 file.delete()
             }
         }
-        database.downloadsDao.deleteAllDownloads()
+        downloadsDao.deleteAllDownloads()
     }
 
     override suspend fun getLocalAudioPath(sermonId: String): String? = withContext(ioDispatcher) {
-        val entity = database.downloadsDao.getDownload(sermonId) ?: return@withContext null
+        val entity = downloadsDao.getDownload(sermonId) ?: return@withContext null
         val file = File(entity.localPath)
         if (file.exists() && file.length() > 0) {
             entity.localPath
@@ -164,12 +171,12 @@ class SermonRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun toggleFavorite(sermon: Sermon) = withContext(ioDispatcher) {
-        val currentlyFav = database.favoritesDao.isFavorite(sermon.id).first()
+    override suspend fun toggleFavorite(sermon: Sermon): Unit = withContext(ioDispatcher) {
+        val currentlyFav = favoritesDao.isFavorite(sermon.id).first()
         if (currentlyFav) {
-            database.favoritesDao.deleteFavorite(sermon.id)
+            favoritesDao.deleteFavorite(sermon.id)
         } else {
-            database.favoritesDao.insertFavorite(sermon.toFavoriteEntity())
+            favoritesDao.insertFavorite(sermon.toFavoriteEntity())
         }
     }
 
@@ -182,7 +189,7 @@ class SermonRepositoryImpl @Inject constructor(
         durationMs: Long
     ) = withContext(ioDispatcher) {
         val completed = durationMs > 0 && positionMs >= (durationMs - 5000L)
-        database.historyDao.upsertHistory(
+        historyDao.upsertHistory(
             HistoryEntity(
                 sermonId = sermonId,
                 title = title,
@@ -375,12 +382,12 @@ class SermonRepositoryImpl @Inject constructor(
         userPreferencesRepository.saveBibleNarrator(narrator)
     }
 
-    override suspend fun clearHistory() = withContext(ioDispatcher) {
-        database.historyDao.clearHistory()
+    override suspend fun clearHistory(): Unit = withContext(ioDispatcher) {
+        historyDao.clearHistory()
     }
 
     override val catalogSyncState: Flow<CatalogSyncState> = combine(
-        database.getCatalogMetadataFlow(),
+        searchDao.getCatalogMetadataFlow(),
         WorkManager.getInstance(context).getWorkInfosForUniqueWorkFlow(CatalogSyncWorker.WORK_NAME),
         hasCatalogUpdateState
     ) { meta, workInfos, hasUpdate ->
@@ -402,8 +409,8 @@ class SermonRepositoryImpl @Inject constructor(
             }
         }
 
-        val meta = database.getCatalogMetadata()
-        val ftsCount = database.getFtsSermonCount()
+        val meta = searchDao.getCatalogMetadata()
+        val ftsCount = searchDao.getFtsSermonCount()
         if (meta != null && meta.sermonCount > 0 && ftsCount > 0) {
             CatalogSyncState.Ready(
                 sermonCount = ftsCount,
@@ -429,7 +436,7 @@ class SermonRepositoryImpl @Inject constructor(
 
     override suspend fun checkForCatalogUpdate(): Boolean = withContext(ioDispatcher) {
         runCatching {
-            val meta = database.getCatalogMetadata() ?: return@withContext false
+            val meta = searchDao.getCatalogMetadata() ?: return@withContext false
             val stats = apiService.getStats()
             if (stats.generated.isNotBlank() && stats.generated != meta.generatedAt) {
                 hasCatalogUpdateState.value = true
@@ -442,18 +449,21 @@ class SermonRepositoryImpl @Inject constructor(
     }
 
     override val recentSearchQueries: Flow<List<String>> =
-        database.getRecentSearchQueries().flowOn(ioDispatcher)
+        searchDao.getRecentSearchQueries().flowOn(ioDispatcher)
 
     override suspend fun addRecentSearchQuery(query: String) = withContext(ioDispatcher) {
-        database.addRecentSearchQuery(query)
+        val clean = query.trim()
+        if (clean.isNotBlank()) {
+            searchDao.insertSearchQuery(SearchHistoryEntity(query = clean, timestamp = System.currentTimeMillis()))
+        }
     }
 
-    override suspend fun deleteRecentSearchQuery(query: String) = withContext(ioDispatcher) {
-        database.deleteRecentSearchQuery(query)
+    override suspend fun deleteRecentSearchQuery(query: String): Unit = withContext(ioDispatcher) {
+        searchDao.deleteSearchQuery(query.trim())
     }
 
-    override suspend fun clearRecentSearchQueries() = withContext(ioDispatcher) {
-        database.clearRecentSearchQueries()
+    override suspend fun clearRecentSearchQueries(): Unit = withContext(ioDispatcher) {
+        searchDao.clearSearchHistory()
     }
 
     override val isCatalogReadyBannerDismissed: Flow<Boolean> =
@@ -489,14 +499,20 @@ class SermonRepositoryImpl @Inject constructor(
         val totalTopicMatches = allMatchingTopics.size
         val matchingTopics = if (category == SearchCategory.ALL) allMatchingTopics.take(8) else allMatchingTopics
 
-        val ftsCount = database.getFtsSermonCount()
+        val ftsCount = searchDao.getFtsSermonCount()
         val hasCatalog = ftsCount > 0
 
         val (matchingSermons, totalSermonMatches) = if (category == SearchCategory.ALL || category == SearchCategory.SERMONS) {
             if (hasCatalog) {
-                val list = database.searchSermonsFts(cleanQuery, limit = if (category == SearchCategory.ALL) 10 else 100)
-                val totalCount = database.countSermonsFts(cleanQuery)
-                Pair(list, totalCount)
+                val ftsQuery = formatFtsMatchQuery(cleanQuery)
+                if (ftsQuery.isBlank()) {
+                    Pair(emptyList(), 0)
+                } else {
+                    val list = searchDao.searchSermonsFts(ftsQuery, limit = if (category == SearchCategory.ALL) 10 else 100)
+                        .map { it.toDomain() }
+                    val totalCount = searchDao.countSermonsFts(ftsQuery)
+                    Pair(list, totalCount)
+                }
             } else {
                 val popular = cachedPopularSermons ?: getPopularSermons().getOrDefault(emptyList())
                 val favs = favorites.first().map { it.toSermon() }
@@ -522,4 +538,13 @@ class SermonRepositoryImpl @Inject constructor(
             )
         )
     }.flowOn(ioDispatcher)
+
+    private fun formatFtsMatchQuery(query: String): String {
+        val clean = query.trim()
+        if (clean.isBlank()) return ""
+        val tokens = clean.split(Regex("[^\\p{L}\\p{Nd}]+"))
+            .filter { it.isNotBlank() }
+        if (tokens.isEmpty()) return ""
+        return tokens.joinToString(" ") { "$it*" }
+    }
 }

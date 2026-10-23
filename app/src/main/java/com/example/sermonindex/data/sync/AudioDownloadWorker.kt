@@ -11,7 +11,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.example.sermonindex.R
-import com.example.sermonindex.data.local.AppDatabase
+import com.example.sermonindex.data.local.dao.DownloadsDao
 import com.example.sermonindex.data.local.entities.DownloadedSermonEntity
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -27,7 +27,7 @@ import java.net.URL
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface AudioDownloadWorkerEntryPoint {
-    fun getAppDatabase(): AppDatabase
+    fun getDownloadsDao(): DownloadsDao
 }
 
 class AudioDownloadWorker(
@@ -69,7 +69,7 @@ class AudioDownloadWorker(
             applicationContext,
             AudioDownloadWorkerEntryPoint::class.java
         )
-        val database = entryPoint.getAppDatabase()
+        val downloadsDao = entryPoint.getDownloadsDao()
 
         val downloadsDir = File(applicationContext.filesDir, "audio_downloads").apply { mkdirs() }
         val targetFile = File(downloadsDir, "${sermonId}.mp3")
@@ -143,7 +143,7 @@ class AudioDownloadWorker(
                 }
 
                 // Insert into downloads table
-                database.downloadsDao.insertDownload(
+                downloadsDao.insertDownload(
                     DownloadedSermonEntity(
                         id = sermonId,
                         title = title,
