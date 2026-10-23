@@ -3,17 +3,21 @@ package com.example.sermonindex.ui.scripture
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.sermonindex.data.local.BiblePreferences
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.BibleTranslation
+import com.example.sermonindex.domain.model.BibleTranslationDefaults
 import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.usecase.GetBibleTranslationsUseCase
 import com.example.sermonindex.domain.usecase.GetBibleVerseTextUseCase
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
+import com.example.sermonindex.domain.usecase.GetFirstTranslationUseCase
+import com.example.sermonindex.domain.usecase.GetSecondTranslationUseCase
 import com.example.sermonindex.domain.usecase.GetScriptureBooksUseCase
 import com.example.sermonindex.domain.usecase.GetScriptureChapterUseCase
 import com.example.sermonindex.domain.usecase.GetScriptureVerseUseCase
+import com.example.sermonindex.domain.usecase.SetFirstTranslationUseCase
+import com.example.sermonindex.domain.usecase.SetSecondTranslationUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,8 +50,8 @@ data class ScriptureUiState(
 
     // Dual Translation & Verse Quote State
     val availableTranslations: List<BibleTranslation> = emptyList(),
-    val firstTranslationId: String = BiblePreferences.DEFAULT_FIRST,
-    val secondTranslationId: String = BiblePreferences.getDefaultSecondaryTranslation(),
+    val firstTranslationId: String = BibleTranslationDefaults.DEFAULT_FIRST,
+    val secondTranslationId: String = BibleTranslationDefaults.getDefaultSecondaryTranslation(),
     val firstVerseText: String? = null,
     val secondVerseText: String? = null,
     val isLoadingFirstVerseText: Boolean = false,
@@ -57,7 +61,7 @@ data class ScriptureUiState(
 ) {
     val firstTranslation: BibleTranslation?
         get() = availableTranslations.find { it.id.equals(firstTranslationId, ignoreCase = true) }
-            ?: if (firstTranslationId.equals(BiblePreferences.DEFAULT_FIRST, ignoreCase = true)) {
+            ?: if (firstTranslationId.equals(BibleTranslationDefaults.DEFAULT_FIRST, ignoreCase = true)) {
                 BibleTranslation(
                     id = "BSB",
                     name = "Berean Standard Bible",
@@ -142,24 +146,52 @@ class ScriptureViewModel @Inject constructor(
     private val getScriptureVerseUseCase: GetScriptureVerseUseCase,
     private val getBibleTranslationsUseCase: GetBibleTranslationsUseCase,
     private val getBibleVerseTextUseCase: GetBibleVerseTextUseCase,
-    private val biblePreferences: BiblePreferences,
+    private val getFirstTranslationUseCase: GetFirstTranslationUseCase,
+    private val getSecondTranslationUseCase: GetSecondTranslationUseCase,
+    private val setFirstTranslationUseCase: SetFirstTranslationUseCase,
+    private val setSecondTranslationUseCase: SetSecondTranslationUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(
-        ScriptureUiState(
-            firstTranslationId = biblePreferences.firstTranslationId.value,
-            secondTranslationId = biblePreferences.secondTranslationId.value
-        )
-    )
+    private val _uiState = MutableStateFlow(ScriptureUiState())
     val uiState: StateFlow<ScriptureUiState> = _uiState.asStateFlow()
 
     init {
         observeFavorites()
+        observeTranslations()
         loadBooks()
         loadTranslations()
+    }
+
+    private fun observeTranslations() {
+        viewModelScope.launch {
+            getFirstTranslationUseCase().collect { id ->
+                val prev = _uiState.value.firstTranslationId
+                _uiState.update { it.copy(firstTranslationId = id) }
+                if (prev != id) {
+                    _uiState.value.selectedVerse?.let { verse ->
+                        val book = _uiState.value.selectedBook ?: return@let
+                        val chapter = _uiState.value.selectedChapter ?: return@let
+                        loadFirstVerseText(book.id, chapter, verse)
+                    }
+                }
+            }
+        }
+        viewModelScope.launch {
+            getSecondTranslationUseCase().collect { id ->
+                val prev = _uiState.value.secondTranslationId
+                _uiState.update { it.copy(secondTranslationId = id) }
+                if (prev != id) {
+                    _uiState.value.selectedVerse?.let { verse ->
+                        val book = _uiState.value.selectedBook ?: return@let
+                        val chapter = _uiState.value.selectedChapter ?: return@let
+                        loadSecondVerseText(book.id, chapter, verse)
+                    }
+                }
+            }
+        }
     }
 
     private fun observeFavorites() {
@@ -273,31 +305,33 @@ class ScriptureViewModel @Inject constructor(
                 _uiState.update { it.copy(isTranslationPickerOpen = false) }
             }
             is ScriptureUiEvent.SelectTranslation -> {
-                if (event.target == TranslationPickerTarget.FIRST) {
-                    biblePreferences.setFirstTranslation(event.translation.id)
-                    _uiState.update {
-                        it.copy(
-                            firstTranslationId = event.translation.id,
-                            isTranslationPickerOpen = false
-                        )
-                    }
-                    _uiState.value.selectedVerse?.let { verse ->
-                        val book = _uiState.value.selectedBook ?: return@let
-                        val chapter = _uiState.value.selectedChapter ?: return@let
-                        loadFirstVerseText(book.id, chapter, verse)
-                    }
-                } else {
-                    biblePreferences.setSecondTranslation(event.translation.id)
-                    _uiState.update {
-                        it.copy(
-                            secondTranslationId = event.translation.id,
-                            isTranslationPickerOpen = false
-                        )
-                    }
-                    _uiState.value.selectedVerse?.let { verse ->
-                        val book = _uiState.value.selectedBook ?: return@let
-                        val chapter = _uiState.value.selectedChapter ?: return@let
-                        loadSecondVerseText(book.id, chapter, verse)
+                viewModelScope.launch {
+                    if (event.target == TranslationPickerTarget.FIRST) {
+                        setFirstTranslationUseCase(event.translation.id)
+                        _uiState.update {
+                            it.copy(
+                                firstTranslationId = event.translation.id,
+                                isTranslationPickerOpen = false
+                            )
+                        }
+                        _uiState.value.selectedVerse?.let { verse ->
+                            val book = _uiState.value.selectedBook ?: return@let
+                            val chapter = _uiState.value.selectedChapter ?: return@let
+                            loadFirstVerseText(book.id, chapter, verse)
+                        }
+                    } else {
+                        setSecondTranslationUseCase(event.translation.id)
+                        _uiState.update {
+                            it.copy(
+                                secondTranslationId = event.translation.id,
+                                isTranslationPickerOpen = false
+                            )
+                        }
+                        _uiState.value.selectedVerse?.let { verse ->
+                            val book = _uiState.value.selectedBook ?: return@let
+                            val chapter = _uiState.value.selectedChapter ?: return@let
+                            loadSecondVerseText(book.id, chapter, verse)
+                        }
                     }
                 }
             }

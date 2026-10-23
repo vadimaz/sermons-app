@@ -186,6 +186,21 @@ data class BibleReadingPreferences(
     val selectedNarrator: String? = null
 )
 
+object BibleTranslationDefaults {
+    const val DEFAULT_FIRST = "BSB"
+
+    fun getDefaultSecondaryTranslation(): String {
+        val lang = java.util.Locale.getDefault().language.lowercase()
+        return when (lang) {
+            "ru" -> "rus_syn"
+            "uk" -> "ukr_1996"
+            "es" -> "spa_r09"
+            "de" -> "deu_elbbk"
+            else -> "eng_kjv"
+        }
+    }
+}
+
 data class BibleTranslation(
     val id: String,
     val name: String,

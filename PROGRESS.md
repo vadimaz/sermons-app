@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.7.1` | **Version Code:** `14`
+> **Current Version:** `1.8.0` | **Version Code:** `15`
 
 ---
 
@@ -98,6 +98,13 @@
   - `GET /v2/stats` integration fetching server dataset timestamp (`generated`).
   - Compared with local `catalog_metadata` table; displays an update available badge/banner if a newer dataset is detected on the CDN.
 
+### 1.9 User Preferences & State Persistence (Jetpack DataStore)
+- **Preferences DataStore Architecture**: Replaced legacy `SharedPreferences` and single-row SQLite table `bible_reading_state` with modern, reactive `androidx.datastore:datastore-preferences:1.1.3`.
+- **Clean Architecture Boundaries**: Extracted pure domain contract `UserPreferencesRepository` and UseCases (`GetFirstTranslationUseCase`, `SetFirstTranslationUseCase`, `GetSecondTranslationUseCase`, `SetSecondTranslationUseCase`). Removed direct `data.local` dependencies from `ScriptureViewModel` and `BibleVerseSermonsViewModel`.
+- **Pure Direct DataStore**: No legacy migration overhead needed during pre-release development — preferences flow directly into and out of DataStore with clean defaults.
+- **Removed SQLite Tech Debt**: Dropped `bibleChangeSignal` flow polling, `bible_reading_state` SQLite table, and `BibleReadingStateEntity` completely.
+
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -163,7 +170,23 @@ interface NetworkMonitor {
 }
 ```
 
-### 2.3 Playback Manager (`PlaybackManager`)
+### 2.3 User Preferences Contract (`UserPreferencesRepository`)
+```kotlin
+interface UserPreferencesRepository {
+    val firstTranslationId: Flow<String>
+    val secondTranslationId: Flow<String>
+    suspend fun setFirstTranslation(id: String)
+    suspend fun setSecondTranslation(id: String)
+    val isCatalogReadyBannerDismissed: Flow<Boolean>
+    suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean)
+    val bibleReadingPreferences: Flow<BibleReadingPreferences>
+    suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int)
+    suspend fun saveBibleTypography(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
+    suspend fun saveBibleNarrator(narrator: String?)
+}
+```
+
+### 2.4 Playback Manager (`PlaybackManager`)
 ```kotlin
 class PlaybackManager(context: Context) {
     val playbackState: StateFlow<PlaybackState>

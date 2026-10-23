@@ -23,6 +23,7 @@ androidxWork = "2.10.0"
 hilt = "2.60.1"
 androidxHilt = "1.2.0"
 androidxPaging = "3.3.6"
+androidxDatastore = "1.1.3"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -79,6 +80,9 @@ androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-com
 # Paging 3
 androidx-paging-runtime = { module = "androidx.paging:paging-runtime", version.ref = "androidxPaging" }
 androidx-paging-compose = { module = "androidx.paging:paging-compose", version.ref = "androidxPaging" }
+
+# DataStore
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "androidxDatastore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }

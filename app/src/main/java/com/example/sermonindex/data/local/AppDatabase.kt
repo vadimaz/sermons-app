@@ -4,11 +4,9 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import com.example.sermonindex.data.local.dao.BibleDao
 import com.example.sermonindex.data.local.dao.DownloadsDao
 import com.example.sermonindex.data.local.dao.FavoritesDao
 import com.example.sermonindex.data.local.dao.HistoryDao
-import com.example.sermonindex.data.local.entities.BibleReadingStateEntity
 import com.example.sermonindex.data.local.entities.CatalogMetadataEntity
 import com.example.sermonindex.data.local.entities.DownloadedSermonEntity
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
@@ -28,7 +26,6 @@ class AppDatabase private constructor(context: Context) {
     private val favoritesChangeSignal = MutableStateFlow(0L)
     private val historyChangeSignal = MutableStateFlow(0L)
     private val downloadsChangeSignal = MutableStateFlow(0L)
-    private val bibleChangeSignal = MutableStateFlow(0L)
     private val catalogChangeSignal = MutableStateFlow(0L)
     private val searchHistoryChangeSignal = MutableStateFlow(0L)
 
@@ -196,80 +193,6 @@ class AppDatabase private constructor(context: Context) {
         }
     }
 
-    val bibleDao: BibleDao = object : BibleDao {
-        override fun getReadingState(): Flow<BibleReadingStateEntity?> {
-            return bibleChangeSignal.asStateFlow().map {
-                queryBibleReadingState()
-            }
-        }
-
-        override suspend fun saveReadingPosition(
-            translationId: String,
-            bookId: String,
-            chapter: Int,
-            verse: Int
-        ) = withContext(Dispatchers.IO) {
-            val existing = queryBibleReadingState()
-            val db = dbHelper.writableDatabase
-            val values = ContentValues().apply {
-                put("id", 1)
-                put("translation_id", translationId)
-                put("book_id", bookId)
-                put("chapter", chapter)
-                put("verse", verse)
-                put("font_size_sp", existing?.fontSizeSp ?: 18.0f)
-                put("is_serif", if (existing?.isSerif != false) 1 else 0)
-                put("line_spacing_multiplier", existing?.lineSpacingMultiplier ?: 1.5f)
-                put("selected_narrator", existing?.selectedNarrator)
-                put("updated_at", System.currentTimeMillis())
-            }
-            db.insertWithOnConflict("bible_reading_state", null, values, SQLiteDatabase.CONFLICT_REPLACE)
-            bibleChangeSignal.value = System.currentTimeMillis()
-        }
-
-        override suspend fun saveTypography(
-            fontSizeSp: Float,
-            isSerif: Boolean,
-            lineSpacingMultiplier: Float
-        ) = withContext(Dispatchers.IO) {
-            val existing = queryBibleReadingState()
-            val db = dbHelper.writableDatabase
-            val values = ContentValues().apply {
-                put("id", 1)
-                put("translation_id", existing?.translationId ?: "rus_syn")
-                put("book_id", existing?.bookId ?: "JHN")
-                put("chapter", existing?.chapter ?: 1)
-                put("verse", existing?.verse ?: 1)
-                put("font_size_sp", fontSizeSp)
-                put("is_serif", if (isSerif) 1 else 0)
-                put("line_spacing_multiplier", lineSpacingMultiplier)
-                put("selected_narrator", existing?.selectedNarrator)
-                put("updated_at", System.currentTimeMillis())
-            }
-            db.insertWithOnConflict("bible_reading_state", null, values, SQLiteDatabase.CONFLICT_REPLACE)
-            bibleChangeSignal.value = System.currentTimeMillis()
-        }
-
-        override suspend fun saveNarrator(narrator: String?) = withContext(Dispatchers.IO) {
-            val existing = queryBibleReadingState()
-            val db = dbHelper.writableDatabase
-            val values = ContentValues().apply {
-                put("id", 1)
-                put("translation_id", existing?.translationId ?: "rus_syn")
-                put("book_id", existing?.bookId ?: "JHN")
-                put("chapter", existing?.chapter ?: 1)
-                put("verse", existing?.verse ?: 1)
-                put("font_size_sp", existing?.fontSizeSp ?: 18.0f)
-                put("is_serif", if (existing?.isSerif != false) 1 else 0)
-                put("line_spacing_multiplier", existing?.lineSpacingMultiplier ?: 1.5f)
-                put("selected_narrator", narrator)
-                put("updated_at", System.currentTimeMillis())
-            }
-            db.insertWithOnConflict("bible_reading_state", null, values, SQLiteDatabase.CONFLICT_REPLACE)
-            bibleChangeSignal.value = System.currentTimeMillis()
-        }
-    }
-
     private suspend fun queryFavorites(): List<FavoriteSermonEntity> = withContext(Dispatchers.IO) {
         val list = mutableListOf<FavoriteSermonEntity>()
         val db = dbHelper.readableDatabase
@@ -356,29 +279,6 @@ class AppDatabase private constructor(context: Context) {
         val db = dbHelper.readableDatabase
         val cursor = db.rawQuery("SELECT 1 FROM downloads WHERE id = ? LIMIT 1", arrayOf(id))
         cursor.use { it.moveToFirst() }
-    }
-
-    private suspend fun queryBibleReadingState(): BibleReadingStateEntity? = withContext(Dispatchers.IO) {
-        val db = dbHelper.readableDatabase
-        val cursor = db.rawQuery(
-            "SELECT translation_id, book_id, chapter, verse, font_size_sp, is_serif, line_spacing_multiplier, selected_narrator, updated_at FROM bible_reading_state WHERE id = 1",
-            null
-        )
-        cursor.use {
-            if (it.moveToFirst()) {
-                BibleReadingStateEntity(
-                    translationId = it.getString(0),
-                    bookId = it.getString(1),
-                    chapter = it.getInt(2),
-                    verse = it.getInt(3),
-                    fontSizeSp = it.getFloat(4),
-                    isSerif = it.getInt(5) == 1,
-                    lineSpacingMultiplier = it.getFloat(6),
-                    selectedNarrator = it.getString(7),
-                    updatedAt = it.getLong(8)
-                )
-            } else null
-        }
     }
 
     fun getRecentSearchQueries(limit: Int = 10): Flow<List<String>> {
@@ -660,23 +560,6 @@ class AppDatabase private constructor(context: Context) {
 
             db.execSQL(
                 """
-                CREATE TABLE bible_reading_state (
-                    id INTEGER PRIMARY KEY CHECK (id = 1),
-                    translation_id TEXT NOT NULL,
-                    book_id TEXT NOT NULL,
-                    chapter INTEGER NOT NULL,
-                    verse INTEGER NOT NULL DEFAULT 1,
-                    font_size_sp REAL NOT NULL DEFAULT 18.0,
-                    is_serif INTEGER NOT NULL DEFAULT 1,
-                    line_spacing_multiplier REAL NOT NULL DEFAULT 1.5,
-                    selected_narrator TEXT,
-                    updated_at INTEGER NOT NULL
-                )
-                """.trimIndent()
-            )
-
-            db.execSQL(
-                """
                 CREATE TABLE catalog_metadata (
                     id INTEGER PRIMARY KEY CHECK (id = 1),
                     sermon_count INTEGER NOT NULL,
@@ -711,24 +594,6 @@ class AppDatabase private constructor(context: Context) {
                         local_path TEXT NOT NULL,
                         file_size_bytes INTEGER NOT NULL,
                         downloaded_at INTEGER NOT NULL
-                    )
-                    """.trimIndent()
-                )
-            }
-            if (oldVersion < 3) {
-                db.execSQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS bible_reading_state (
-                        id INTEGER PRIMARY KEY CHECK (id = 1),
-                        translation_id TEXT NOT NULL,
-                        book_id TEXT NOT NULL,
-                        chapter INTEGER NOT NULL,
-                        verse INTEGER NOT NULL DEFAULT 1,
-                        font_size_sp REAL NOT NULL DEFAULT 18.0,
-                        is_serif INTEGER NOT NULL DEFAULT 1,
-                        line_spacing_multiplier REAL NOT NULL DEFAULT 1.5,
-                        selected_narrator TEXT,
-                        updated_at INTEGER NOT NULL
                     )
                     """.trimIndent()
                 )

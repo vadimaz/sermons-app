@@ -1,8 +1,8 @@
 package com.example.sermonindex.ui.bible.sermons
 
 import androidx.compose.runtime.Immutable
-import com.example.sermonindex.data.local.BiblePreferences
 import com.example.sermonindex.domain.model.BibleTranslation
+import com.example.sermonindex.domain.model.BibleTranslationDefaults
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.ui.scripture.TranslationPickerTarget
 
@@ -18,8 +18,8 @@ data class BibleVerseSermonsUiState(
     val errorMessage: String? = null,
 
     // Dual Translations
-    val firstTranslationId: String = BiblePreferences.DEFAULT_FIRST,
-    val secondTranslationId: String = BiblePreferences.getDefaultSecondaryTranslation(),
+    val firstTranslationId: String = BibleTranslationDefaults.DEFAULT_FIRST,
+    val secondTranslationId: String = BibleTranslationDefaults.getDefaultSecondaryTranslation(),
     val availableTranslations: List<BibleTranslation> = emptyList(),
     val firstVerseText: String? = null,
     val secondVerseText: String? = null,
@@ -30,7 +30,7 @@ data class BibleVerseSermonsUiState(
 ) {
     val firstTranslation: BibleTranslation?
         get() = availableTranslations.find { it.id.equals(firstTranslationId, ignoreCase = true) }
-            ?: if (firstTranslationId.equals(BiblePreferences.DEFAULT_FIRST, ignoreCase = true)) {
+            ?: if (firstTranslationId.equals(BibleTranslationDefaults.DEFAULT_FIRST, ignoreCase = true)) {
                 BibleTranslation(
                     id = "BSB",
                     name = "Berean Standard Bible",

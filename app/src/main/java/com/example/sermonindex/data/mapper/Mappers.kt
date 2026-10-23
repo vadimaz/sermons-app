@@ -230,18 +230,6 @@ fun com.example.sermonindex.data.model.BibleFootnoteDto.toDomain(): com.example.
         verse = reference?.verse ?: 0
     )
 
-fun com.example.sermonindex.data.local.entities.BibleReadingStateEntity.toDomain(): com.example.sermonindex.domain.model.BibleReadingPreferences =
-    com.example.sermonindex.domain.model.BibleReadingPreferences(
-        translationId = translationId,
-        bookId = bookId,
-        chapter = chapter,
-        verse = verse,
-        fontSizeSp = fontSizeSp,
-        isSerif = isSerif,
-        lineSpacingMultiplier = lineSpacingMultiplier,
-        selectedNarrator = selectedNarrator
-    )
-
 fun BibleChapterResponse.toDomain(
     translationId: String,
     bookId: String,

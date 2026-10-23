@@ -18,6 +18,7 @@
 | **Media Player** | AndroidX Media3 1.5.1 | `ExoPlayer`, `MediaSessionService`, `MediaController` |
 | **Networking** | Retrofit 2.11.0 + OkHttp 4.12.0 | `kotlinx.serialization.json`, custom 404-safe interceptor |
 | **Database & Search** | SQLiteOpenHelper + FTS4 | `AppDatabase.kt` with full-text search (`sermon_fts`), Room runtime/ktx |
+| **Preferences** | Jetpack DataStore 1.1.3 | Preferences DataStore (`UserPreferencesRepositoryImpl`) |
 | **Image Loading** | Coil 3.1.0 | `coil-compose`, `coil-network-okhttp` |
 | **Paging** | AndroidX Paging 3 (3.3.6) | `androidx.paging:paging-runtime`, `androidx.paging:paging-compose` |
 | **Background Work** | AndroidX WorkManager 2.10.0 | `CoroutineWorker`, Hilt `@EntryPoint` integration |
@@ -63,9 +64,9 @@ com.example.sermonindex
 │
 ├── data/
 │   ├── local/
-│   │   ├── AppDatabase.kt        # SQLiteOpenHelper + FTS4 virtual table + downloads/favorites/history/bible state
-│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao, BibleDao
-│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, BibleReadingStateEntity, FtsSermonResult
+│   │   ├── AppDatabase.kt        # SQLiteOpenHelper + FTS4 virtual table + downloads/favorites/history
+│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao
+│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, FtsSermonResult
 │   ├── mapper/
 │   │   └── Mappers.kt            # DTO/Entity <-> Domain mapping extensions
 │   ├── model/
@@ -77,26 +78,30 @@ com.example.sermonindex
 │   │   ├── NetworkClient.kt      # OkHttp with disk cache & logging, Retrofit
 │   │   └── SermonIndexApiService.kt # Endpoints under https://api.sermonindex.net/v2
 │   ├── repository/
-│   │   └── SermonRepositoryImpl.kt # Concrete domain repository with injected CoroutineDispatcher
+│   │   ├── SermonRepositoryImpl.kt # Concrete domain repository with injected CoroutineDispatcher
+│   │   └── UserPreferencesRepositoryImpl.kt # Jetpack DataStore preferences repository implementation
 │   └── sync/
 │       ├── AudioDownloadWorker.kt # WorkManager streaming worker for MP3 files
 │       └── CatalogSyncWorker.kt  # WorkManager CoroutineWorker for streaming gzip catalog
 │
 ├── di/
-│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao, BibleDao
+│   ├── DataStoreModule.kt        # Provides DataStore<Preferences> as @Singleton
+│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao
 │   ├── DispatchersModule.kt      # Qualifiers: @IoDispatcher, @DefaultDispatcher, @MainDispatcher
 │   ├── MediaModule.kt            # Provides PlaybackManager as @Singleton
 │   ├── NetworkModule.kt          # Provides OkHttpClient, Retrofit, SermonIndexApiService
-│   └── RepositoryModule.kt       # Binds SermonRepository & NetworkMonitor
+│   └── RepositoryModule.kt       # Binds SermonRepository, NetworkMonitor, UserPreferencesRepository
 │
 ├── domain/
 │   ├── model/
 │   │   └── Models.kt             # Pure Kotlin domain data classes (no Android dependencies)
 │   ├── repository/
 │   │   ├── NetworkMonitor.kt     # Pure network connectivity contract
-│   │   └── SermonRepository.kt   # Pure domain repository interface
+│   │   ├── SermonRepository.kt   # Pure domain repository interface
+│   │   └── UserPreferencesRepository.kt # Pure domain preferences repository interface
 │   └── usecase/
-│       └── UseCases.kt           # 26 single-responsibility UseCase classes
+│       ├── TranslationPreferencesUseCases.kt # First & second translation UseCases
+│       └── UseCases.kt           # Single-responsibility UseCase classes
 │
 ├── playback/
 │   ├── PlaybackManager.kt        # MediaController wrapper, playbackState StateFlow, sleep timer

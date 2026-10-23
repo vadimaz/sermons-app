@@ -33,6 +33,7 @@ import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.domain.model.TopicDetail
 import com.example.sermonindex.domain.model.TranscriptCue
 import com.example.sermonindex.domain.repository.SermonRepository
+import com.example.sermonindex.domain.repository.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -56,7 +57,7 @@ class SermonRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context,
     private val apiService: SermonIndexApiService,
     private val database: AppDatabase,
-    private val searchPreferences: com.example.sermonindex.data.local.SearchPreferences,
+    private val userPreferencesRepository: UserPreferencesRepository,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : SermonRepository {
 
@@ -319,31 +320,7 @@ class SermonRepositoryImpl @Inject constructor(
     private val translationBooksCache = java.util.concurrent.ConcurrentHashMap<String, List<BibleBook>>()
 
     override val bibleReadingPreferences: Flow<com.example.sermonindex.domain.model.BibleReadingPreferences> =
-        database.bibleDao.getReadingState()
-            .map { entity ->
-                entity?.toDomain() ?: defaultBibleReadingPreferences()
-            }
-            .flowOn(ioDispatcher)
-
-    private fun defaultBibleReadingPreferences(): com.example.sermonindex.domain.model.BibleReadingPreferences {
-        val language = java.util.Locale.getDefault().language
-        val defaultTranslation = when (language) {
-            "ru" -> "rus_syn"
-            "uk" -> "ukr_1996"
-            "es" -> "spa_r09"
-            else -> "BSB"
-        }
-        return com.example.sermonindex.domain.model.BibleReadingPreferences(
-            translationId = defaultTranslation,
-            bookId = "GEN",
-            chapter = 1,
-            verse = 1,
-            fontSizeSp = 18f,
-            isSerif = true,
-            lineSpacingMultiplier = 1.5f,
-            selectedNarrator = null
-        )
-    }
+        userPreferencesRepository.bibleReadingPreferences
 
     override suspend fun getBibleBooksForTranslation(translationId: String): Result<List<BibleBook>> =
         withContext(ioDispatcher) {
@@ -383,7 +360,7 @@ class SermonRepositoryImpl @Inject constructor(
         chapter: Int,
         verse: Int
     ) = withContext(ioDispatcher) {
-        database.bibleDao.saveReadingPosition(translationId, bookId, chapter, verse)
+        userPreferencesRepository.saveBibleReadingPosition(translationId, bookId, chapter, verse)
     }
 
     override suspend fun saveBibleTypographyPreferences(
@@ -391,11 +368,11 @@ class SermonRepositoryImpl @Inject constructor(
         isSerif: Boolean,
         lineSpacingMultiplier: Float
     ) = withContext(ioDispatcher) {
-        database.bibleDao.saveTypography(fontSizeSp, isSerif, lineSpacingMultiplier)
+        userPreferencesRepository.saveBibleTypography(fontSizeSp, isSerif, lineSpacingMultiplier)
     }
 
     override suspend fun saveBibleNarrator(narrator: String?) = withContext(ioDispatcher) {
-        database.bibleDao.saveNarrator(narrator)
+        userPreferencesRepository.saveBibleNarrator(narrator)
     }
 
     override suspend fun clearHistory() = withContext(ioDispatcher) {
@@ -480,10 +457,10 @@ class SermonRepositoryImpl @Inject constructor(
     }
 
     override val isCatalogReadyBannerDismissed: Flow<Boolean> =
-        searchPreferences.isCatalogReadyBannerDismissed
+        userPreferencesRepository.isCatalogReadyBannerDismissed
 
     override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {
-        searchPreferences.setCatalogReadyBannerDismissed(dismissed)
+        userPreferencesRepository.setCatalogReadyBannerDismissed(dismissed)
     }
 
     override fun search(query: String, category: SearchCategory): Flow<SearchAggregateResult> = kotlinx.coroutines.flow.flow {
