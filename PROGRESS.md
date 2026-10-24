@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.10.0` | **Version Code:** `17`
+> **Current Version:** `1.10.1` | **Version Code:** `18`
 
 ---
 
@@ -134,6 +134,7 @@
 - **Player & Card Refinements**:
   - Restored speaker portraits as primary imagery across all sermon cards, hero carousel, mini player, and details screen.
   - Numerical speed indicator badge (`1x`, `1.25x`, etc.) replacing the gauge icon.
+  - Removed redundant "Offline Audio" chip from fullscreen player header for clean presentation.
   - Strictly excluded Bible chapter tracks (`bible_...`) from history queries and continue-listening shelves.
 
 ---

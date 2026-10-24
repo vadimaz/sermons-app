@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -488,37 +487,12 @@ fun PlayerContent(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Status badges (Offline Audio, Sleep Timer, CDN Failover, Video Switch)
+                    // Status badges (Sleep Timer, CDN Failover)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(top = 6.dp)
                     ) {
-                        if (state.isLocalAudio) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.OfflinePin,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Text(
-                                        text = stringResource(R.string.offline_audio),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            }
-                        }
-
                         val timerState = state.sleepTimerState
                         if (timerState !is com.example.sermonindex.domain.model.SleepTimerState.Off) {
                             val timerText = when (timerState) {
