@@ -104,7 +104,11 @@ fun SermonListItem(
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
-                                    imageVector = if (isTextOnly) Icons.AutoMirrored.Outlined.MenuBook else Icons.Outlined.PlayCircle,
+                                    imageVector = if (isTextOnly) {
+                                        Icons.AutoMirrored.Outlined.MenuBook
+                                    } else {
+                                        Icons.Outlined.PlayCircle
+                                    },
                                     contentDescription = null,
                                     tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.size(28.dp)

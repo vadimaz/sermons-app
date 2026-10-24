@@ -13,11 +13,15 @@ data class PlaybackState(
     val playbackSpeed: Float = 1.0f,
     val isUsingFailoverCdn: Boolean = false,
     val isLocalAudio: Boolean = false,
+    val isVideoActive: Boolean = true,
     val sleepTimerState: SleepTimerState = SleepTimerState.Off,
     val errorMessage: String? = null
 ) {
     val hasActiveMedia: Boolean
         get() = currentSermon != null
+
+    val hasVideo: Boolean
+        get() = currentSermon?.hasVideo == true
 
     val progressFraction: Float
         get() = if (durationMs > 0) (currentPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f

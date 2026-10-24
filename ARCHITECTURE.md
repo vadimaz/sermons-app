@@ -120,7 +120,7 @@ com.example.sermonindex
     │   └── SermonListItem.kt     # Standard list item with avatar, title, duration
     ├── home/                     # HomeScreen.kt, HomeViewModel.kt
     ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt
-    ├── player/                   # FullscreenPlayerScreen.kt, PlayerViewModel.kt
+    ├── player/                   # FullscreenPlayerScreen.kt, FullscreenVideoScreen.kt, PlayerViewModel.kt, components/VideoPlayerSurface.kt
     ├── scripture/                # ScriptureScreen.kt, ScriptureViewModel.kt
     ├── search/                   # SearchScreen.kt, SearchViewModel.kt, SearchUiState.kt, components/
     ├── sermon/                   # SermonDetailScreen.kt, SermonDetailViewModel.kt

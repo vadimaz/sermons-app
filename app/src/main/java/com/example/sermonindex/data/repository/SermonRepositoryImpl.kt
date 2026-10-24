@@ -112,14 +112,26 @@ class SermonRepositoryImpl @Inject constructor(
 
     override suspend fun downloadSermon(sermon: Sermon) = withContext(ioDispatcher) {
         val workManager = WorkManager.getInstance(context)
+        val isVideo = sermon.hasVideo
+        val primaryUrl = if (isVideo) {
+            sermon.mp4Url.ifBlank { sermon.cdnMp4Url.ifBlank { sermon.mp3Url } }
+        } else {
+            sermon.mp3Url.ifBlank { sermon.cdnMp3Url }
+        }
+        val cdnUrl = if (isVideo) {
+            sermon.cdnMp4Url.ifBlank { sermon.cdnMp3Url }
+        } else {
+            sermon.cdnMp3Url
+        }
         val inputData = workDataOf(
             AudioDownloadWorker.KEY_SERMON_ID to sermon.id,
             AudioDownloadWorker.KEY_TITLE to sermon.title,
             AudioDownloadWorker.KEY_SPEAKER to sermon.speaker,
             AudioDownloadWorker.KEY_SPEAKER_IMAGE to sermon.speakerImage,
             AudioDownloadWorker.KEY_DURATION to sermon.duration,
-            AudioDownloadWorker.KEY_PRIMARY_URL to sermon.mp3Url,
-            AudioDownloadWorker.KEY_CDN_URL to sermon.cdnMp3Url
+            AudioDownloadWorker.KEY_PRIMARY_URL to primaryUrl,
+            AudioDownloadWorker.KEY_CDN_URL to cdnUrl,
+            AudioDownloadWorker.KEY_IS_VIDEO to isVideo
         )
 
         val request = OneTimeWorkRequestBuilder<AudioDownloadWorker>()
@@ -188,6 +200,7 @@ class SermonRepositoryImpl @Inject constructor(
         positionMs: Long,
         durationMs: Long
     ) = withContext(ioDispatcher) {
+        if (sermonId.startsWith("bible_")) return@withContext
         val completed = durationMs > 0 && positionMs >= (durationMs - 5000L)
         historyDao.upsertHistory(
             HistoryEntity(

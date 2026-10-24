@@ -52,7 +52,11 @@ fun SermonDto.toDomain(): Sermon = Sermon(
     duration = duration,
     thumbnailUrl = thumbnailUrl,
     summary = summary,
-    topics = topics.map { Topic(id = it.slug, name = it.name, slug = it.slug, count = 0) }
+    topics = topics.map { Topic(id = it.slug, name = it.name, slug = it.slug, count = 0) },
+    videoUrl = videoUrl,
+    mp4Url = mp4Url,
+    cdnMp4Url = cdnMp4Url,
+    mediaType = mediaType
 )
 
 fun SermonDetailDto.toDomain(): SermonDetail = SermonDetail(
@@ -75,7 +79,11 @@ fun SermonDetailDto.toDomain(): SermonDetail = SermonDetail(
     applicationPoints = applicationPoints,
     faq = faq.map { it.toDomain() },
     transcript = transcript,
-    transcriptHtml = transcriptHtml
+    transcriptHtml = transcriptHtml,
+    videoUrl = videoUrl,
+    mp4Url = mp4Url,
+    cdnMp4Url = cdnMp4Url,
+    mediaType = mediaType
 )
 
 fun OutlineItemDto.toDomain(): OutlineItem = OutlineItem(

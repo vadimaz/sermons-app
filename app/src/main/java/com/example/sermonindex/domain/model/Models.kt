@@ -16,10 +16,17 @@ data class Sermon(
     val duration: String = "",
     val thumbnailUrl: String = "",
     val summary: String = "",
-    val topics: List<Topic> = emptyList()
+    val topics: List<Topic> = emptyList(),
+    val videoUrl: String = "",
+    val mp4Url: String = "",
+    val cdnMp4Url: String = "",
+    val mediaType: String = "AUDIO"
 ) {
+    val hasVideo: Boolean
+        get() = mp4Url.isNotBlank() || cdnMp4Url.isNotBlank() || videoUrl.isNotBlank()
+
     val isTextOnly: Boolean
-        get() = !hasAudio && mp3Url.isBlank() && cdnMp3Url.isBlank()
+        get() = !hasAudio && !hasVideo && mp3Url.isBlank() && cdnMp3Url.isBlank() && mp4Url.isBlank() && cdnMp4Url.isBlank()
 }
 
 /**
@@ -45,10 +52,17 @@ data class SermonDetail(
     val applicationPoints: List<String> = emptyList(),
     val faq: List<FaqItem> = emptyList(),
     val transcript: String = "",
-    val transcriptHtml: String = ""
+    val transcriptHtml: String = "",
+    val videoUrl: String = "",
+    val mp4Url: String = "",
+    val cdnMp4Url: String = "",
+    val mediaType: String = "AUDIO"
 ) {
+    val hasVideo: Boolean
+        get() = mp4Url.isNotBlank() || cdnMp4Url.isNotBlank() || videoUrl.isNotBlank()
+
     val isTextOnly: Boolean
-        get() = !hasAudio && mp3Url.isBlank() && cdnMp3Url.isBlank()
+        get() = !hasAudio && !hasVideo && mp3Url.isBlank() && cdnMp3Url.isBlank() && mp4Url.isBlank() && cdnMp4Url.isBlank()
 
     fun toSermon(): Sermon = Sermon(
         id = id,
@@ -61,7 +75,11 @@ data class SermonDetail(
         hasAudio = hasAudio,
         duration = duration,
         thumbnailUrl = thumbnailUrl,
-        summary = summary
+        summary = summary,
+        videoUrl = videoUrl,
+        mp4Url = mp4Url,
+        cdnMp4Url = cdnMp4Url,
+        mediaType = mediaType
     )
 }
 
@@ -272,13 +290,18 @@ data class DownloadedSermon(
     val fileSizeBytes: Long,
     val downloadedAt: Long
 ) {
-    fun toSermon(): Sermon = Sermon(
-        id = id,
-        title = title,
-        speaker = speaker,
-        speakerImage = speakerImage,
-        duration = duration
-    )
+    fun toSermon(): Sermon {
+        val isVideo = localPath.endsWith(".mp4", ignoreCase = true)
+        return Sermon(
+            id = id,
+            title = title,
+            speaker = speaker,
+            speakerImage = speakerImage,
+            duration = duration,
+            mp4Url = if (isVideo) "file://$localPath" else "",
+            mp3Url = if (!isVideo) "file://$localPath" else ""
+        )
+    }
 
     val formattedSize: String
         get() {

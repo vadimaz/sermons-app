@@ -34,6 +34,9 @@ open class PlaybackManager(private val context: Context? = null) {
     private val _playbackState = MutableStateFlow(PlaybackState())
     open val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
 
+    open val player: Player?
+        get() = mediaController
+
     private var activeSermon: Sermon? = null
     private var pendingPlay: Pair<Sermon, Long>? = null
 
@@ -64,9 +67,14 @@ open class PlaybackManager(private val context: Context? = null) {
     }
 
     open fun playSermon(sermon: Sermon, startPositionMs: Long = 0L) {
-        if (!sermon.hasAudio && sermon.mp3Url.isBlank() && sermon.cdnMp3Url.isBlank()) {
+        val hasStream = (sermon.hasAudio && (sermon.mp3Url.isNotBlank() || sermon.cdnMp3Url.isNotBlank())) ||
+                sermon.hasVideo ||
+                sermon.mp3Url.isNotBlank() ||
+                sermon.cdnMp3Url.isNotBlank()
+
+        if (!hasStream) {
             _playbackState.value = _playbackState.value.copy(
-                errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio stream available"
+                errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio or video stream available"
             )
             return
         }
@@ -78,14 +86,30 @@ open class PlaybackManager(private val context: Context? = null) {
             return
         }
 
-        val localFile = context?.filesDir?.let { java.io.File(it, "audio_downloads/${sermon.id}.mp3") }
-        val isLocal = localFile != null && localFile.exists() && localFile.length() > 0
+        val mp4File = context?.filesDir?.let { java.io.File(it, "audio_downloads/${sermon.id}.mp4") }
+        val mp3File = context?.filesDir?.let { java.io.File(it, "audio_downloads/${sermon.id}.mp3") }
+        val localFile = when {
+            mp4File != null && mp4File.exists() && mp4File.length() > 0 -> mp4File
+            mp3File != null && mp3File.exists() && mp3File.length() > 0 -> mp3File
+            else -> null
+        }
+        val isLocal = localFile != null
+        val isLocalVideo = localFile?.name?.endsWith(".mp4", ignoreCase = true) == true
+        val hasVideo = sermon.hasVideo || isLocalVideo
+        val localUri = localFile?.let { "file://${it.absolutePath}" }
+
         val playUrl = if (isLocal) {
-            "file://${localFile.absolutePath}"
+            localUri!!
+        } else if (hasVideo) {
+            sermon.mp4Url.ifBlank { sermon.cdnMp4Url.ifBlank { sermon.mp3Url.ifBlank { sermon.cdnMp3Url } } }
         } else {
             sermon.mp3Url.ifBlank { sermon.cdnMp3Url }
         }
-        val cdnUrl = sermon.cdnMp3Url
+        val cdnUrl = if (hasVideo) {
+            sermon.cdnMp4Url.ifBlank { sermon.cdnMp3Url }
+        } else {
+            sermon.cdnMp3Url
+        }
 
         if (playUrl.isBlank()) {
             _playbackState.value = _playbackState.value.copy(
@@ -103,7 +127,11 @@ open class PlaybackManager(private val context: Context? = null) {
             isFailover = false,
             primaryUrl = playUrl,
             cdnUrl = cdnUrl,
-            isLocal = isLocal
+            isLocal = isLocal,
+            hasVideo = hasVideo,
+            videoUrl = sermon.videoUrl,
+            mp4Url = if (isLocalVideo) localUri!! else sermon.mp4Url,
+            cdnMp4Url = if (isLocalVideo) localUri!! else sermon.cdnMp4Url
         )
 
         controller.setMediaItem(mediaItem)
@@ -119,10 +147,15 @@ open class PlaybackManager(private val context: Context? = null) {
             isBuffering = true,
             errorMessage = null,
             currentPositionMs = startPositionMs,
-            isLocalAudio = isLocal
+            isLocalAudio = isLocal,
+            isVideoActive = hasVideo
         )
 
         startPositionPolling()
+    }
+
+    fun setVideoActive(active: Boolean) {
+        _playbackState.value = _playbackState.value.copy(isVideoActive = active)
     }
 
     private var sleepTimerJob: Job? = null

@@ -44,6 +44,7 @@ class AudioDownloadWorker(
         const val KEY_DURATION = "duration"
         const val KEY_PRIMARY_URL = "primary_url"
         const val KEY_CDN_URL = "cdn_url"
+        const val KEY_IS_VIDEO = "is_video"
         const val KEY_PROGRESS = "progress"
 
         private const val CHANNEL_ID = "sermon_downloads_channel"
@@ -71,9 +72,12 @@ class AudioDownloadWorker(
         )
         val downloadsDao = entryPoint.getDownloadsDao()
 
+        val isVideo = inputData.getBoolean(KEY_IS_VIDEO, false)
+        val ext = if (isVideo || downloadUrl.contains(".mp4", ignoreCase = true)) "mp4" else "mp3"
+
         val downloadsDir = File(applicationContext.filesDir, "audio_downloads").apply { mkdirs() }
-        val targetFile = File(downloadsDir, "${sermonId}.mp3")
-        val tempFile = File(downloadsDir, "${sermonId}.mp3.tmp")
+        val targetFile = File(downloadsDir, "${sermonId}.${ext}")
+        val tempFile = File(downloadsDir, "${sermonId}.${ext}.tmp")
 
         createNotificationChannel()
         val notificationId = NOTIFICATION_ID_BASE + (sermonId.hashCode() and 0x7FFF)

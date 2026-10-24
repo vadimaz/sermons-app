@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface HistoryDao {
-    @Query("SELECT * FROM history ORDER BY updated_at DESC LIMIT :limit")
+    @Query("SELECT * FROM history WHERE sermon_id NOT LIKE 'bible_%' ORDER BY updated_at DESC LIMIT :limit")
     fun getRecentHistory(limit: Int = 30): Flow<List<HistoryEntity>>
 
     @Query("SELECT * FROM history WHERE sermon_id = :sermonId LIMIT 1")

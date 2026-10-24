@@ -269,4 +269,15 @@
     <string name="search_next_match">Next match</string>
     <string name="search_dismiss_highlight">Dismiss highlights</string>
     <string name="search_see_all_count">See all (%1$d)</string>
+
+    <!-- Video Player &amp; Sermon -->
+    <string name="video_sermon">Video Sermon</string>
+    <string name="watch_video">Watch Video</string>
+    <string name="watch_on_youtube">Watch on YouTube</string>
+    <string name="audio_mode">Audio</string>
+    <string name="video_mode">Video</string>
+    <string name="enter_fullscreen">Fullscreen</string>
+    <string name="exit_fullscreen">Exit Fullscreen</string>
+    <string name="pip_mode">Picture-in-Picture</string>
+    <string name="badge_video">Video</string>
 </resources>

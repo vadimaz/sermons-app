@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.9.0` | **Version Code:** `16`
+> **Current Version:** `1.10.0` | **Version Code:** `17`
 
 ---
 
@@ -112,6 +112,30 @@
 - **Clean Architecture Repository Decoupling**: Refactored `SermonRepositoryImpl` to inject pure DAO interfaces (`FavoritesDao`, `HistoryDao`, `DownloadsDao`, `SearchDao`) instead of depending directly on `AppDatabase`.
 - **KSP Schema Export**: Automated Room JSON schema export to `app/schemas/` for rigorous compile-time verification and future migration testing.
 
+### 1.11 Video Playback Engine, Picture-in-Picture & Fullscreen Immersive Mode
+- **Dual Audio/Video Engine (Media3 & ExoPlayer)**:
+  - Direct video rendering via `VideoPlayerSurface` and `PlayerView` (Media3 UI) hooked into `PlaybackManager.player`.
+  - Offline `.mp4` video downloads supported via WorkManager (`AudioDownloadWorker` with `KEY_IS_VIDEO` and `.mp4` storage) and streamed seamlessly offline from local storage.
+  - `DownloadedSermon.toSermon()` maps `.mp4` downloads to `hasVideo = true` and `mp4Url = "file://$localPath"`.
+- **Viewport Visibility-Driven Audio/Video Decoding**:
+  - Automatically monitors whether the player header video component is in the viewport (`firstVisibleItemIndex == 0`).
+  - When scrolled off-screen (e.g., to read synced WebVTT transcript) or when the player is minimized to the mini-player, video decoding is immediately suspended to conserve battery, CPU, and memory, continuing seamless audio-only decoding.
+  - Resumes video rendering instantaneously when scrolled back into view or when navigating to fullscreen video.
+- **Picture-in-Picture (PiP) Architecture**:
+  - Android 12+ `setAutoEnterEnabled(isPlaying)` allows fluid gestures directly from fullscreen video to a 16:9 floating PiP window on swipe-to-home.
+  - `LocalPictureInPictureMode` provides reactive PiP state down Compose trees, auto-hiding all controls in the floating window.
+  - Closing the PiP window via the system 'X' button invokes `MainActivity.onStop()` to immediately halt playback and clear the foreground media notification.
+- **True Immersive Fullscreen Mode (`FullscreenVideoScreen`)**:
+  - Unlocked `SCREEN_ORIENTATION_SENSOR` for natural portrait or landscape video viewing without forced rotations.
+  - System bars (status and navigation) hidden via `WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE` and `hide(systemBars())`.
+  - Zero `Scaffold` insets (`contentWindowInsets = WindowInsets(0, 0, 0, 0)` and `PaddingValues(0.dp)`) so the video physically extends to 100% of the display.
+  - Fully transparent system bars in theme and window, contrast enforcement disabled (`isStatusBarContrastEnforced = false`, `isNavigationBarContrastEnforced = false`), and `LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES` for edge-to-edge presentation without letterboxing.
+  - `.safeDrawingPadding()` protects fullscreen overlay controls from display cutouts, notches, and rounded corners.
+- **Player & Card Refinements**:
+  - Restored speaker portraits as primary imagery across all sermon cards, hero carousel, mini player, and details screen.
+  - Numerical speed indicator badge (`1x`, `1.25x`, etc.) replacing the gauge icon.
+  - Strictly excluded Bible chapter tracks (`bible_...`) from history queries and continue-listening shelves.
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -197,6 +221,9 @@ interface UserPreferencesRepository {
 ```kotlin
 class PlaybackManager(context: Context) {
     val playbackState: StateFlow<PlaybackState>
+    val isVideoActive: StateFlow<Boolean>
+    val player: Player?
+    fun setVideoActive(active: Boolean)
     fun playSermon(sermon: Sermon, startPositionMs: Long = 0L)
     fun togglePlayPause()
     fun pause()

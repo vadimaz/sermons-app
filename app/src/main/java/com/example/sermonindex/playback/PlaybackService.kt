@@ -95,13 +95,23 @@ class PlaybackService : MediaSessionService() {
                     hasTriedFailover = true
                     val currentPosition = player.currentPosition
 
+                    val currentExtras = player.currentMediaItem?.mediaMetadata?.extras
+                    val hasVideo = currentExtras?.getBoolean(EXTRA_HAS_VIDEO, false) ?: false
+                    val videoUrl = currentExtras?.getString(EXTRA_VIDEO_URL) ?: ""
+                    val mp4Url = currentExtras?.getString(EXTRA_MP4_URL) ?: ""
+                    val cdnMp4Url = currentExtras?.getString(EXTRA_CDN_MP4_URL) ?: ""
+
                     val failoverMediaItem = buildMediaItem(
                         url = cdnMp3Url,
                         title = currentTitle,
                         speaker = currentSpeaker,
                         speakerImage = currentSpeakerImage,
                         sermonId = currentSermonId ?: "",
-                        isFailover = true
+                        isFailover = true,
+                        hasVideo = hasVideo,
+                        videoUrl = videoUrl,
+                        mp4Url = mp4Url,
+                        cdnMp4Url = cdnMp4Url
                     )
 
                     player.setMediaItem(failoverMediaItem)
@@ -134,7 +144,7 @@ class PlaybackService : MediaSessionService() {
                 delay(2000L)
                 if (player.isPlaying) {
                     val sermonId = currentSermonId
-                    if (!sermonId.isNullOrBlank()) {
+                    if (!sermonId.isNullOrBlank() && !sermonId.startsWith("bible_")) {
                         val pos = player.currentPosition
                         val duration = player.duration.coerceAtLeast(0L)
                         runCatching {
@@ -193,6 +203,10 @@ class PlaybackService : MediaSessionService() {
         const val EXTRA_CDN_URL = "extra_cdn_url"
         const val EXTRA_IS_FAILOVER = "extra_is_failover"
         const val EXTRA_IS_LOCAL = "extra_is_local"
+        const val EXTRA_HAS_VIDEO = "extra_has_video"
+        const val EXTRA_VIDEO_URL = "extra_video_url"
+        const val EXTRA_MP4_URL = "extra_mp4_url"
+        const val EXTRA_CDN_MP4_URL = "extra_cdn_mp4_url"
 
         fun buildMediaItem(
             url: String,
@@ -203,7 +217,11 @@ class PlaybackService : MediaSessionService() {
             isFailover: Boolean = false,
             primaryUrl: String = url,
             cdnUrl: String = "",
-            isLocal: Boolean = false
+            isLocal: Boolean = false,
+            hasVideo: Boolean = false,
+            videoUrl: String = "",
+            mp4Url: String = "",
+            cdnMp4Url: String = ""
         ): MediaItem {
             val extras = Bundle().apply {
                 putString(EXTRA_SERMON_ID, sermonId)
@@ -211,6 +229,10 @@ class PlaybackService : MediaSessionService() {
                 putString(EXTRA_CDN_URL, cdnUrl)
                 putBoolean(EXTRA_IS_FAILOVER, isFailover)
                 putBoolean(EXTRA_IS_LOCAL, isLocal)
+                putBoolean(EXTRA_HAS_VIDEO, hasVideo)
+                putString(EXTRA_VIDEO_URL, videoUrl)
+                putString(EXTRA_MP4_URL, mp4Url)
+                putString(EXTRA_CDN_MP4_URL, cdnMp4Url)
             }
 
             val metadata = MediaMetadata.Builder()

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,7 +35,6 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.OfflinePin
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,10 +77,12 @@ import androidx.compose.ui.graphics.Color
 import com.example.sermonindex.ui.search.components.TextHighlightUtils
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.Player
 import coil3.compose.AsyncImage
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
+import com.example.sermonindex.ui.player.components.VideoPlayerSurface
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -91,11 +94,13 @@ import java.util.Locale
 @Composable
 fun FullscreenPlayerScreen(
     onBack: () -> Unit,
+    onFullscreenVideoClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val viewModel: PlayerViewModel = hiltViewModel()
 
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val player = viewModel.player
 
     // Auto-exit if no sermon is active after waiting for initial service connection
     LaunchedEffect(state.sermon) {
@@ -109,8 +114,10 @@ fun FullscreenPlayerScreen(
 
     PlayerContent(
         state = state,
+        player = player,
         onEvent = viewModel::onEvent,
         onBack = onBack,
+        onFullscreenVideoClick = onFullscreenVideoClick,
         modifier = modifier
     )
 }
@@ -122,8 +129,10 @@ fun FullscreenPlayerScreen(
 @Composable
 fun PlayerContent(
     state: PlayerUiState,
+    player: Player?,
     onEvent: (PlayerUiEvent) -> Unit,
     onBack: () -> Unit,
+    onFullscreenVideoClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val sermon = state.sermon
@@ -253,6 +262,16 @@ fun PlayerContent(
         if (state.isReadingMode && state.activeCueIndex >= 0) {
             val target = if (state.activeCueIndex >= 3) state.activeCueIndex - 1 else 1
             listState.animateScrollToItem(target)
+        }
+    }
+
+    // Automatically switch between Video and Audio-only based on header visibility
+    val isHeaderVisible by remember {
+        derivedStateOf { listState.firstVisibleItemIndex == 0 }
+    }
+    LaunchedEffect(isHeaderVisible, state.hasVideo) {
+        if (state.hasVideo) {
+            currentOnEvent(PlayerUiEvent.SetVideoActive(isHeaderVisible))
         }
     }
 
@@ -410,30 +429,43 @@ fun PlayerContent(
                 ) {
                     Spacer(modifier = Modifier.height(8.dp))
 
-                    // Speaker Artwork
-                    val imageUrl = sermon.speakerImage.ifBlank { sermon.thumbnailUrl }
-                    Surface(
-                        modifier = Modifier
-                            .size(240.dp)
-                            .shadow(16.dp, RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
-                    ) {
-                        if (imageUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = sermon.speaker,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(64.dp)
+                    // Video Surface or Speaker Artwork
+                    if (state.hasVideo) {
+                        VideoPlayerSurface(
+                            player = player,
+                            isPlaying = state.isPlaying,
+                            onTogglePlayPause = { onEvent(PlayerUiEvent.TogglePlayPause) },
+                            onFullscreenClick = onFullscreenVideoClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .shadow(16.dp, RoundedCornerShape(20.dp))
+                        )
+                    } else {
+                        val imageUrl = sermon.speakerImage.ifBlank { sermon.thumbnailUrl }
+                        Surface(
+                            modifier = Modifier
+                                .size(240.dp)
+                                .shadow(16.dp, RoundedCornerShape(24.dp)),
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            if (imageUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = sermon.speaker,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
                                 )
+                            } else {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -456,7 +488,7 @@ fun PlayerContent(
                         color = MaterialTheme.colorScheme.primary
                     )
 
-                    // Status badges (Offline Audio, Sleep Timer, CDN Failover)
+                    // Status badges (Offline Audio, Sleep Timer, CDN Failover, Video Switch)
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -580,15 +612,26 @@ fun PlayerContent(
                         horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // 1. Speed Selector (Icon only; accent color when not 1.0x)
-                        Box {
-                            IconButton(onClick = { onEvent(PlayerUiEvent.SetSpeedMenuVisible(true)) }) {
-                                val isCustomSpeed = state.playbackSpeed != 1.0f
-                                Icon(
-                                    imageVector = Icons.Default.Speed,
-                                    contentDescription = stringResource(R.string.playback_speed),
-                                    tint = if (isCustomSpeed) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(24.dp)
+                        // 1. Speed Selector (displays numerical speed, e.g. "1x", "1.25x")
+                        Box(contentAlignment = Alignment.Center) {
+                            val isCustomSpeed = state.playbackSpeed != 1.0f
+                            val speedText = if (state.playbackSpeed % 1.0f == 0.0f) {
+                                "${state.playbackSpeed.toInt()}x"
+                            } else {
+                                "${state.playbackSpeed}x"
+                            }
+                            Surface(
+                                onClick = { onEvent(PlayerUiEvent.SetSpeedMenuVisible(true)) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isCustomSpeed) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                                modifier = Modifier.padding(horizontal = 4.dp)
+                            ) {
+                                Text(
+                                    text = speedText,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isCustomSpeed) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                                 )
                             }
                             DropdownMenu(
@@ -596,8 +639,9 @@ fun PlayerContent(
                                 onDismissRequest = { onEvent(PlayerUiEvent.SetSpeedMenuVisible(false)) }
                             ) {
                                 listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f).forEach { speed ->
+                                    val itemLabel = if (speed % 1.0f == 0.0f) "${speed.toInt()}x" else "${speed}x"
                                     DropdownMenuItem(
-                                        text = { Text("${speed}x") },
+                                        text = { Text(itemLabel, fontWeight = if (state.playbackSpeed == speed) FontWeight.Bold else FontWeight.Normal) },
                                         onClick = {
                                             onEvent(PlayerUiEvent.SetSpeed(speed))
                                         }
@@ -803,7 +847,7 @@ private fun TranscriptSection(transcriptHtml: String, transcriptText: String) {
     }
 }
 
-private fun formatDuration(ms: Long): String {
+internal fun formatDuration(ms: Long): String {
     val totalSeconds = (ms / 1000).coerceAtLeast(0)
     val seconds = totalSeconds % 60
     val minutes = (totalSeconds / 60) % 60

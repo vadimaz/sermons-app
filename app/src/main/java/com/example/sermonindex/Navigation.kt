@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -35,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -190,7 +192,7 @@ fun MainNavigation(
     val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)
 
     val currentRoute = navigationState.currentRoute
-    val isFullscreenPlayer = currentRoute is PlayerRoute || currentRoute is TextSermonRoute
+    val isFullscreenPlayer = currentRoute is PlayerRoute || currentRoute is TextSermonRoute || currentRoute is FullscreenVideoRoute
     var isScriptureAtRoot by rememberSaveable { mutableStateOf(true) }
     var isBibleBottomBarVisible by rememberSaveable { mutableStateOf(true) }
 
@@ -222,7 +224,10 @@ fun MainNavigation(
         label = "bottomBarTranslationY"
     )
 
+    val isFullscreenVideo = currentRoute is FullscreenVideoRoute
+
     Scaffold(
+        contentWindowInsets = if (isFullscreenVideo) WindowInsets(0, 0, 0, 0) else ScaffoldDefaults.contentWindowInsets,
         bottomBar = {
             if (showBottomBar || showMiniPlayer) {
                 Column(
@@ -369,7 +374,7 @@ fun MainNavigation(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(if (isFullscreenVideo) PaddingValues(0.dp) else innerPadding)
         ) {
             if (!isFullscreenPlayer) {
                 OfflineBanner(isOnline = isOnline)
@@ -539,6 +544,13 @@ fun MainNavigation(
 
                         entry<PlayerRoute> {
                             FullscreenPlayerScreen(
+                                onBack = { navigator.goBack() },
+                                onFullscreenVideoClick = { navigator.navigate(FullscreenVideoRoute) }
+                            )
+                        }
+
+                        entry<FullscreenVideoRoute> {
+                            com.example.sermonindex.ui.player.FullscreenVideoScreen(
                                 onBack = { navigator.goBack() }
                             )
                         }

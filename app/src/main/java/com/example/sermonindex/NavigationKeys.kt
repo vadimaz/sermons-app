@@ -45,4 +45,7 @@ data class SermonDetailRoute(val sermonId: String, val highlightQuery: String? =
 data object PlayerRoute : NavKey
 
 @Serializable
+data object FullscreenVideoRoute : NavKey
+
+@Serializable
 data class TextSermonRoute(val sermonId: String, val highlightQuery: String? = null) : NavKey

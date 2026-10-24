@@ -257,12 +257,74 @@ class  UseCasesTest {
     }
 
     @Test
+    fun sermon_videoSermon_hasVideoIsTrueAndIsTextOnlyIsFalse() {
+        val videoSermon = Sermon(
+            id = "4",
+            title = "Video Sermon",
+            speaker = "Zac Poonen",
+            hasAudio = false,
+            mp3Url = "",
+            cdnMp3Url = "",
+            mp4Url = "https://example.com/video.mp4"
+        )
+        assertTrue(videoSermon.hasVideo)
+        org.junit.Assert.assertFalse(videoSermon.isTextOnly)
+    }
+
+    @Test
     fun sermonDetail_isTextOnly_returnsTrueOnlyWhenAudioUnavailable() {
         val textDetail = SermonDetail(id = "1", title = "Text Sermon", speaker = "Spurgeon", hasAudio = false, mp3Url = "", cdnMp3Url = "")
         val audioDetail = SermonDetail(id = "2", title = "Audio Sermon", speaker = "Tozer", hasAudio = true, mp3Url = "https://example.com/audio.mp3")
 
         assertTrue(textDetail.isTextOnly)
         org.junit.Assert.assertFalse(audioDetail.isTextOnly)
+    }
+
+    @Test
+    fun sermonDetail_videoSermon_hasVideoIsTrueAndIsTextOnlyIsFalse() {
+        val videoDetail = SermonDetail(
+            id = "3",
+            title = "Video Sermon Detail",
+            speaker = "Zac Poonen",
+            hasAudio = false,
+            mp3Url = "",
+            cdnMp3Url = "",
+            videoUrl = "https://youtube.com/watch?v=123"
+        )
+        assertTrue(videoDetail.hasVideo)
+        org.junit.Assert.assertFalse(videoDetail.isTextOnly)
+    }
+
+    @Test
+    fun downloadedSermon_toSermon_mapsMp4ToVideoOfflinePlayback() {
+        val videoDownload = com.example.sermonindex.domain.model.DownloadedSermon(
+            id = "vid_123",
+            title = "Video Sermon",
+            speaker = "Art Katz",
+            localPath = "/data/user/0/com.example.sermonindex/files/audio_downloads/vid_123.mp4",
+            fileSizeBytes = 50_000_000L,
+            downloadedAt = 1000L
+        )
+        val sermon = videoDownload.toSermon()
+        assertTrue(sermon.hasVideo)
+        assertEquals("file:///data/user/0/com.example.sermonindex/files/audio_downloads/vid_123.mp4", sermon.mp4Url)
+        assertEquals("", sermon.mp3Url)
+    }
+
+    @Test
+    fun downloadedSermon_toSermon_mapsMp3ToAudioOfflinePlayback() {
+        val audioDownload = com.example.sermonindex.domain.model.DownloadedSermon(
+            id = "aud_123",
+            title = "Audio Sermon",
+            speaker = "A.W. Tozer",
+            localPath = "/data/user/0/com.example.sermonindex/files/audio_downloads/aud_123.mp3",
+            fileSizeBytes = 15_000_000L,
+            downloadedAt = 1000L
+        )
+        val sermon = audioDownload.toSermon()
+        org.junit.Assert.assertFalse(sermon.hasVideo)
+        assertEquals("", sermon.mp4Url)
+        assertEquals("file:///data/user/0/com.example.sermonindex/files/audio_downloads/aud_123.mp3", sermon.mp3Url)
     }
 
     @Test

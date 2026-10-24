@@ -3,6 +3,7 @@ package com.example.sermonindex.ui.player
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Player
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.model.SleepTimerState
@@ -40,6 +41,8 @@ data class PlayerUiState(
     val playbackSpeed: Float = 1.0f,
     val isUsingFailoverCdn: Boolean = false,
     val isLocalAudio: Boolean = false,
+    val hasVideo: Boolean = false,
+    val isVideoActive: Boolean = true,
     val sleepTimerState: SleepTimerState = SleepTimerState.Off,
     val showSleepTimerDialog: Boolean = false,
     val sliderPosition: Float = 0f,
@@ -85,6 +88,7 @@ sealed interface PlayerUiEvent {
     data class SetReadingMode(val active: Boolean) : PlayerUiEvent
     data class SeekToCue(val startMs: Long) : PlayerUiEvent
     data class SetHighlightQuery(val query: String?) : PlayerUiEvent
+    data class SetVideoActive(val active: Boolean) : PlayerUiEvent
 }
 
 /**
@@ -106,6 +110,9 @@ class PlayerViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PlayerUiState())
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    val player: Player?
+        get() = playbackManager.player
 
     private var currentFavoriteIds = emptySet<String>()
     private var downloadObserverJob: Job? = null
@@ -134,6 +141,8 @@ class PlayerViewModel @Inject constructor(
                         playbackSpeed = pbState.playbackSpeed,
                         isUsingFailoverCdn = pbState.isUsingFailoverCdn,
                         isLocalAudio = pbState.isLocalAudio,
+                        hasVideo = pbState.hasVideo,
+                        isVideoActive = pbState.isVideoActive,
                         sleepTimerState = pbState.sleepTimerState,
                         isFavorite = newSermon?.id?.let { currentFavoriteIds.contains(it) } ?: false
                     )
@@ -303,6 +312,9 @@ class PlayerViewModel @Inject constructor(
                         matchingCueIndices = matching
                     )
                 }
+            }
+            is PlayerUiEvent.SetVideoActive -> {
+                playbackManager.setVideoActive(event.active)
             }
         }
     }
