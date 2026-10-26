@@ -35,6 +35,14 @@
                 <action android:name="androidx.media3.session.MediaSessionService"/>
             </intent-filter>
         </service>
+
+        <receiver
+            android:name=".data.sync.CatalogUpdateBroadcastReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.example.sermonindex.action.START_CATALOG_UPDATE" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

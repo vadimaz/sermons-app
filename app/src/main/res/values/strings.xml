@@ -280,4 +280,12 @@
     <string name="exit_fullscreen">Exit Fullscreen</string>
     <string name="pip_mode">Picture-in-Picture</string>
     <string name="badge_video">Video</string>
+
+    <!-- Catalog Update Notification &amp; Background Worker -->
+    <string name="catalog_updates_channel_name">Catalog Updates</string>
+    <string name="catalog_updates_channel_desc">Notifications about updates to the offline sermon database</string>
+    <string name="catalog_update_notification_title">Sermon Catalog Update</string>
+    <string name="catalog_update_notification_desc">A new version of the sermon catalog is available (%1$d sermons). Tap to update.</string>
+    <string name="catalog_update_notification_action_update">Update Now</string>
+    <string name="catalog_update_notification_started">Catalog download started in background</string>
 </resources>

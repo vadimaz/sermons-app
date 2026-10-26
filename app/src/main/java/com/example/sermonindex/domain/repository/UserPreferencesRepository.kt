@@ -47,4 +47,18 @@ interface UserPreferencesRepository {
     )
 
     suspend fun saveBibleNarrator(narrator: String?)
+
+    /**
+     * Whether periodic background checking for catalog updates is enabled.
+     */
+    val isAutoCatalogUpdateCheckEnabled: Flow<Boolean>
+
+    suspend fun setAutoCatalogUpdateCheckEnabled(enabled: Boolean)
+
+    /**
+     * Timestamp in milliseconds when the last catalog update check was performed.
+     */
+    val lastCatalogUpdateCheckTimestamp: Flow<Long>
+
+    suspend fun setLastCatalogUpdateCheckTimestamp(timestamp: Long)
 }

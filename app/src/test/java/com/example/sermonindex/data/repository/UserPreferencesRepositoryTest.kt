@@ -56,6 +56,8 @@ class UserPreferencesRepositoryTest {
         assertTrue(readingPrefs.isSerif)
         assertEquals(1.5f, readingPrefs.lineSpacingMultiplier)
         assertNull(readingPrefs.selectedNarrator)
+        assertTrue(repository.isAutoCatalogUpdateCheckEnabled.first())
+        assertEquals(0L, repository.lastCatalogUpdateCheckTimestamp.first())
     }
 
     @Test
@@ -127,5 +129,31 @@ class UserPreferencesRepositoryTest {
 
         repository.saveBibleNarrator(null)
         assertNull(repository.bibleReadingPreferences.first().selectedNarrator)
+    }
+
+    @Test
+    fun setAutoCatalogUpdateCheckEnabled_persistsCorrectly() = testScope.runTest {
+        val repository = UserPreferencesRepositoryImpl(
+            dataStore = dataStore,
+            ioDispatcher = testDispatcher
+        )
+
+        repository.setAutoCatalogUpdateCheckEnabled(false)
+        assertFalse(repository.isAutoCatalogUpdateCheckEnabled.first())
+
+        repository.setAutoCatalogUpdateCheckEnabled(true)
+        assertTrue(repository.isAutoCatalogUpdateCheckEnabled.first())
+    }
+
+    @Test
+    fun setLastCatalogUpdateCheckTimestamp_persistsCorrectly() = testScope.runTest {
+        val repository = UserPreferencesRepositoryImpl(
+            dataStore = dataStore,
+            ioDispatcher = testDispatcher
+        )
+
+        val timestamp = 1729958400000L
+        repository.setLastCatalogUpdateCheckTimestamp(timestamp)
+        assertEquals(timestamp, repository.lastCatalogUpdateCheckTimestamp.first())
     }
 }

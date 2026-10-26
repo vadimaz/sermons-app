@@ -39,6 +39,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -180,13 +181,21 @@ fun rememberNavigationState(
 @Composable
 fun MainNavigation(
     playbackManager: PlaybackManager,
-    networkMonitor: NetworkMonitor
+    networkMonitor: NetworkMonitor,
+    initialRoute: NavKey = HomeRoute,
+    navigateToRoute: NavKey? = null
 ) {
     val navigationState = rememberNavigationState(
-        startRoute = HomeRoute,
+        startRoute = initialRoute,
         topLevelRoutes = TOP_LEVEL_ROUTES
     )
     val navigator = remember { Navigator(navigationState) }
+
+    LaunchedEffect(navigateToRoute) {
+        if (navigateToRoute != null) {
+            navigator.navigate(navigateToRoute)
+        }
+    }
 
     val playbackState by playbackManager.playbackState.collectAsStateWithLifecycle()
     val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)

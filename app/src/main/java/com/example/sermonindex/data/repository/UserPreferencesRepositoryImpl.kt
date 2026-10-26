@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.sermonindex.di.IoDispatcher
 import com.example.sermonindex.domain.model.BibleReadingPreferences
@@ -41,6 +42,8 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val BIBLE_IS_SERIF = booleanPreferencesKey("bible_reading_is_serif")
         val BIBLE_LINE_SPACING = floatPreferencesKey("bible_reading_line_spacing_multiplier")
         val BIBLE_SELECTED_NARRATOR = stringPreferencesKey("bible_reading_selected_narrator")
+        val AUTO_CATALOG_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_catalog_update_check_enabled")
+        val LAST_CATALOG_UPDATE_CHECK_TIMESTAMP = longPreferencesKey("last_catalog_update_check_timestamp")
     }
 
     private val safePreferencesFlow: Flow<Preferences> = dataStore.data
@@ -151,6 +154,34 @@ class UserPreferencesRepositoryImpl @Inject constructor(
                 } else {
                     preferences[PreferencesKeys.BIBLE_SELECTED_NARRATOR] = narrator
                 }
+            }
+        }
+    }
+
+    override val isAutoCatalogUpdateCheckEnabled: Flow<Boolean> = safePreferencesFlow
+        .map { preferences ->
+            preferences[PreferencesKeys.AUTO_CATALOG_UPDATE_CHECK_ENABLED] ?: true
+        }
+        .flowOn(ioDispatcher)
+
+    override suspend fun setAutoCatalogUpdateCheckEnabled(enabled: Boolean) {
+        withContext(ioDispatcher) {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.AUTO_CATALOG_UPDATE_CHECK_ENABLED] = enabled
+            }
+        }
+    }
+
+    override val lastCatalogUpdateCheckTimestamp: Flow<Long> = safePreferencesFlow
+        .map { preferences ->
+            preferences[PreferencesKeys.LAST_CATALOG_UPDATE_CHECK_TIMESTAMP] ?: 0L
+        }
+        .flowOn(ioDispatcher)
+
+    override suspend fun setLastCatalogUpdateCheckTimestamp(timestamp: Long) {
+        withContext(ioDispatcher) {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.LAST_CATALOG_UPDATE_CHECK_TIMESTAMP] = timestamp
             }
         }
     }

@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.10.2` | **Version Code:** `19`
+> **Current Version:** `1.11.0` | **Version Code:** `20`
 
 ---
 
@@ -137,6 +137,24 @@
   - Removed redundant "Offline Audio" chip from fullscreen player header for clean presentation.
   - Strictly excluded Bible chapter tracks (`bible_...`) from history queries and continue-listening shelves.
 
+### 1.12 Periodic Catalog Update Worker & Push Notifications (WorkManager)
+- **Automated Update Check Worker (`CatalogUpdateCheckWorker`)**:
+  - Power-efficient WorkManager `CoroutineWorker` scheduled periodically (every 24 hours with a 6-hour flex interval) on `NetworkType.CONNECTED` and `requiresBatteryNotLow(true)`.
+  - Compares remote `/v2/stats` `generated` timestamp with local `catalog_metadata.generatedAt` without downloading heavy datasets.
+  - Automatically respects user preference `isAutoCatalogUpdateCheckEnabled` and records `lastCatalogUpdateCheckTimestamp`.
+- **System Notification Delivery**:
+  - Dedicated notification channel `catalog_updates_channel` with importance `DEFAULT`.
+  - Android 13+ (API 33+) safe permission checks ensuring zero crashes or exceptions if notifications are disabled.
+  - Deep-link intent targeting `MainActivity` with `EXTRA_NAVIGATE_TO_SEARCH = true` to immediately navigate to the Search screen where `CatalogSyncBanner` displays update status.
+  - One-tap notification action button ("Update Now" / `R.string.catalog_update_notification_action_update`) dispatching a broadcast to `CatalogUpdateBroadcastReceiver`.
+- **`CatalogUpdateBroadcastReceiver`**:
+  - Unexported broadcast receiver listening for `ACTION_START_CATALOG_UPDATE`.
+  - Cancels the system notification, immediately schedules `CatalogSyncWorker` (`ExistingWorkPolicy.REPLACE`), and shows a confirmation toast.
+- **Runtime Notification Permissions**:
+  - Non-intrusive runtime `POST_NOTIFICATIONS` permission request via Compose `rememberLauncherForActivityResult` in `MainActivity` for Android 13+ devices.
+- **Clean Architecture & Preference Use Cases**:
+  - `UserPreferencesRepository` contracts and single-responsibility domain UseCases (`GetAutoCatalogUpdateCheckEnabledUseCase`, `SetAutoCatalogUpdateCheckEnabledUseCase`, `GetLastCatalogUpdateCheckTimestampUseCase`, `SetLastCatalogUpdateCheckTimestampUseCase`).
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -215,6 +233,10 @@ interface UserPreferencesRepository {
     suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int)
     suspend fun saveBibleTypography(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
     suspend fun saveBibleNarrator(narrator: String?)
+    val isAutoCatalogUpdateCheckEnabled: Flow<Boolean>
+    suspend fun setAutoCatalogUpdateCheckEnabled(enabled: Boolean)
+    val lastCatalogUpdateCheckTimestamp: Flow<Long>
+    suspend fun setLastCatalogUpdateCheckTimestamp(timestamp: Long)
 }
 ```
 
@@ -302,6 +324,5 @@ interface SearchDao {
 
 - **Adaptive Layouts & Navigation 3 Scenes (Foldables, Tablets, Desktops)**: Multi-pane responsive layout architecture using Navigation 3 Scenes (`ListDetailSceneStrategy` for Speakers and Topics directories with placeholder detail panes, `SupportingPaneSceneStrategy` for two-pane player with synchronized WebVTT transcript, adaptive start `NavigationRail` replacing bottom bar on medium/expanded windows, and `GridCells.Adaptive` across directories, library, and search). Detailed technical plan preserved in `adaptive_design_plan.md`. Deferred for future release.
 - **Dynamic Material You Theming**: Palette extraction based on speaker portraits / album art.
-- **Periodic Catalog Update Worker & Push Notifications**: Background WorkManager periodic check against `GET /v2/stats` (`generated` timestamp) compared to local `catalog_metadata.timestamp`. Notify user via system notification when a new version of the 70,000+ sermon catalog is released, with a one-tap background download action.
 - **Bible Full-Text Search (SQLite FTS)**: Pure offline indexing of active Bible translation verses into an SQLite FTS virtual table (`bible_fts`) for sub-millisecond Bible search across Old and New Testaments.
 - **UI Component Decomposition & Reusability (Scripture & Explorers)**: Refactor complex, multi-level screen monoliths (e.g., the 4-level navigation in `ScriptureScreen`) into decoupled, stateless UI building blocks (`ScriptureBookPicker`, `ScriptureChapterPicker`, `ScriptureVerseHeatMapGrid`, `ScriptureVerseQuoteCard`). This prevents tight coupling to single ViewModels, simplifies testing, and enables flexible composition across different sections (e.g. Bible reader, search, topic studies).

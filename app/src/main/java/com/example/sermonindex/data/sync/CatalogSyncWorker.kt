@@ -168,6 +168,9 @@ class CatalogSyncWorker(
                 )
             )
 
+            // Ensure periodic update checks are active
+            CatalogUpdateCheckWorker.enqueuePeriodicCheck(applicationContext)
+
             setProgress(workDataOf(KEY_PROGRESS to 1.0f))
             Log.i(TAG, "Catalog sync successfully completed: $processedCount sermons indexed (generatedAt=$generatedAt)")
             Result.success()

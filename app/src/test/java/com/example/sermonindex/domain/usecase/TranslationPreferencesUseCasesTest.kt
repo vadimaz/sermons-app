@@ -95,5 +95,17 @@ class TranslationPreferencesUseCasesTest {
         override suspend fun saveBibleNarrator(narrator: String?) {
             _readingPrefs.value = _readingPrefs.value.copy(selectedNarrator = narrator)
         }
+
+        private val _autoUpdateCheck = MutableStateFlow(true)
+        override val isAutoCatalogUpdateCheckEnabled: Flow<Boolean> = _autoUpdateCheck
+        override suspend fun setAutoCatalogUpdateCheckEnabled(enabled: Boolean) {
+            _autoUpdateCheck.value = enabled
+        }
+
+        private val _lastCheckTimestamp = MutableStateFlow(0L)
+        override val lastCatalogUpdateCheckTimestamp: Flow<Long> = _lastCheckTimestamp
+        override suspend fun setLastCatalogUpdateCheckTimestamp(timestamp: Long) {
+            _lastCheckTimestamp.value = timestamp
+        }
     }
 }

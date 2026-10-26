@@ -82,7 +82,9 @@ com.example.sermonindex
 │   │   └── UserPreferencesRepositoryImpl.kt # Jetpack DataStore preferences repository implementation
 │   └── sync/
 │       ├── AudioDownloadWorker.kt # WorkManager streaming worker for MP3 files
-│       └── CatalogSyncWorker.kt  # WorkManager CoroutineWorker for streaming gzip catalog
+│       ├── CatalogSyncWorker.kt  # WorkManager CoroutineWorker for streaming gzip catalog
+│       ├── CatalogUpdateBroadcastReceiver.kt # BroadcastReceiver for 1-tap notification update action
+│       └── CatalogUpdateCheckWorker.kt # WorkManager periodic worker checking catalog updates
 │
 ├── di/
 │   ├── DataStoreModule.kt        # Provides DataStore<Preferences> as @Singleton
@@ -100,6 +102,7 @@ com.example.sermonindex
 │   │   ├── SermonRepository.kt   # Pure domain repository interface
 │   │   └── UserPreferencesRepository.kt # Pure domain preferences repository interface
 │   └── usecase/
+│       ├── CatalogPreferencesUseCases.kt # Auto-update check & timestamp UseCases
 │       ├── TranslationPreferencesUseCases.kt # First & second translation UseCases
 │       └── UseCases.kt           # Single-responsibility UseCase classes
 │
