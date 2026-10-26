@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.10.1` | **Version Code:** `18`
+> **Current Version:** `1.10.2` | **Version Code:** `19`
 
 ---
 
@@ -296,15 +296,12 @@ interface SearchDao {
    - Duck audio on brief notifications and handle phone calls gracefully via AudioFocusManager.
    - Wire media button receiver events for wired and Bluetooth headsets (double click forward, triple click rewind).
 
-2. **Adaptive Layouts & Window Sizes**:
-   - Two-pane player and scripture explorer layouts on foldable and tablet form factors.
-   - Dynamic Material You theming based on speaker portraits.
-
 ---
 
 ## 4. Backlog & Technical Debt
 
+- **Adaptive Layouts & Navigation 3 Scenes (Foldables, Tablets, Desktops)**: Multi-pane responsive layout architecture using Navigation 3 Scenes (`ListDetailSceneStrategy` for Speakers and Topics directories with placeholder detail panes, `SupportingPaneSceneStrategy` for two-pane player with synchronized WebVTT transcript, adaptive start `NavigationRail` replacing bottom bar on medium/expanded windows, and `GridCells.Adaptive` across directories, library, and search). Detailed technical plan preserved in `adaptive_design_plan.md`. Deferred for future release.
+- **Dynamic Material You Theming**: Palette extraction based on speaker portraits / album art.
 - **Periodic Catalog Update Worker & Push Notifications**: Background WorkManager periodic check against `GET /v2/stats` (`generated` timestamp) compared to local `catalog_metadata.timestamp`. Notify user via system notification when a new version of the 70,000+ sermon catalog is released, with a one-tap background download action.
 - **Bible Full-Text Search (SQLite FTS)**: Pure offline indexing of active Bible translation verses into an SQLite FTS virtual table (`bible_fts`) for sub-millisecond Bible search across Old and New Testaments.
 - **UI Component Decomposition & Reusability (Scripture & Explorers)**: Refactor complex, multi-level screen monoliths (e.g., the 4-level navigation in `ScriptureScreen`) into decoupled, stateless UI building blocks (`ScriptureBookPicker`, `ScriptureChapterPicker`, `ScriptureVerseHeatMapGrid`, `ScriptureVerseQuoteCard`). This prevents tight coupling to single ViewModels, simplifies testing, and enables flexible composition across different sections (e.g. Bible reader, search, topic studies).
-- **Audio Focus Transition**: Smoothly duck audio on brief notifications and pause on audio focus loss (phone calls).
