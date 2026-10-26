@@ -1,5 +1,6 @@
 package com.example.sermonindex.data.model
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -122,6 +123,30 @@ data class SermonDetailDto(
 data class PopularSermonsResponse(
     val count: Int = 0,
     val sermons: List<SermonDto> = emptyList()
+)
+
+@Serializable
+data class RandomShardResponse(
+    val shard: Int = 1,
+    val count: Int = 0,
+    val sermons: List<RandomSermonDto> = emptyList()
+)
+
+@Serializable
+data class RandomSermonDto(
+    @SerialName("i") val id: String = "",
+    @SerialName("t") val title: String = "",
+    @SerialName("u") val url: String = "",
+    @SerialName("s") val speaker: String = "",
+    @SerialName("g") val speakerSlug: String = "",
+    @SerialName("m") val speakerImage: String = "",
+    @SerialName("d") val duration: String = "",
+    @SerialName("a") val mp3Url: String = "",
+    @SerialName("c") val cdnMp3Url: String = "",
+    @SerialName("y") val summary: String = "",
+    @SerialName("p") val topics: List<String> = emptyList(),
+    @SerialName("v") val scripture: List<String> = emptyList(),
+    @SerialName("x") val hasTranscript: Int = 0
 )
 
 @Serializable

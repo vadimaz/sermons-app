@@ -6,6 +6,7 @@ import com.example.sermonindex.data.local.entities.HistoryEntity
 import com.example.sermonindex.data.local.entities.SermonFtsEntity
 import com.example.sermonindex.data.model.FaqItemDto
 import com.example.sermonindex.data.model.OutlineItemDto
+import com.example.sermonindex.data.model.RandomSermonDto
 import com.example.sermonindex.data.model.ScriptureBookDto
 import com.example.sermonindex.data.model.ScriptureChapterDto
 import com.example.sermonindex.data.model.SermonDetailDto
@@ -58,6 +59,31 @@ fun SermonDto.toDomain(): Sermon = Sermon(
     cdnMp4Url = cdnMp4Url,
     mediaType = mediaType
 )
+
+fun RandomSermonDto.toDomain(): Sermon {
+    val topicItems = if (topics.size >= 2) {
+        listOf(Topic(id = topics[1], name = topics[0], slug = topics[1], count = 0))
+    } else emptyList()
+
+    return Sermon(
+        id = id,
+        title = title,
+        speaker = speaker,
+        speakerImage = speakerImage,
+        mp3Url = mp3Url,
+        cdnMp3Url = cdnMp3Url,
+        vttUrl = "",
+        hasAudio = mp3Url.isNotBlank() || cdnMp3Url.isNotBlank(),
+        duration = duration,
+        thumbnailUrl = "",
+        summary = summary,
+        topics = topicItems,
+        videoUrl = "",
+        mp4Url = "",
+        cdnMp4Url = "",
+        mediaType = "AUDIO"
+    )
+}
 
 fun SermonDetailDto.toDomain(): SermonDetail = SermonDetail(
     id = id,

@@ -157,6 +157,22 @@ class  UseCasesTest {
 
         override val isCatalogReadyBannerDismissed: Flow<Boolean> = flowOf(false)
         override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {}
+
+        var requestedRandomShard: Int? = null
+        var randomSermonsResult: Result<List<Sermon>> = Result.success(listOf(fakeSermon))
+        override suspend fun getRandomSermons(shard: Int?): Result<List<Sermon>> {
+            requestedRandomShard = shard
+            return randomSermonsResult
+        }
+    }
+
+    @Test
+    fun getRandomSermonsUseCase_delegatesToRepositoryWithShard() = runTest {
+        val useCase = GetRandomSermonsUseCase(fakeRepository)
+        val result = useCase(42)
+        assertTrue(result.isSuccess)
+        assertEquals(42, fakeRepository.requestedRandomShard)
+        assertEquals(listOf(fakeSermon), result.getOrNull())
     }
 
     @Test

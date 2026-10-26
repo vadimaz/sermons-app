@@ -5,6 +5,7 @@ import com.example.sermonindex.data.model.AvailableTranslationsResponse
 import com.example.sermonindex.data.model.BibleChapterResponse
 import com.example.sermonindex.data.model.BibleTranslationBooksResponse
 import com.example.sermonindex.data.model.PopularSermonsResponse
+import com.example.sermonindex.data.model.RandomShardResponse
 import com.example.sermonindex.data.model.ScriptureBooksResponse
 import com.example.sermonindex.data.model.ScriptureChapterDto
 import com.example.sermonindex.data.model.ScriptureVerseResponse
@@ -24,6 +25,11 @@ interface SermonIndexApiService {
 
     @GET("sermons/popular")
     suspend fun getPopularSermons(): PopularSermonsResponse
+
+    @GET("random/{shard}")
+    suspend fun getRandomSermons(
+        @Path("shard") shard: Int
+    ): RandomShardResponse
 
     @GET("scripture")
     suspend fun getScriptureBooks(): ScriptureBooksResponse

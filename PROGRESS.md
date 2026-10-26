@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.11.1` | **Version Code:** `21`
+> **Current Version:** `1.12.0` | **Version Code:** `22`
 
 ---
 
@@ -161,6 +161,19 @@
 - **Offline & Media Resilience**: Formalized media failover patterns (Internet Archive primary with automatic BunnyCDN fallback), bulk database specifications (`sermonindex.db` SQLite 3 and `sermons.json.gz`), Kiwix offline ZIM packages, and OSIS canonical book codes.
 - **Android Integration Guidelines**: Clear technical conventions for Retrofit interceptors, Room FTS4 sync, Media3 ExoPlayer error recovery, and Paging 3 pagination sources.
 
+### 1.14 Random Sermons Discovery Shards ("Surprise Me" / Vintage Treasures)
+- **80 Static Pre-computed Shards (`/v2/random/{1..80}`)**: Full integration with SermonIndex static random shards containing 50 curated sermons each (4,000 total rotating sermons) with minified keys (`i`, `t`, `s`, `g`, `m`, `d`, `a`, `c`, `y`, `p`, `v`, `x`) delivering a featherweight ~9 KB JSON payload per shard.
+- **Clean Architecture Pipeline**:
+  - `RandomShardResponse` and `RandomSermonDto` with `@SerialName` annotations.
+  - `RandomSermonDto.toDomain(): Sermon` extension mapping in `Mappers.kt`.
+  - Pure domain use case `GetRandomSermonsUseCase` invoking `SermonRepository.getRandomSermons(shard: Int?)`.
+  - Concrete implementation in `SermonRepositoryImpl` with `@IoDispatcher` context switching and fallback to random shard selection (`1..80`).
+- **Presentation & UI (`HomeScreen`)**:
+  - "Vintage Treasures" shelf positioned on `HomeScreen` between Topics and Most Listened Sermons with eyebrow header ("DISCOVERY") and one-tap Shuffle action.
+  - Interactive Shuffle button with live `CircularProgressIndicator` during fetches, refreshing sermons from another random shard while preserving scroll and other shelves.
+  - Horizontally scrolling cards with speaker artwork, 2-line title, preacher name, duration/text badge, and instant Play/Read action.
+- **Automated Test Coverage**: Comprehensive deserialization and mapping test suite (`RandomSermonMappingTest`) and usecase test (`UseCasesTest`).
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -186,6 +199,7 @@ interface SermonRepository {
     suspend fun updateHistory(sermonId: String, title: String, speaker: String, speakerImage: String, positionMs: Long, durationMs: Long)
 
     suspend fun getPopularSermons(): Result<List<Sermon>>
+    suspend fun getRandomSermons(shard: Int? = null): Result<List<Sermon>>
     suspend fun getScriptureBooks(): Result<List<BibleBook>>
     suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails>
     suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>>

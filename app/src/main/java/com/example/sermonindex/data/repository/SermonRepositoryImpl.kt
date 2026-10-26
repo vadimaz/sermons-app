@@ -225,6 +225,13 @@ class SermonRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getRandomSermons(shard: Int?): Result<List<Sermon>> = withContext(ioDispatcher) {
+        runCatching {
+            val selectedShard = shard ?: kotlin.random.Random.nextInt(1, 81)
+            apiService.getRandomSermons(selectedShard).sermons.map { it.toDomain() }
+        }
+    }
+
     override suspend fun getScriptureBooks(): Result<List<BibleBook>> = withContext(ioDispatcher) {
         runCatching {
             apiService.getScriptureBooks().books.map { it.toDomain() }

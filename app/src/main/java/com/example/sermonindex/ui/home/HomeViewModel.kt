@@ -10,6 +10,7 @@ import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
 import com.example.sermonindex.domain.usecase.GetHistoryUseCase
 import com.example.sermonindex.domain.usecase.GetPopularSermonsUseCase
+import com.example.sermonindex.domain.usecase.GetRandomSermonsUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
 import com.example.sermonindex.domain.usecase.GetSpeakersUseCase
 import com.example.sermonindex.domain.usecase.GetTopicsUseCase
@@ -27,7 +28,10 @@ import javax.inject.Inject
 @Immutable
 data class HomeUiState(
     val isLoading: Boolean = true,
+    val isRandomLoading: Boolean = false,
     val popularSermons: List<Sermon> = emptyList(),
+    val randomSermons: List<Sermon> = emptyList(),
+    val currentRandomShard: Int = 1,
     val speakers: List<Speaker> = emptyList(),
     val topics: List<Topic> = emptyList(),
     val history: List<ListeningHistory> = emptyList(),
@@ -37,6 +41,7 @@ data class HomeUiState(
 
 sealed interface HomeUiEvent {
     data object Refresh : HomeUiEvent
+    data object ShuffleRandomSermons : HomeUiEvent
     data class PlaySermon(val sermon: Sermon) : HomeUiEvent
     data class ReadSermon(val sermon: Sermon) : HomeUiEvent
     data class ResumeHistory(val history: ListeningHistory) : HomeUiEvent
@@ -48,6 +53,7 @@ sealed interface HomeUiEvent {
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val getPopularSermonsUseCase: GetPopularSermonsUseCase,
+    private val getRandomSermonsUseCase: GetRandomSermonsUseCase,
     private val getSpeakersUseCase: GetSpeakersUseCase,
     private val getTopicsUseCase: GetTopicsUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
@@ -82,6 +88,7 @@ class HomeViewModel @Inject constructor(
     fun onEvent(event: HomeUiEvent) {
         when (event) {
             is HomeUiEvent.Refresh -> loadHomeData()
+            is HomeUiEvent.ShuffleRandomSermons -> shuffleRandomSermons()
             is HomeUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
             is HomeUiEvent.ReadSermon -> Unit
             is HomeUiEvent.ResumeHistory -> resumeHistoryItem(event.history)
@@ -99,15 +106,19 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
+            val initialShard = kotlin.random.Random.nextInt(1, 81)
             val popularDeferred = async { getPopularSermonsUseCase() }
+            val randomDeferred = async { getRandomSermonsUseCase(initialShard) }
             val speakersDeferred = async { getSpeakersUseCase() }
             val topicsDeferred = async { getTopicsUseCase() }
 
             val popularResult = popularDeferred.await()
+            val randomResult = randomDeferred.await()
             val speakersResult = speakersDeferred.await()
             val topicsResult = topicsDeferred.await()
 
             val sermons = popularResult.getOrDefault(emptyList())
+            val randomSermons = randomResult.getOrDefault(emptyList())
             val speakers = speakersResult.getOrDefault(emptyList())
             val topics = topicsResult.getOrDefault(emptyList())
 
@@ -120,6 +131,8 @@ class HomeViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     popularSermons = sermons,
+                    randomSermons = randomSermons,
+                    currentRandomShard = initialShard,
                     speakers = speakers,
                     topics = topics,
                     errorMessage = errorMsg
@@ -128,8 +141,31 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun shuffleRandomSermons() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRandomLoading = true) }
+            val currentShard = _uiState.value.currentRandomShard
+            var nextShard = kotlin.random.Random.nextInt(1, 81)
+            if (nextShard == currentShard) {
+                nextShard = if (currentShard < 80) currentShard + 1 else 1
+            }
+            getRandomSermonsUseCase(nextShard).onSuccess { sermons ->
+                _uiState.update {
+                    it.copy(
+                        isRandomLoading = false,
+                        randomSermons = sermons,
+                        currentRandomShard = nextShard
+                    )
+                }
+            }.onFailure {
+                _uiState.update { it.copy(isRandomLoading = false) }
+            }
+        }
+    }
+
     private fun resumeHistoryItem(history: ListeningHistory) {
         val matching = _uiState.value.popularSermons.find { it.id == history.sermonId }
+            ?: _uiState.value.randomSermons.find { it.id == history.sermonId }
         if (matching != null) {
             playbackManager.playSermon(matching, startPositionMs = history.lastPositionMs)
         } else {

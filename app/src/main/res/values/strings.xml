@@ -69,6 +69,9 @@
     <string name="home_speakers_title">Speakers</string>
     <string name="home_topics_eyebrow">Key Themes</string>
     <string name="home_topics_title">Topics</string>
+    <string name="home_random_eyebrow">Discovery</string>
+    <string name="home_random_title">Vintage Treasures</string>
+    <string name="shuffle_random_sermons">Shuffle random sermons</string>
 
     <!-- Quick Topics on Home Screen -->
     <string name="quick_topic_prayer">Prayer</string>

@@ -41,7 +41,7 @@ The application strictly adheres to **Clean Architecture** principles and Google
                              │
 ┌────────────────────────────▼────────────────────────────┐
 │                       Domain Layer                      │
-│   UseCases (15)  ──►  SermonRepository (Interface)      │
+│   UseCases (16)  ──►  SermonRepository (Interface)      │
 │   Pure Domain Models (Sermon, Speaker, Topic, etc.)     │
 └────────────────────────────┬────────────────────────────┘
                              │
@@ -104,6 +104,7 @@ com.example.sermonindex
 │   │   └── UserPreferencesRepository.kt # Pure domain preferences repository interface
 │   └── usecase/
 │       ├── CatalogPreferencesUseCases.kt # Auto-update check & timestamp UseCases
+│       ├── GetRandomSermonsUseCase.kt    # Random discovery shard UseCase
 │       ├── TranslationPreferencesUseCases.kt # First & second translation UseCases
 │       └── UseCases.kt           # Single-responsibility UseCase classes
 │

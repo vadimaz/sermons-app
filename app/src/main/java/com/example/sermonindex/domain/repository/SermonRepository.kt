@@ -44,6 +44,7 @@ interface SermonRepository {
     )
 
     suspend fun getPopularSermons(): Result<List<Sermon>>
+    suspend fun getRandomSermons(shard: Int? = null): Result<List<Sermon>>
     suspend fun getScriptureBooks(): Result<List<BibleBook>>
     suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails>
     suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>>
