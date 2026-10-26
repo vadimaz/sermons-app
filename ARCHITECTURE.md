@@ -1,6 +1,7 @@
 # Technical Architecture & Guidelines
 
-> Single Source of Truth for AI assistants and developers working on SermonIndex Android App.
+> Single Source of Truth for AI assistants and developers working on SermonIndex Android App.  
+> Complete API specification & contracts: see [`SERMONINDEX_API.md`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/SERMONINDEX_API.md).
 
 ---
 

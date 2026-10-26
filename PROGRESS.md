@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.11.0` | **Version Code:** `20`
+> **Current Version:** `1.11.1` | **Version Code:** `21`
 
 ---
 
@@ -154,6 +154,12 @@
   - Non-intrusive runtime `POST_NOTIFICATIONS` permission request via Compose `rememberLauncherForActivityResult` in `MainActivity` for Android 13+ devices.
 - **Clean Architecture & Preference Use Cases**:
   - `UserPreferencesRepository` contracts and single-responsibility domain UseCases (`GetAutoCatalogUpdateCheckEnabledUseCase`, `SetAutoCatalogUpdateCheckEnabledUseCase`, `GetLastCatalogUpdateCheckTimestampUseCase`, `SetLastCatalogUpdateCheckTimestampUseCase`).
+
+### 1.13 Comprehensive SermonIndex API v2 Specification
+- **Single Source of Truth (`SERMONINDEX_API.md`)**: Complete English technical reference document describing the entire SermonIndex API v2 platform, Edge CDN distribution, zero-authentication model, rate-limiting policies, and HTTP conventions.
+- **Complete Endpoints & Contracts**: Fully documented request/response schemas for Metadata (`/v2`, `/v2/stats`), Scripture Index (`/v2/scripture/...` with chapter verse heatmaps), Topics (`/v2/topics/...` with BSB texts), Speakers & 50-item Pagination (`/v2/speakers/...`), Sermons & 500-item Pagination (`/v2/sermons/...`, `/v2/sermons/{id}` with 39 fields), Random discovery shards (`/v2/random/{1..80}`), and hosted Bible corpus (1,253 translations and 6 historical commentaries).
+- **Offline & Media Resilience**: Formalized media failover patterns (Internet Archive primary with automatic BunnyCDN fallback), bulk database specifications (`sermonindex.db` SQLite 3 and `sermons.json.gz`), Kiwix offline ZIM packages, and OSIS canonical book codes.
+- **Android Integration Guidelines**: Clear technical conventions for Retrofit interceptors, Room FTS4 sync, Media3 ExoPlayer error recovery, and Paging 3 pagination sources.
 
 ---
 
