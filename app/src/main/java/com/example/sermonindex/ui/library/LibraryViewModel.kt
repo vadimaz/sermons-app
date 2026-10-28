@@ -3,16 +3,20 @@ package com.example.sermonindex.ui.library
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.repository.SermonRepository
 import com.example.sermonindex.domain.usecase.DeleteAllDownloadsUseCase
+import com.example.sermonindex.domain.usecase.DeleteBibleBookmarkUseCase
 import com.example.sermonindex.domain.usecase.DeleteDownloadUseCase
+import com.example.sermonindex.domain.usecase.GetAllBibleBookmarksUseCase
 import com.example.sermonindex.domain.usecase.GetDownloadsUseCase
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
 import com.example.sermonindex.domain.usecase.GetHistoryUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
+import com.example.sermonindex.domain.usecase.SaveBibleReadingPositionUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,11 +29,12 @@ import javax.inject.Inject
 
 @Immutable
 data class LibraryUiState(
-    val selectedTab: Int = 0, // 0: Favorites, 1: Downloads, 2: History
+    val selectedTab: Int = 0, // 0: Favorites, 1: Downloads, 2: History, 3: Bookmarks
     val favorites: List<FavoriteSermon> = emptyList(),
     val downloads: List<DownloadedSermon> = emptyList(),
     val totalDownloadsSizeFormatted: String = "0 MB",
-    val history: List<ListeningHistory> = emptyList()
+    val history: List<ListeningHistory> = emptyList(),
+    val bookmarks: List<BibleBookmark> = emptyList()
 )
 
 sealed interface LibraryUiEvent {
@@ -42,6 +47,8 @@ sealed interface LibraryUiEvent {
     data class ResumeHistory(val history: ListeningHistory) : LibraryUiEvent
     data object ClearHistory : LibraryUiEvent
     data class SelectSermon(val sermonId: String) : LibraryUiEvent
+    data class DeleteBookmark(val id: String) : LibraryUiEvent
+    data class OpenBookmarkInBible(val bookmark: BibleBookmark) : LibraryUiEvent
 }
 
 @HiltViewModel
@@ -53,6 +60,9 @@ class LibraryViewModel @Inject constructor(
     private val getHistoryUseCase: GetHistoryUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
+    private val getAllBibleBookmarksUseCase: GetAllBibleBookmarksUseCase,
+    private val deleteBibleBookmarkUseCase: DeleteBibleBookmarkUseCase,
+    private val saveBibleReadingPositionUseCase: SaveBibleReadingPositionUseCase,
     private val sermonRepository: SermonRepository,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
@@ -81,6 +91,11 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             getHistoryUseCase().collect { hist ->
                 _uiState.update { it.copy(history = hist) }
+            }
+        }
+        viewModelScope.launch {
+            getAllBibleBookmarksUseCase().collect { bms ->
+                _uiState.update { it.copy(bookmarks = bms) }
             }
         }
     }
@@ -123,6 +138,21 @@ class LibraryViewModel @Inject constructor(
             is LibraryUiEvent.ClearHistory -> {
                 viewModelScope.launch {
                     sermonRepository.clearHistory()
+                }
+            }
+            is LibraryUiEvent.DeleteBookmark -> {
+                viewModelScope.launch {
+                    deleteBibleBookmarkUseCase(event.id)
+                }
+            }
+            is LibraryUiEvent.OpenBookmarkInBible -> {
+                viewModelScope.launch {
+                    saveBibleReadingPositionUseCase(
+                        translationId = event.bookmark.translationId,
+                        bookId = event.bookmark.bookId,
+                        chapter = event.bookmark.chapter,
+                        verse = event.bookmark.verse
+                    )
                 }
             }
             is LibraryUiEvent.SelectSermon -> Unit

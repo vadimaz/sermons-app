@@ -18,7 +18,7 @@
 | **Async / Reactive** | Coroutines 1.10.2 & Flow | `StateFlow`, `SharedFlow`, `flowOn(ioDispatcher)` |
 | **Media Player** | AndroidX Media3 1.5.1 | `ExoPlayer`, `MediaSessionService`, `MediaController` |
 | **Networking** | Retrofit 2.11.0 + OkHttp 4.12.0 | `kotlinx.serialization.json`, custom 404-safe interceptor |
-| **Database & Search** | Android Room 2.8.5 + FTS4 | `AppDatabase.kt` with full-text search (`sermon_fts`), DAOs (`FavoritesDao`, `HistoryDao`, `DownloadsDao`, `SearchDao`), schema export |
+| **Database & Search** | Android Room 2.8.5 + FTS4 | `AppDatabase.kt` (schema version 2) with full-text search (`sermon_fts`), DAOs (`FavoritesDao`, `HistoryDao`, `DownloadsDao`, `SearchDao`, `BibleBookmarksDao`), schema export |
 | **Preferences** | Jetpack DataStore 1.1.3 | Preferences DataStore (`UserPreferencesRepositoryImpl`) |
 | **Image Loading** | Coil 3.1.0 | `coil-compose`, `coil-network-okhttp` |
 | **Paging** | AndroidX Paging 3 (3.3.6) | `androidx.paging:paging-runtime`, `androidx.paging:paging-compose` |
@@ -65,9 +65,9 @@ com.example.sermonindex
 │
 ├── data/
 │   ├── local/
-│   │   ├── AppDatabase.kt        # Room @Database + FTS4 virtual table + downloads/favorites/history/search
-│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao, SearchDao
-│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, SermonFtsEntity, SearchHistoryEntity, CatalogMetadataEntity
+│   │   ├── AppDatabase.kt        # Room @Database + FTS4 virtual table + downloads/favorites/history/search/bookmarks
+│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao, SearchDao, BibleBookmarksDao
+│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, SermonFtsEntity, SearchHistoryEntity, CatalogMetadataEntity, BibleBookmarkEntity
 │   ├── mapper/
 │   │   └── Mappers.kt            # DTO/Entity <-> Domain mapping extensions
 │   ├── model/
@@ -89,7 +89,7 @@ com.example.sermonindex
 │
 ├── di/
 │   ├── DataStoreModule.kt        # Provides DataStore<Preferences> as @Singleton
-│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao
+│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao, BibleBookmarksDao
 │   ├── DispatchersModule.kt      # Qualifiers: @IoDispatcher, @DefaultDispatcher, @MainDispatcher
 │   ├── MediaModule.kt            # Provides PlaybackManager as @Singleton
 │   ├── NetworkModule.kt          # Provides OkHttpClient, Retrofit, SermonIndexApiService
@@ -103,6 +103,7 @@ com.example.sermonindex
 │   │   ├── SermonRepository.kt   # Pure domain repository interface
 │   │   └── UserPreferencesRepository.kt # Pure domain preferences repository interface
 │   └── usecase/
+│       ├── BibleBookmarkUseCases.kt      # Bookmark CRUD & Chapter bookmarks Flow UseCases
 │       ├── CatalogPreferencesUseCases.kt # Auto-update check & timestamp UseCases
 │       ├── GetRandomSermonsUseCase.kt    # Random discovery shard UseCase
 │       ├── TranslationPreferencesUseCases.kt # First & second translation UseCases

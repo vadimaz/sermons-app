@@ -1,5 +1,6 @@
 package com.example.sermonindex.data.mapper
 
+import com.example.sermonindex.data.local.entities.BibleBookmarkEntity
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
 import com.example.sermonindex.data.local.entities.FtsSermonRecord
 import com.example.sermonindex.data.local.entities.HistoryEntity
@@ -16,10 +17,12 @@ import com.example.sermonindex.data.model.SpeakerPagedDto
 import com.example.sermonindex.data.model.TopicDetailDto
 import com.example.sermonindex.data.model.TopicDto
 import com.example.sermonindex.data.model.TopicScriptureDto
+import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.ChapterDetails
 import com.example.sermonindex.domain.model.FaqItem
 import com.example.sermonindex.domain.model.FavoriteSermon
+import com.example.sermonindex.domain.model.HighlightColor
 import com.example.sermonindex.domain.model.ListeningHistory
 import com.example.sermonindex.domain.model.OutlineItem
 import com.example.sermonindex.domain.model.QuoteItem
@@ -397,5 +400,30 @@ fun com.example.sermonindex.data.model.ApiStatsDto.toDomain(): com.example.sermo
         topicsCount = topics,
         generatedAt = generated
     )
+
+fun BibleBookmarkEntity.toDomain(): BibleBookmark = BibleBookmark(
+    id = id,
+    translationId = translationId,
+    bookId = bookId,
+    bookName = bookName,
+    chapter = chapter,
+    verse = verse,
+    text = text,
+    color = runCatching { HighlightColor.valueOf(colorName) }.getOrDefault(HighlightColor.YELLOW),
+    createdAt = createdAt
+)
+
+fun BibleBookmark.toEntity(): BibleBookmarkEntity = BibleBookmarkEntity(
+    id = id,
+    translationId = translationId,
+    bookId = bookId,
+    bookName = bookName,
+    chapter = chapter,
+    verse = verse,
+    text = text,
+    colorName = color.name,
+    createdAt = createdAt
+)
+
 
 

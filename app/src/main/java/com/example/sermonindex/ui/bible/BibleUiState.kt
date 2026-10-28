@@ -1,11 +1,13 @@
 package com.example.sermonindex.ui.bible
 
 import androidx.compose.runtime.Immutable
+import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.BibleChapter
 import com.example.sermonindex.domain.model.BibleFootnote
 import com.example.sermonindex.domain.model.BibleReadingPreferences
 import com.example.sermonindex.domain.model.BibleTranslation
+import com.example.sermonindex.domain.model.HighlightColor
 
 @Immutable
 data class BibleUiState(
@@ -25,7 +27,14 @@ data class BibleUiState(
 
     // Audio Narration
     val isAudioPlaying: Boolean = false,
-    val currentAudioNarrator: String? = null
+    val currentAudioNarrator: String? = null,
+
+    // Verse Selection & Bookmarks
+    val isSelectionMode: Boolean = false,
+    val selectedVerse: Int? = null,
+    val chapterBookmarks: List<BibleBookmark> = emptyList(),
+    val showQuoteCardSheet: Boolean = false,
+    val targetScrollVerse: Int? = null
 ) {
     val currentTranslation: BibleTranslation?
         get() = availableTranslations.firstOrNull { it.id.equals(preferences.translationId, ignoreCase = true) }
@@ -72,4 +81,12 @@ sealed interface BibleUiEvent {
         val verse: Int
     ) : BibleUiEvent
     data object Retry : BibleUiEvent
+
+    // Verse Selection & Bookmarks
+    data class StartVerseSelection(val verseNumber: Int) : BibleUiEvent
+    data object ClearSelection : BibleUiEvent
+    data class ApplyHighlight(val color: HighlightColor) : BibleUiEvent
+    data object DeleteBookmarkForCurrentVerse : BibleUiEvent
+    data class SetQuoteCardSheetOpen(val isOpen: Boolean) : BibleUiEvent
+    data object ClearTargetScrollVerse : BibleUiEvent
 }

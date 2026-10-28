@@ -100,6 +100,7 @@ class UserPreferencesRepositoryTest {
         assertEquals("JHN", prefs.bookId)
         assertEquals(3, prefs.chapter)
         assertEquals(16, prefs.verse)
+        assertTrue(prefs.positionUpdatedAt > 0L)
     }
 
     @Test

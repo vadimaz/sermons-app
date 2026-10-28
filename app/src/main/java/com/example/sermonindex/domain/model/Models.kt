@@ -201,7 +201,8 @@ data class BibleReadingPreferences(
     val fontSizeSp: Float = 18f,
     val isSerif: Boolean = true,
     val lineSpacingMultiplier: Float = 1.5f,
-    val selectedNarrator: String? = null
+    val selectedNarrator: String? = null,
+    val positionUpdatedAt: Long = 0L
 )
 
 object BibleTranslationDefaults {
@@ -228,6 +229,25 @@ data class BibleTranslation(
     val languageName: String = "",
     val languageEnglishName: String = "",
     val numberOfBooks: Int = 66
+)
+
+enum class HighlightColor(val id: String) {
+    YELLOW("YELLOW"),
+    GREEN("GREEN"),
+    BLUE("BLUE"),
+    CORAL("CORAL")
+}
+
+data class BibleBookmark(
+    val id: String,
+    val translationId: String,
+    val bookId: String,
+    val bookName: String,
+    val chapter: Int,
+    val verse: Int,
+    val text: String,
+    val color: HighlightColor,
+    val createdAt: Long = System.currentTimeMillis()
 )
 
 data class ChapterDetails(

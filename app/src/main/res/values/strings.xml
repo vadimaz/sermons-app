@@ -291,4 +291,31 @@
     <string name="catalog_update_notification_desc">A new version of the sermon catalog is available (%1$d sermons). Tap to update.</string>
     <string name="catalog_update_notification_action_update">Update Now</string>
     <string name="catalog_update_notification_started">Catalog download started in background</string>
+
+    <!-- Bible Bookmarks, Highlights & Verse Sharing -->
+    <string name="tab_bookmarks">Bookmarks</string>
+    <string name="verse_title_format">Verse %1$d</string>
+    <string name="action_clear_selection">Clear selection</string>
+    <string name="action_highlight_yellow">Yellow highlight</string>
+    <string name="action_highlight_green">Green highlight</string>
+    <string name="action_highlight_blue">Blue highlight</string>
+    <string name="action_highlight_coral">Coral highlight</string>
+    <string name="action_clear_highlight">Remove highlight</string>
+    <string name="action_remove">Remove</string>
+    <string name="toast_saved">Saved</string>
+    <string name="toast_removed">Removed</string>
+    <string name="toast_copied">Copied</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_share">Share</string>
+    <string name="quote_card_title">Share Verse</string>
+    <string name="quote_card_style_minimal">Minimal</string>
+    <string name="quote_card_style_teal">Sage Teal</string>
+    <string name="quote_card_style_paper">Paper</string>
+    <string name="quote_card_style_charcoal">Charcoal</string>
+    <string name="action_share_image">Share Image</string>
+    <string name="action_share_text">Share Text</string>
+    <string name="empty_bookmarks_title">No bookmarks yet</string>
+    <string name="empty_bookmarks_desc">Long-press verses in the Bible reader to highlight or bookmark them for quick access.</string>
+    <string name="bookmark_deleted">Bookmark removed</string>
+    <string name="delete_bookmark">Delete bookmark</string>
 </resources>

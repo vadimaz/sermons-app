@@ -6,6 +6,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.example.sermonindex.data.local.dao.BibleBookmarksDao
 import com.example.sermonindex.data.local.dao.DownloadsDao
 import com.example.sermonindex.data.local.dao.FavoritesDao
 import com.example.sermonindex.data.local.dao.HistoryDao
@@ -15,10 +16,12 @@ import com.example.sermonindex.data.local.entities.HistoryEntity
 import com.example.sermonindex.data.local.entities.SearchHistoryEntity
 import com.example.sermonindex.data.mapper.extractVerseMap
 import com.example.sermonindex.data.mapper.toDomain
+import com.example.sermonindex.data.mapper.toEntity
 import com.example.sermonindex.data.mapper.toFavoriteEntity
 import com.example.sermonindex.data.network.SermonIndexApiService
 import com.example.sermonindex.data.sync.AudioDownloadWorker
 import com.example.sermonindex.data.sync.CatalogSyncWorker
+import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.BibleTranslation
 import com.example.sermonindex.domain.model.CatalogSyncState
@@ -64,6 +67,7 @@ class SermonRepositoryImpl @Inject constructor(
     private val historyDao: HistoryDao,
     private val downloadsDao: DownloadsDao,
     private val searchDao: SearchDao,
+    private val bibleBookmarksDao: BibleBookmarksDao,
     private val userPreferencesRepository: UserPreferencesRepository,
     @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : SermonRepository {
@@ -404,6 +408,37 @@ class SermonRepositoryImpl @Inject constructor(
 
     override suspend fun clearHistory(): Unit = withContext(ioDispatcher) {
         historyDao.clearHistory()
+    }
+
+    override val bibleBookmarks: Flow<List<BibleBookmark>> =
+        bibleBookmarksDao.getAllBookmarks()
+            .map { list -> list.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
+
+    override fun getBibleBookmarksForChapter(
+        translationId: String,
+        bookId: String,
+        chapter: Int
+    ): Flow<List<BibleBookmark>> =
+        bibleBookmarksDao.getBookmarksForChapter(translationId, bookId, chapter)
+            .map { list -> list.map { it.toDomain() } }
+            .flowOn(ioDispatcher)
+
+    override suspend fun saveBibleBookmark(bookmark: BibleBookmark) = withContext(ioDispatcher) {
+        bibleBookmarksDao.upsertBookmark(bookmark.toEntity())
+    }
+
+    override suspend fun deleteBibleBookmark(id: String): Unit = withContext(ioDispatcher) {
+        bibleBookmarksDao.deleteBookmark(id)
+    }
+
+    override suspend fun deleteBibleBookmarkForVerse(
+        translationId: String,
+        bookId: String,
+        chapter: Int,
+        verse: Int
+    ): Unit = withContext(ioDispatcher) {
+        bibleBookmarksDao.deleteBookmarkForVerse(translationId, bookId, chapter, verse)
     }
 
     override val catalogSyncState: Flow<CatalogSyncState> = combine(

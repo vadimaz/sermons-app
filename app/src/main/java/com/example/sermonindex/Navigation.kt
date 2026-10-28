@@ -530,6 +530,9 @@ fun MainNavigation(
                                 onSermonSelect = { sermonId ->
                                     navigator.navigate(SermonDetailRoute(sermonId))
                                 },
+                                onNavigateToBible = {
+                                    navigator.navigate(BibleRoute)
+                                },
                                 reselectEvents = navigator.reselectEvents
                             )
                         }

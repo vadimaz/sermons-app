@@ -1,5 +1,7 @@
 package com.example.sermonindex.ui.bible
 
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -20,6 +22,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,12 +38,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.BibleRoute
 import com.example.sermonindex.R
+import com.example.sermonindex.domain.model.BibleChapterItem
 import com.example.sermonindex.ui.bible.components.BibleFootnoteDialog
 import com.example.sermonindex.ui.bible.components.BibleReaderContent
+import com.example.sermonindex.ui.bible.components.BibleVerseBottomSheet
 import com.example.sermonindex.ui.bible.components.BibleSettingsSheet
 import com.example.sermonindex.ui.bible.components.BibleTableOfContentsSheet
 import com.example.sermonindex.ui.bible.components.BibleTopBar
 import com.example.sermonindex.ui.bible.components.BibleTranslationPickerSheet
+import com.example.sermonindex.ui.bible.components.QuoteCardSheet
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import kotlinx.coroutines.flow.Flow
@@ -82,6 +90,7 @@ fun BibleScreen(
 /**
  * Stateless BibleContent.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun BibleContent(
     state: BibleUiState,
@@ -90,6 +99,8 @@ fun BibleContent(
     reselectEvents: Flow<NavKey>? = null,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val listState = rememberLazyListState()
     var isTopBarVisible by rememberSaveable { mutableStateOf(true) }
 
@@ -106,10 +117,14 @@ fun BibleContent(
     )
 
     // Reset scroll to top and restore bars when chapter changes
-    val chapterKey = "${state.currentChapter?.bookId}_${state.currentChapter?.chapterNumber}"
+    val chapterKey = "${state.currentChapter?.translationId}_${state.currentChapter?.bookId}_${state.currentChapter?.chapterNumber}"
+    var lastChapterKey by rememberSaveable { mutableStateOf<String?>(null) }
     LaunchedEffect(chapterKey) {
         if (state.currentChapter != null) {
-            listState.scrollToItem(0)
+            if (lastChapterKey != null && lastChapterKey != chapterKey && state.targetScrollVerse == null) {
+                listState.scrollToItem(0)
+            }
+            lastChapterKey = chapterKey
             isTopBarVisible = true
             onBottomBarVisibilityChange(true)
         }
@@ -123,6 +138,14 @@ fun BibleContent(
                 isTopBarVisible = true
                 onBottomBarVisibilityChange(true)
             }
+        }
+    }
+
+    LaunchedEffect(state.isSelectionMode) {
+        if (state.isSelectionMode) {
+            onBottomBarVisibilityChange(false)
+        } else {
+            onBottomBarVisibilityChange(true)
         }
     }
 
@@ -204,11 +227,74 @@ fun BibleContent(
                         onFootnoteClick = { onEvent(BibleUiEvent.ShowFootnote(it)) },
                         onOpenSermonsForVerse = { bId, bName, c, v ->
                             onEvent(BibleUiEvent.OpenSermonsForVerse(bId, bName, c, v))
-                        }
+                        },
+                        onStartVerseSelection = { onEvent(BibleUiEvent.StartVerseSelection(it)) },
+                        onClearTargetScrollVerse = { onEvent(BibleUiEvent.ClearTargetScrollVerse) }
                     )
                 }
             }
+
+            // Verse Actions Bottom Sheet
+            val selectedVerseItem = remember(state.selectedVerse, state.currentChapter) {
+                state.currentChapter?.items?.filterIsInstance<BibleChapterItem.Verse>()
+                    ?.firstOrNull { it.number == state.selectedVerse }
+            }
+            val matchingBookmark = remember(state.selectedVerse, state.chapterBookmarks) {
+                state.chapterBookmarks.firstOrNull { it.verse == state.selectedVerse }
+            }
+            val selectionHighlightColor = matchingBookmark?.color
+
+            BibleVerseBottomSheet(
+                visible = state.isSelectionMode,
+                verseNumber = state.selectedVerse,
+                currentColor = selectionHighlightColor,
+                onDismissRequest = { onEvent(BibleUiEvent.ClearSelection) },
+                onColorSelected = { color ->
+                    onEvent(BibleUiEvent.ApplyHighlight(color))
+                    Toast.makeText(context, R.string.toast_saved, Toast.LENGTH_SHORT).show()
+                },
+                onRemove = {
+                    onEvent(BibleUiEvent.DeleteBookmarkForCurrentVerse)
+                    Toast.makeText(context, R.string.toast_removed, Toast.LENGTH_SHORT).show()
+                },
+                onCopy = {
+                    val verseText = selectedVerseItem?.text ?: ""
+                    val bookName = state.currentChapter?.bookName ?: state.preferences.bookId
+                    val chapter = state.currentChapter?.chapterNumber ?: state.preferences.chapter
+                    val verse = state.selectedVerse ?: 1
+                    val translationName = state.currentTranslation?.shortName ?: state.preferences.translationId
+                    val copyContent = "«$verseText»\n— $bookName $chapter:$verse ($translationName)"
+                    clipboardManager.setText(AnnotatedString(copyContent))
+                    if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
+                        Toast.makeText(context, R.string.toast_copied, Toast.LENGTH_SHORT).show()
+                    }
+                    onEvent(BibleUiEvent.ClearSelection)
+                },
+                onShare = {
+                    onEvent(BibleUiEvent.SetQuoteCardSheetOpen(true))
+                }
+            )
         }
+    }
+
+    if (state.showQuoteCardSheet && state.selectedVerse != null) {
+        val selectedVerseItem = remember(state.selectedVerse, state.currentChapter) {
+            state.currentChapter?.items?.filterIsInstance<BibleChapterItem.Verse>()
+                ?.firstOrNull { it.number == state.selectedVerse }
+        }
+        val verseText = selectedVerseItem?.text ?: ""
+        val bookName = state.currentChapter?.bookName ?: state.preferences.bookId
+        val chapter = state.currentChapter?.chapterNumber ?: state.preferences.chapter
+        val verse = state.selectedVerse
+        val reference = "$bookName $chapter:$verse"
+        val translationName = state.currentTranslation?.shortName ?: state.preferences.translationId
+
+        QuoteCardSheet(
+            verseText = verseText,
+            reference = reference,
+            translationName = translationName,
+            onDismissRequest = { onEvent(BibleUiEvent.SetQuoteCardSheetOpen(false)) }
+        )
     }
 
     // Modal Sheets & Dialogs

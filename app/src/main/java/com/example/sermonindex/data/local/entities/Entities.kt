@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Fts4
 import androidx.room.FtsOptions
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "favorites")
@@ -106,3 +107,29 @@ data class FtsSermonRecord(
     val mp3Url: String = "",
     val cdnMp3Url: String = ""
 )
+
+@Entity(
+    tableName = "bible_bookmarks",
+    indices = [
+        Index(value = ["translation_id", "book_id", "chapter"]),
+        Index(value = ["created_at"])
+    ]
+)
+data class BibleBookmarkEntity(
+    @PrimaryKey
+    val id: String, // "$translationId:$bookId:$chapter:$verse"
+    @ColumnInfo(name = "translation_id")
+    val translationId: String,
+    @ColumnInfo(name = "book_id")
+    val bookId: String,
+    @ColumnInfo(name = "book_name")
+    val bookName: String,
+    val chapter: Int,
+    val verse: Int,
+    val text: String,
+    @ColumnInfo(name = "color_name")
+    val colorName: String,
+    @ColumnInfo(name = "created_at")
+    val createdAt: Long = System.currentTimeMillis()
+)
+

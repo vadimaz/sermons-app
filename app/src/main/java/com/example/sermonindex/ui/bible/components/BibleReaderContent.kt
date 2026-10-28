@@ -1,7 +1,10 @@
 package com.example.sermonindex.ui.bible.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,22 +25,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
-import androidx.compose.material.icons.filled.Explore
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -51,14 +50,13 @@ import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Popup
 import com.example.sermonindex.R
-import com.example.sermonindex.domain.model.BibleChapter
+import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.BibleChapterItem
 import com.example.sermonindex.domain.model.BibleFootnote
+import com.example.sermonindex.domain.model.HighlightColor
 import com.example.sermonindex.ui.bible.BibleUiState
 
 @Composable
@@ -70,6 +68,8 @@ fun BibleReaderContent(
     onPreviousChapter: () -> Unit,
     onFootnoteClick: (BibleFootnote) -> Unit,
     onOpenSermonsForVerse: (bookId: String, bookName: String, chapter: Int, verse: Int) -> Unit,
+    onStartVerseSelection: (verseNumber: Int) -> Unit,
+    onClearTargetScrollVerse: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val chapter = state.currentChapter ?: return
@@ -78,6 +78,22 @@ fun BibleReaderContent(
     val fontFamily = if (preferences.isSerif) FontFamily.Serif else FontFamily.Default
     val fontSize = preferences.fontSizeSp.sp
     val lineHeight = (preferences.fontSizeSp * preferences.lineSpacingMultiplier).sp
+
+    // Scroll to target verse if requested (e.g. from Library bookmarks)
+    LaunchedEffect(state.targetScrollVerse, chapter) {
+        val targetVerse = state.targetScrollVerse ?: return@LaunchedEffect
+        val isTargetChapterLoaded = chapter.bookId.equals(preferences.bookId, ignoreCase = true) &&
+            chapter.chapterNumber == preferences.chapter
+        if (!isTargetChapterLoaded) return@LaunchedEffect
+
+        val itemIndex = chapter.items.indexOfFirst {
+            it is BibleChapterItem.Verse && it.number == targetVerse
+        }
+        if (itemIndex != -1) {
+            listState.animateScrollToItem(itemIndex + 1)
+        }
+        onClearTargetScrollVerse()
+    }
 
     LazyColumn(
         state = listState,
@@ -154,6 +170,11 @@ fun BibleReaderContent(
                     Spacer(modifier = Modifier.height(10.dp))
                 }
                 is BibleChapterItem.Verse -> {
+                    val isSelected = item.number == state.selectedVerse
+                    val matchingBookmark = state.chapterBookmarks.firstOrNull { bm ->
+                        item.number == bm.verse
+                    }
+
                     VerseItemRow(
                         verse = item,
                         bookId = chapter.bookId,
@@ -163,17 +184,21 @@ fun BibleReaderContent(
                         fontSize = fontSize,
                         lineHeight = lineHeight,
                         footnotes = chapter.footnotes,
+                        isSelectionMode = state.isSelectionMode,
+                        isSelected = isSelected,
+                        matchingBookmark = matchingBookmark,
                         onFootnoteClick = onFootnoteClick,
                         onOpenSermonsForVerse = onOpenSermonsForVerse,
+                        onStartSelection = { onStartVerseSelection(item.number) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 4.dp)
+                            .padding(vertical = 3.dp)
                     )
                 }
             }
         }
 
-        // Bottom Chapter Navigation (No extra card underneath)
+        // Bottom Chapter Navigation
         item(key = "bottom_nav_footer") {
             Spacer(modifier = Modifier.height(24.dp))
             BottomNavigationFooter(
@@ -184,6 +209,7 @@ fun BibleReaderContent(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun VerseItemRow(
     verse: BibleChapterItem.Verse,
@@ -194,12 +220,14 @@ private fun VerseItemRow(
     fontSize: androidx.compose.ui.unit.TextUnit,
     lineHeight: androidx.compose.ui.unit.TextUnit,
     footnotes: List<BibleFootnote>,
+    isSelectionMode: Boolean,
+    isSelected: Boolean,
+    matchingBookmark: BibleBookmark?,
     onFootnoteClick: (BibleFootnote) -> Unit,
     onOpenSermonsForVerse: (bookId: String, bookName: String, chapter: Int, verse: Int) -> Unit,
+    onStartSelection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showTooltip by remember { mutableStateOf(false) }
-
     val matchingFootnotes = remember(verse, footnotes) {
         val byId = footnotes.filter { it.noteId in verse.footnoteIds }
         if (byId.isNotEmpty()) {
@@ -221,69 +249,91 @@ private fun VerseItemRow(
         }
     }
 
-    Box(modifier = modifier) {
-        val annotatedText = buildAnnotatedString {
-            // Verse Number
+    val highlightColor = matchingBookmark?.color
+    val backgroundColor = when {
+        isSelected -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        highlightColor != null -> when (highlightColor) {
+            HighlightColor.YELLOW -> Color(0xFFFBC02D).copy(alpha = 0.28f)
+            HighlightColor.GREEN -> Color(0xFF388E3C).copy(alpha = 0.25f)
+            HighlightColor.BLUE -> Color(0xFF1976D2).copy(alpha = 0.25f)
+            HighlightColor.CORAL -> Color(0xFFD32F2F).copy(alpha = 0.25f)
+        }
+        else -> Color.Transparent
+    }
+
+    val annotatedText = buildAnnotatedString {
+        // Verse Number
+        withStyle(
+            SpanStyle(
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Bold,
+                fontSize = (fontSize.value * 0.75f).sp,
+                baselineShift = BaselineShift.Superscript
+            )
+        ) {
+            append("${verse.number} ")
+        }
+
+        // Verse Text
+        append(verse.text)
+
+        // Footnote Indicators
+        if (verse.footnoteIds.isNotEmpty() || matchingFootnote != null) {
+            val link = if (matchingFootnote != null) {
+                LinkAnnotation.Clickable(
+                    tag = "footnote_${verse.number}",
+                    styles = TextLinkStyles(
+                        style = SpanStyle(
+                            color = MaterialTheme.colorScheme.tertiary,
+                            textDecoration = TextDecoration.None
+                        )
+                    ),
+                    linkInteractionListener = {
+                        onFootnoteClick(matchingFootnote)
+                    }
+                )
+            } else null
+
             withStyle(
                 SpanStyle(
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.tertiary,
                     fontWeight = FontWeight.Bold,
-                    fontSize = (fontSize.value * 0.75f).sp,
+                    fontSize = (fontSize.value * 0.7f).sp,
                     baselineShift = BaselineShift.Superscript
                 )
             ) {
-                append("${verse.number} ")
-            }
-
-            // Verse Text
-            append(verse.text)
-
-            // Footnote Indicators
-            if (verse.footnoteIds.isNotEmpty() || matchingFootnote != null) {
-                val link = if (matchingFootnote != null) {
-                    LinkAnnotation.Clickable(
-                        tag = "footnote_${verse.number}",
-                        styles = TextLinkStyles(
-                            style = SpanStyle(
-                                color = MaterialTheme.colorScheme.tertiary,
-                                textDecoration = TextDecoration.None
-                            )
-                        ),
-                        linkInteractionListener = {
-                            showTooltip = false
-                            onFootnoteClick(matchingFootnote)
-                        }
-                    )
-                } else null
-
-                withStyle(
-                    SpanStyle(
-                        color = MaterialTheme.colorScheme.tertiary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = (fontSize.value * 0.7f).sp,
-                        baselineShift = BaselineShift.Superscript
-                    )
-                ) {
-                    if (link != null) {
-                        withLink(link) {
-                            append(" *")
-                        }
-                    } else {
+                if (link != null) {
+                    withLink(link) {
                         append(" *")
                     }
+                } else {
+                    append(" *")
                 }
             }
         }
+    }
 
+    Box(modifier = modifier) {
         Row(
             verticalAlignment = Alignment.Top,
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(6.dp))
-                .clickable {
-                    showTooltip = !showTooltip
-                }
-                .padding(vertical = 2.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(backgroundColor)
+                .then(
+                    if (isSelected) {
+                        Modifier.border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(8.dp))
+                    } else Modifier
+                )
+                .combinedClickable(
+                    onClick = {
+                        onOpenSermonsForVerse(bookId, bookName, chapterNumber, verse.number)
+                    },
+                    onLongClick = {
+                        onStartSelection()
+                    }
+                )
+                .padding(horizontal = 6.dp, vertical = 4.dp)
         ) {
             Text(
                 text = annotatedText,
@@ -295,85 +345,6 @@ private fun VerseItemRow(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-        }
-
-        // Direct tooltip on regular tap to navigate to sermons for this verse or view footnote
-        if (showTooltip) {
-            Popup(
-                alignment = Alignment.TopCenter,
-                offset = IntOffset(0, -50),
-                onDismissRequest = { showTooltip = false }
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.inverseSurface,
-                    shadowElevation = 6.dp,
-                    modifier = Modifier.clip(RoundedCornerShape(20.dp))
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .clickable {
-                                    showTooltip = false
-                                    onOpenSermonsForVerse(bookId, bookName, chapterNumber, verse.number)
-                                }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Explore,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.inverseOnSurface,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = stringResource(R.string.verse_sermons_pill, verse.number),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.inverseOnSurface
-                            )
-                        }
-
-                        if (matchingFootnote != null) {
-                            Spacer(
-                                modifier = Modifier
-                                    .width(1.dp)
-                                    .height(18.dp)
-                                    .background(MaterialTheme.colorScheme.inverseOnSurface.copy(alpha = 0.3f))
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(16.dp))
-                                    .clickable {
-                                        showTooltip = false
-                                        onFootnoteClick(matchingFootnote)
-                                    }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Info,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.inverseOnSurface,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = stringResource(R.string.footnote_title),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.inverseOnSurface
-                                )
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }

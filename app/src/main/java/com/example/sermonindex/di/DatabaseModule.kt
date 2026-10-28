@@ -3,6 +3,7 @@ package com.example.sermonindex.di
 import android.content.Context
 import androidx.room.Room
 import com.example.sermonindex.data.local.AppDatabase
+import com.example.sermonindex.data.local.dao.BibleBookmarksDao
 import com.example.sermonindex.data.local.dao.DownloadsDao
 import com.example.sermonindex.data.local.dao.FavoritesDao
 import com.example.sermonindex.data.local.dao.HistoryDao
@@ -26,6 +27,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             AppDatabase.DATABASE_NAME
         )
+        .addMigrations(AppDatabase.MIGRATION_1_2)
         .fallbackToDestructiveMigration(dropAllTables = true)
         .build()
     }
@@ -48,5 +50,10 @@ object DatabaseModule {
     @Provides
     fun provideSearchDao(database: AppDatabase): SearchDao {
         return database.searchDao()
+    }
+
+    @Provides
+    fun provideBibleBookmarksDao(database: AppDatabase): BibleBookmarksDao {
+        return database.bibleBookmarksDao()
     }
 }

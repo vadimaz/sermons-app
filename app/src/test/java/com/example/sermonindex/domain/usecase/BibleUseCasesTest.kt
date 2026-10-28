@@ -69,6 +69,7 @@ class BibleUseCasesTest {
         override suspend fun getLocalAudioPath(sermonId: String): String? = null
         override suspend fun updateHistory(sermonId: String, title: String, speaker: String, speakerImage: String, positionMs: Long, durationMs: Long) {}
         override suspend fun getPopularSermons(): Result<List<Sermon>> = Result.success(emptyList())
+        override suspend fun getRandomSermons(shard: Int?): Result<List<Sermon>> = Result.success(emptyList())
         override suspend fun getScriptureBooks(): Result<List<BibleBook>> = Result.success(fakeBooks)
         override suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails> = Result.failure(NotImplementedError())
         override suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>> = Result.success(emptyList())
@@ -121,6 +122,12 @@ class BibleUseCasesTest {
         override suspend fun clearRecentSearchQueries() {}
         override val isCatalogReadyBannerDismissed: Flow<Boolean> = flowOf(false)
         override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {}
+
+        override val bibleBookmarks: Flow<List<com.example.sermonindex.domain.model.BibleBookmark>> = flowOf(emptyList())
+        override fun getBibleBookmarksForChapter(translationId: String, bookId: String, chapter: Int): Flow<List<com.example.sermonindex.domain.model.BibleBookmark>> = flowOf(emptyList())
+        override suspend fun saveBibleBookmark(bookmark: com.example.sermonindex.domain.model.BibleBookmark) {}
+        override suspend fun deleteBibleBookmark(id: String) {}
+        override suspend fun deleteBibleBookmarkForVerse(translationId: String, bookId: String, chapter: Int, verse: Int) {}
     }
 
     @Test

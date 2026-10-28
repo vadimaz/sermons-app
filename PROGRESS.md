@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.12.0` | **Version Code:** `22`
+> **Current Version:** `1.13.0` | **Version Code:** `23`
 
 ---
 
@@ -25,7 +25,7 @@
 |---|---|---|
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
 | **Search** | `SearchViewModel` | Global search across speakers, topics, and 70k+ offline sermon catalog with debounced FTS4 queries; dynamic category filter chips (All, Sermons, Speakers, Topics); dismissible catalog sync status banner; recent search history; sermon cards with Play pill, Favorite toggle, quote snippet with query highlights, and differentiated navigation (card body -> Sermon Details, book icon -> Text Reader). |
-| **Bible Reader** | `BibleViewModel` | Distraction-free Holy Scripture reader with 1,250+ translations, localized book titles, chapter continuous text with headings, verse markers, poetic stanzas, Hebrew subtitles, footnotes popups, table of contents sheet with OT/NT tabs and book search, reading typography settings (font size slider, Serif vs Sans toggle, line spacing), BSB audio narration streaming via Media3, in-chapter search with match navigation, and direct cross-link to Scripture sermons. |
+| **Bible Reader** | `BibleViewModel` | Distraction-free Holy Scripture reader with 1,250+ translations, localized book titles, chapter continuous text with headings, verse markers, poetic stanzas, Hebrew subtitles, footnotes popups, table of contents sheet with OT/NT tabs and book search, reading typography settings, BSB audio narration streaming via Media3, in-chapter search, single-verse selection mode via long-press, pastel highlights (Yellow, Green, Blue, Coral) with auto-save and removal, ModalBottomSheet anchored to bottom bar, 1:1 quote card sharing generator, clipboard integration, and scroll position preservation across navigation. |
 | **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, dual Scripture Verse quote card (default BSB + system language / KJV fallback), searchable translation picker bottom sheet (`ModalBottomSheet`), verse sermons list, navigation bar hidden on chapter/verse levels, synchronized back gesture handling via `BackHandler`, scroll-to-top on reselect without resetting selection. |
 | **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, sermon count badges, and back navigation when opened from Home. |
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, AndroidX Paging 3 paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`) with `LazyPagingItems`, prefetching, loading indicator, and inline retry on failure. |
@@ -33,7 +33,7 @@
 | **Topic Detail** | `TopicDetailViewModel` | Thematic description, Berean Standard Bible scripture correlations (`topScriptures`), related sermons. |
 | **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, reactive Play/Pause state synced with `PlaybackManager` (displays `Pause` icon when active), 3-in-a-row action layout (Favorite heart, Play pill capsule, Download with progress), 3 tabs for Overview, Outline, and Study Notes. Text-only sermons automatically hide the download button and display "Read Sermon" action. Tapping Play on a newly selected sermon automatically navigates to Fullscreen Player, while tapping Play/Pause on an already active sermon (playing or paused) toggles playback in-place. |
 | **Text Sermon Reader** | `TextSermonViewModel` | Dedicated distraction-free reader screen for text-only sermons (e.g., C.H. Spurgeon's written articles). Fullscreen layout mirroring player dimensions without playback controls; top app bar with favorite toggle, 220dp shadow artwork, title, speaker, "Text Sermon" badge, selectable body typography (18sp / 28sp line height), quotes, and application points. |
-| **Library** | `LibraryViewModel` | 3 primary tabs with count badges (Favorites, Downloads, History), storage size indicator, "Clear Downloads" action with confirmation dialog removing local files and database records, "Clear History" action. |
+| **Library** | `LibraryViewModel` | 4 primary tabs with count badges (Favorites, Downloads, History, Bookmarks), storage size indicator, "Clear Downloads" action with confirmation dialog removing local files and database records, "Clear History" action, and Bookmarks tab with pastel color indicators, verse quote preview, share dialog, delete action, and one-tap jump & auto-scroll to verse in Bible Reader. |
 | **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, synchronized WebVTT karaoke transcript reading mode. |
 | **Offline Banner** | N/A (Global) | Animated non-intrusive banner indicating offline mode when internet connection is lost. |
 
@@ -174,6 +174,33 @@
   - Horizontally scrolling cards with speaker artwork, 2-line title, preacher name, duration/text badge, and instant Play/Read action.
 - **Automated Test Coverage**: Comprehensive deserialization and mapping test suite (`RandomSermonMappingTest`) and usecase test (`UseCasesTest`).
 
+### 1.15 Bible Bookmarks, Pastel Highlights & 1:1 Quote Cards Generator
+- **Verse Selection Mode**:
+  - Long press on any Bible verse activates focused selection mode for that specific verse, displaying subtle selection background tint.
+  - Tapping another verse while in selection mode cleanly shifts selection to the tapped verse.
+- **Material 3 Modal Bottom Sheet (`BibleVerseBottomSheet`)**:
+  - Anchored modal sheet with scrim preventing accidental background taps on reader text.
+  - Extended bottom container color (`surfaceContainerHigh`) with `navigationBarsPadding()` eliminating transparent bar gaps above the system navigation bar.
+  - Pastel color palette row featuring 4 highlights: Yellow (`#FEF08A`), Green (`#BBF7D0`), Blue (`#BFDBFE`), Coral (`#FECDD3`).
+  - Auto-saving on color selection: tapping any palette color highlights the verse, persists the bookmark to Room and DataStore, dismisses the sheet, and shows a "Saved" toast (`R.string.toast_saved`).
+  - Contextual "Remove" action (`TextButton` styled with `colorScheme.error`): appears only when the verse already has a highlight, deletes the bookmark, resets highlighting, dismisses the sheet, and shows a "Removed" toast (`R.string.toast_removed`).
+  - Native clipboard copy with verse text, book name, chapter, verse, and translation reference; gated to Android 12 and below (`Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2`) to prevent duplicate toast notifications alongside Android 13+ native clipboard overlay.
+- **1:1 Quote Card Generator & Sharing (`QuoteCardSheet`)**:
+  - High-resolution (1080x1080) square image quote cards with 4 selectable pastel backgrounds matching highlight tones.
+  - Offloaded native Android `Canvas` + `StaticLayout` bitmap generation running asynchronously on `@IoDispatcher` (`generateQuoteCardBitmap`).
+  - Horizontal scrollable background color chips with embedded color preview circles.
+  - Android system Share Sheet integration via `FileProvider` (`file_paths.xml`), creating cached PNG cards without persistent storage bloat.
+- **Library Bookmarks Tab**:
+  - 4th tab in Library with count badge, displaying all user bookmarks sorted by timestamp.
+  - Bookmarks cards with pastel color indicators, reference, full verse text preview, and quick share / delete actions.
+  - One-tap navigation to Bible reader with automatic smooth scrolling to the exact bookmarked verse.
+- **Room Migration & Database Integrity**:
+  - Official Room migration `MIGRATION_1_2` creating table `bible_bookmarks` with indices on `(translation_id, book_id, chapter)`.
+  - Exported schema verification (`2.json`).
+- **Reader State & Navigation Fixes**:
+  - Preserved reader scroll position across navigation tabs via `rememberSaveable` chapter key tracking.
+  - DataStore reading position timestamp tracking (`positionUpdatedAt: Long = 0L` in `BibleReadingPreferences`) ensuring reliable auto-scroll on bookmark navigation without false-positive triggers during typography or narrator adjustments.
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -219,6 +246,12 @@ interface SermonRepository {
     suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int = 1)
     suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
     suspend fun saveBibleNarrator(narrator: String?)
+
+    val bibleBookmarks: Flow<List<BibleBookmark>>
+    fun getBibleBookmarksForChapter(translationId: String, bookId: String, chapter: Int): Flow<List<BibleBookmark>>
+    suspend fun saveBibleBookmark(translationId: String, bookId: String, bookName: String, chapter: Int, verse: Int, text: String, color: HighlightColor)
+    suspend fun deleteBibleBookmark(translationId: String, bookId: String, chapter: Int, verse: Int)
+    suspend fun deleteBibleBookmarkById(id: Long)
 
     val catalogSyncState: Flow<CatalogSyncState>
     fun search(query: String, category: SearchCategory): Flow<SearchAggregateResult>
@@ -328,6 +361,16 @@ interface SearchDao {
     suspend fun deleteSearchQuery(query: String): Int
     suspend fun clearSearchHistory(): Int
 }
+
+@Dao
+interface BibleBookmarksDao {
+    fun getBookmarksForChapter(translationId: String, bookId: String, chapter: Int): Flow<List<BibleBookmarkEntity>>
+    fun getAllBookmarks(): Flow<List<BibleBookmarkEntity>>
+    suspend fun getBookmarkForVerse(translationId: String, bookId: String, chapter: Int, verse: Int): BibleBookmarkEntity?
+    suspend fun insertBookmark(bookmark: BibleBookmarkEntity)
+    suspend fun deleteBookmarkForVerse(translationId: String, bookId: String, chapter: Int, verse: Int)
+    suspend fun deleteBookmarkById(id: Long)
+}
 ```
 
 ---
@@ -342,6 +385,8 @@ interface SearchDao {
 
 ## 4. Backlog & Technical Debt
 
+- **Bible Verse Sharing Enhancements**: Add deep links into the app and optional SermonIndex branding badge / Google Play link to generated quote cards (deferred per user review).
+- **User Bible Notes & Journaling**: Add personal reflections and notes attached to highlighted verses or chapters (deferred per user review).
 - **Adaptive Layouts & Navigation 3 Scenes (Foldables, Tablets, Desktops)**: Multi-pane responsive layout architecture using Navigation 3 Scenes (`ListDetailSceneStrategy` for Speakers and Topics directories with placeholder detail panes, `SupportingPaneSceneStrategy` for two-pane player with synchronized WebVTT transcript, adaptive start `NavigationRail` replacing bottom bar on medium/expanded windows, and `GridCells.Adaptive` across directories, library, and search). Detailed technical plan preserved in `adaptive_design_plan.md`. Deferred for future release.
 - **Dynamic Material You Theming**: Palette extraction based on speaker portraits / album art.
 - **Bible Full-Text Search (SQLite FTS)**: Pure offline indexing of active Bible translation verses into an SQLite FTS virtual table (`bible_fts`) for sub-millisecond Bible search across Old and New Testaments.

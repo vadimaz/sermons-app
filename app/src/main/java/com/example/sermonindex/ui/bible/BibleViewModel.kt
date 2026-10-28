@@ -2,20 +2,27 @@ package com.example.sermonindex.ui.bible
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.BibleChapterItem
 import com.example.sermonindex.domain.model.BibleReadingPreferences
 import com.example.sermonindex.domain.model.BibleTranslation
+import com.example.sermonindex.domain.model.HighlightColor
 import com.example.sermonindex.domain.model.Sermon
+import com.example.sermonindex.domain.usecase.DeleteBibleBookmarkForVerseUseCase
+import com.example.sermonindex.domain.usecase.DeleteBibleBookmarkUseCase
+import com.example.sermonindex.domain.usecase.GetBibleBookmarksForChapterUseCase
 import com.example.sermonindex.domain.usecase.GetBibleBooksForTranslationUseCase
 import com.example.sermonindex.domain.usecase.GetBibleChapterUseCase
 import com.example.sermonindex.domain.usecase.GetBibleReadingPreferencesUseCase
 import com.example.sermonindex.domain.usecase.GetBibleTranslationsUseCase
+import com.example.sermonindex.domain.usecase.SaveBibleBookmarkUseCase
 import com.example.sermonindex.domain.usecase.SaveBibleNarratorUseCase
 import com.example.sermonindex.domain.usecase.SaveBibleReadingPositionUseCase
 import com.example.sermonindex.domain.usecase.SaveBibleTypographyPreferencesUseCase
 import com.example.sermonindex.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,11 +41,17 @@ class BibleViewModel @Inject constructor(
     private val saveBibleReadingPositionUseCase: SaveBibleReadingPositionUseCase,
     private val saveBibleTypographyPreferencesUseCase: SaveBibleTypographyPreferencesUseCase,
     private val saveBibleNarratorUseCase: SaveBibleNarratorUseCase,
+    private val getBibleBookmarksForChapterUseCase: GetBibleBookmarksForChapterUseCase,
+    private val saveBibleBookmarkUseCase: SaveBibleBookmarkUseCase,
+    private val deleteBibleBookmarkUseCase: DeleteBibleBookmarkUseCase,
+    private val deleteBibleBookmarkForVerseUseCase: DeleteBibleBookmarkForVerseUseCase,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BibleUiState())
     val uiState: StateFlow<BibleUiState> = _uiState.asStateFlow()
+
+    private var bookmarksJob: Job? = null
 
     init {
         observePreferences()
@@ -50,7 +63,29 @@ class BibleViewModel @Inject constructor(
         viewModelScope.launch {
             getBibleReadingPreferencesUseCase().distinctUntilChanged().collectLatest { prefs ->
                 val prev = _uiState.value.preferences
-                _uiState.update { it.copy(preferences = prefs) }
+                val isExplicitPositionChange = prev.positionUpdatedAt != prefs.positionUpdatedAt ||
+                    prev.translationId != prefs.translationId ||
+                    prev.bookId != prefs.bookId ||
+                    prev.chapter != prefs.chapter ||
+                    prev.verse != prefs.verse
+
+                val targetVerse = if (isExplicitPositionChange) {
+                    when {
+                        prefs.verse > 1 -> prefs.verse
+                        prev.positionUpdatedAt != prefs.positionUpdatedAt &&
+                            prefs.positionUpdatedAt > 0L &&
+                            prev.bookId.equals(prefs.bookId, ignoreCase = true) &&
+                            prev.chapter == prefs.chapter -> prefs.verse
+                        else -> null
+                    }
+                } else null
+
+                _uiState.update {
+                    it.copy(
+                        preferences = prefs,
+                        targetScrollVerse = targetVerse ?: it.targetScrollVerse
+                    )
+                }
 
                 if (_uiState.value.currentChapter == null ||
                     prev.translationId != prefs.translationId ||
@@ -99,6 +134,7 @@ class BibleViewModel @Inject constructor(
             // 2. Load chapter
             getBibleChapterUseCase(translationId, effectiveBookId, chapter)
                 .onSuccess { chapterData ->
+                    observeBookmarksForChapter(translationId, effectiveBookId, chapter)
                     _uiState.update {
                         it.copy(
                             isLoading = false,
@@ -216,6 +252,79 @@ class BibleViewModel @Inject constructor(
             is BibleUiEvent.OpenSermonsForVerse -> {
                 // Handled in UI navigation
             }
+            is BibleUiEvent.StartVerseSelection -> {
+                _uiState.update {
+                    it.copy(
+                        isSelectionMode = true,
+                        selectedVerse = event.verseNumber
+                    )
+                }
+            }
+            is BibleUiEvent.ClearSelection -> {
+                _uiState.update {
+                    it.copy(
+                        isSelectionMode = false,
+                        selectedVerse = null
+                    )
+                }
+            }
+            is BibleUiEvent.ApplyHighlight -> {
+                applyHighlightToSelection(event.color)
+            }
+            is BibleUiEvent.DeleteBookmarkForCurrentVerse -> {
+                deleteBookmarkForSelection()
+            }
+            is BibleUiEvent.SetQuoteCardSheetOpen -> {
+                _uiState.update { it.copy(showQuoteCardSheet = event.isOpen) }
+            }
+            is BibleUiEvent.ClearTargetScrollVerse -> {
+                _uiState.update { it.copy(targetScrollVerse = null) }
+            }
+        }
+    }
+
+    private fun observeBookmarksForChapter(translationId: String, bookId: String, chapter: Int) {
+        bookmarksJob?.cancel()
+        bookmarksJob = viewModelScope.launch {
+            getBibleBookmarksForChapterUseCase(translationId, bookId, chapter).collectLatest { bookmarks ->
+                _uiState.update { it.copy(chapterBookmarks = bookmarks) }
+            }
+        }
+    }
+
+    private fun applyHighlightToSelection(color: HighlightColor) {
+        val chapter = _uiState.value.currentChapter ?: return
+        val selected = _uiState.value.selectedVerse ?: return
+
+        val existing = _uiState.value.chapterBookmarks.firstOrNull { it.verse == selected }
+        val verseItem = chapter.items.filterIsInstance<BibleChapterItem.Verse>()
+            .firstOrNull { it.number == selected } ?: return
+
+        viewModelScope.launch {
+            val bookmark = existing?.copy(color = color) ?: BibleBookmark(
+                id = "${chapter.translationId}:${chapter.bookId}:${chapter.chapterNumber}:$selected",
+                translationId = chapter.translationId,
+                bookId = chapter.bookId,
+                bookName = chapter.bookName,
+                chapter = chapter.chapterNumber,
+                verse = selected,
+                text = verseItem.text,
+                color = color
+            )
+            saveBibleBookmarkUseCase(bookmark)
+            _uiState.update { it.copy(isSelectionMode = false, selectedVerse = null) }
+        }
+    }
+
+    private fun deleteBookmarkForSelection() {
+        val selected = _uiState.value.selectedVerse ?: return
+        val existing = _uiState.value.chapterBookmarks.firstOrNull { it.verse == selected }
+
+        viewModelScope.launch {
+            if (existing != null) {
+                deleteBibleBookmarkUseCase(existing.id)
+            }
+            _uiState.update { it.copy(isSelectionMode = false, selectedVerse = null) }
         }
     }
 

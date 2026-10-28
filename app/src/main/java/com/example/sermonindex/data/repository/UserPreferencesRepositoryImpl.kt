@@ -42,6 +42,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val BIBLE_IS_SERIF = booleanPreferencesKey("bible_reading_is_serif")
         val BIBLE_LINE_SPACING = floatPreferencesKey("bible_reading_line_spacing_multiplier")
         val BIBLE_SELECTED_NARRATOR = stringPreferencesKey("bible_reading_selected_narrator")
+        val BIBLE_POSITION_UPDATED_AT = longPreferencesKey("bible_reading_position_updated_at")
         val AUTO_CATALOG_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_catalog_update_check_enabled")
         val LAST_CATALOG_UPDATE_CHECK_TIMESTAMP = longPreferencesKey("last_catalog_update_check_timestamp")
     }
@@ -111,7 +112,8 @@ class UserPreferencesRepositoryImpl @Inject constructor(
                 fontSizeSp = preferences[PreferencesKeys.BIBLE_FONT_SIZE_SP] ?: 18.0f,
                 isSerif = preferences[PreferencesKeys.BIBLE_IS_SERIF] ?: true,
                 lineSpacingMultiplier = preferences[PreferencesKeys.BIBLE_LINE_SPACING] ?: 1.5f,
-                selectedNarrator = preferences[PreferencesKeys.BIBLE_SELECTED_NARRATOR]
+                selectedNarrator = preferences[PreferencesKeys.BIBLE_SELECTED_NARRATOR],
+                positionUpdatedAt = preferences[PreferencesKeys.BIBLE_POSITION_UPDATED_AT] ?: 0L
             )
         }
         .flowOn(ioDispatcher)
@@ -128,6 +130,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
                 preferences[PreferencesKeys.BIBLE_BOOK_ID] = bookId
                 preferences[PreferencesKeys.BIBLE_CHAPTER] = chapter
                 preferences[PreferencesKeys.BIBLE_VERSE] = verse
+                preferences[PreferencesKeys.BIBLE_POSITION_UPDATED_AT] = System.currentTimeMillis()
             }
         }
     }
