@@ -80,7 +80,9 @@ import com.example.sermonindex.ui.library.LibraryScreen
 import com.example.sermonindex.ui.player.FullscreenPlayerScreen
 import com.example.sermonindex.ui.reader.TextSermonScreen
 import com.example.sermonindex.ui.search.SearchScreen
+import com.example.sermonindex.ui.scripture.ScriptureChaptersScreen
 import com.example.sermonindex.ui.scripture.ScriptureScreen
+import com.example.sermonindex.ui.scripture.ScriptureVerseHeatMapScreen
 import com.example.sermonindex.ui.sermon.SermonDetailScreen
 import com.example.sermonindex.ui.speakers.SpeakerDetailScreen
 import com.example.sermonindex.ui.speakers.SpeakersScreen
@@ -317,17 +319,9 @@ fun MainNavigation(
 
     val currentRoute = navigationState.currentRoute
     val isFullscreenPlayer = currentRoute is PlayerRoute || currentRoute is TextSermonRoute || currentRoute is FullscreenVideoRoute
-    var isScriptureAtRoot by rememberSaveable { mutableStateOf(true) }
     var isBibleBottomBarVisible by rememberSaveable { mutableStateOf(true) }
 
-    val isAtTopLevel = when (currentRoute) {
-        HomeRoute -> true
-        SearchRoute -> true
-        BibleRoute -> true
-        LibraryRoute -> true
-        ScriptureRoute -> isScriptureAtRoot
-        else -> false
-    }
+    val isAtTopLevel = currentRoute in TOP_LEVEL_ROUTES
     val isBibleTrack = playbackState.currentSermon?.id?.startsWith("bible_") == true
     val isBibleTab = navigationState.topLevelRoute == BibleRoute
     val effectivelyShowBottomBar = if (isBibleTab) isBibleBottomBarVisible else true
@@ -580,14 +574,53 @@ fun MainNavigation(
 
                         entry<ScriptureRoute> {
                             ScriptureScreen(
-                                onSermonClick = { sermon ->
-                                    navigator.navigate(SermonDetailRoute(sermon.id))
+                                onBookSelect = { book ->
+                                    navigator.navigate(
+                                        ScriptureChaptersRoute(
+                                            bookId = book.id,
+                                            bookName = book.name,
+                                            chapterCount = book.chapterCount
+                                        )
+                                    )
                                 },
-                                onTextSermonClick = { sermon ->
-                                    navigator.navigate(TextSermonRoute(sermon.id))
+                                reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<ScriptureChaptersRoute> { route ->
+                            ScriptureChaptersScreen(
+                                bookId = route.bookId,
+                                bookName = route.bookName,
+                                chapterCount = route.chapterCount,
+                                onChapterSelect = { chapter ->
+                                    navigator.navigate(
+                                        ScriptureVerseHeatMapRoute(
+                                            bookId = route.bookId,
+                                            bookName = route.bookName,
+                                            chapter = chapter
+                                        )
+                                    )
                                 },
-                                reselectEvents = navigator.reselectEvents,
-                                onIsAtRootChanged = { isScriptureAtRoot = it }
+                                onBack = { navigator.goBack() }
+                            )
+                        }
+
+                        entry<ScriptureVerseHeatMapRoute> { route ->
+                            ScriptureVerseHeatMapScreen(
+                                bookId = route.bookId,
+                                bookName = route.bookName,
+                                chapter = route.chapter,
+                                onVerseSelect = { verse ->
+                                    navigator.navigate(
+                                        BibleVerseSermonsRoute(
+                                            bookId = route.bookId,
+                                            bookName = route.bookName,
+                                            chapter = route.chapter,
+                                            verse = verse
+                                        )
+                                    )
+                                },
+                                onBack = { navigator.goBack() }
                             )
                         }
 

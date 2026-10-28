@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.4` | **Version Code:** `27`
+> **Current Version:** `1.13.5` | **Version Code:** `28`
 
 ---
 
@@ -26,7 +26,7 @@
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
 | **Search** | `SearchViewModel` | Global search across speakers, topics, and 70k+ offline sermon catalog with debounced FTS4 queries; dynamic category filter chips (All, Sermons, Speakers, Topics); dismissible catalog sync status banner; recent search history; sermon cards with Play pill, Favorite toggle, quote snippet with query highlights, and differentiated navigation (card body -> Sermon Details, book icon -> Text Reader). |
 | **Bible Reader** | `BibleViewModel` | Distraction-free Holy Scripture reader with 1,250+ translations, localized book titles, chapter continuous text with headings, verse markers, poetic stanzas, Hebrew subtitles, footnotes popups, table of contents sheet with OT/NT tabs and book search, reading typography settings, BSB audio narration streaming via Media3, in-chapter search, single-verse selection mode via long-press, pastel highlights (Yellow, Green, Blue, Coral) with auto-save and removal, ModalBottomSheet anchored to bottom bar, 1:1 quote card sharing generator, clipboard integration, and scroll position preservation across navigation. |
-| **Scripture Explorer** | `ScriptureViewModel` | 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density, dual Scripture Verse quote card (default BSB + system language / KJV fallback), searchable translation picker bottom sheet (`ModalBottomSheet`), verse sermons list, navigation bar hidden on chapter/verse levels, synchronized back gesture handling via `BackHandler`, scroll-to-top on reselect without resetting selection. |
+| **Scripture Explorer** | `ScriptureViewModel` / `ScriptureChapterViewModel` | Multi-route Navigation 3 flow (`ScriptureRoute` $\rightarrow$ `ScriptureChaptersRoute` $\rightarrow$ `ScriptureVerseHeatMapRoute` $\rightarrow$ shared `BibleVerseSermonsRoute`) with Material 3 Shared X-Axis transitions and native Predictive Back: 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density with `@AssistedInject` `ScriptureChapterViewModel`, unified dual Scripture Verse quote card and verse sermons list via `BibleVerseSermonsScreen`, and scroll-to-top on reselect. |
 | **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, sermon count badges, and back navigation when opened from Home. |
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, AndroidX Paging 3 paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`) with `LazyPagingItems`, prefetching, loading indicator, and inline retry on failure. |
 | **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges, shortened search placeholder, and back navigation when opened from Home. |
@@ -226,6 +226,9 @@
   - Replaced non-lazy `FlowRow` in `SearchScreen` (`SearchCategory.TOPICS`) with lazy `LazyColumn` virtualization (`TopicSearchItem`) and `contentType` keys across all lazy lists.
   - Offloaded in-memory filtering of 14,087 topics (`TopicsViewModel`) and 2,210 preachers (`SpeakersViewModel`) from the Main UI thread to `@IoDispatcher` using `mapLatest`.
   - Replaced `.lowercase().contains(q)` with zero-allocation `contains(cleanQuery, ignoreCase = true)` in `SermonRepositoryImpl.search()`, skipped unnecessary FTS count queries when filtering by `TOPICS`/`SPEAKERS`, and prevented `LazyColumn` composition teardown during active typing or category chip switches.
+- **Scripture Explorer Navigation 3 Refactoring & Deduplication**:
+  - Replaced 4-level internal state switching in `ScriptureScreen` with canonical Navigation 3 routes (`ScriptureRoute` $\rightarrow$ `ScriptureChaptersRoute` $\rightarrow$ `ScriptureVerseHeatMapRoute` $\rightarrow$ `BibleVerseSermonsRoute`), enabling Material 3 Shared X-Axis transitions and native Predictive Back gestures across all levels.
+  - Extracted `@HiltViewModel(assistedFactory = ...)` `ScriptureChapterViewModel` for the verse heat map level and unified Level 4 with `BibleVerseSermonsScreen` / `BibleVerseSermonsViewModel`, eliminating ~250 lines of duplicate translation and sermon loading logic and removing the `isScriptureAtRoot` workaround from `Navigation.kt`.
 
 ---
 
@@ -416,4 +419,3 @@ interface BibleBookmarksDao {
 - **Adaptive Layouts & Navigation 3 Scenes (Foldables, Tablets, Desktops)**: Multi-pane responsive layout architecture using Navigation 3 Scenes (`ListDetailSceneStrategy` for Speakers and Topics directories with placeholder detail panes, `SupportingPaneSceneStrategy` for two-pane player with synchronized WebVTT transcript, adaptive start `NavigationRail` replacing bottom bar on medium/expanded windows, and `GridCells.Adaptive` across directories, library, and search). Detailed technical plan preserved in `adaptive_design_plan.md`. Deferred for future release.
 - **Dynamic Material You Theming**: Palette extraction based on speaker portraits / album art.
 - **Bible Full-Text Search (SQLite FTS)**: Pure offline indexing of active Bible translation verses into an SQLite FTS virtual table (`bible_fts`) for sub-millisecond Bible search across Old and New Testaments.
-- **UI Component Decomposition & Reusability (Scripture & Explorers)**: Refactor complex, multi-level screen monoliths (e.g., the 4-level navigation in `ScriptureScreen`) into decoupled, stateless UI building blocks (`ScriptureBookPicker`, `ScriptureChapterPicker`, `ScriptureVerseHeatMapGrid`, `ScriptureVerseQuoteCard`). This prevents tight coupling to single ViewModels, simplifies testing, and enables flexible composition across different sections (e.g. Bible reader, search, topic studies).

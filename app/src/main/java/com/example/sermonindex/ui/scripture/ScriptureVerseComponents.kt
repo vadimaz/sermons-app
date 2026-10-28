@@ -52,6 +52,11 @@ import androidx.compose.ui.unit.sp
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.BibleTranslation
 
+enum class TranslationPickerTarget {
+    FIRST,
+    SECOND
+}
+
 private val POPULAR_TRANSLATION_IDS = listOf(
     "BSB",
     "rus_syn",

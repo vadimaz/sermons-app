@@ -127,7 +127,7 @@ com.example.sermonindex
     ├── home/                     # HomeScreen.kt, HomeViewModel.kt
     ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt
     ├── player/                   # FullscreenPlayerScreen.kt, FullscreenVideoScreen.kt, PlayerViewModel.kt, components/VideoPlayerSurface.kt
-    ├── scripture/                # ScriptureScreen.kt, ScriptureViewModel.kt
+    ├── scripture/                # ScriptureScreen.kt, ScriptureViewModel.kt, ScriptureChapterViewModel.kt, ScriptureVerseComponents.kt
     ├── search/                   # SearchScreen.kt, SearchViewModel.kt, SearchUiState.kt, components/
     ├── sermon/                   # SermonDetailScreen.kt, SermonDetailViewModel.kt
     ├── speakers/                 # SpeakersScreen.kt, SpeakerDetailScreen.kt, ViewModels

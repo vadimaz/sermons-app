@@ -16,6 +16,20 @@ data object BibleRoute : NavKey
 data object ScriptureRoute : NavKey
 
 @Serializable
+data class ScriptureChaptersRoute(
+    val bookId: String,
+    val bookName: String,
+    val chapterCount: Int
+) : NavKey
+
+@Serializable
+data class ScriptureVerseHeatMapRoute(
+    val bookId: String,
+    val bookName: String,
+    val chapter: Int
+) : NavKey
+
+@Serializable
 data class BibleVerseSermonsRoute(
     val bookId: String,
     val bookName: String,

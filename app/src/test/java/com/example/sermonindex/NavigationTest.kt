@@ -249,10 +249,67 @@ class NavigationTest {
         assertFalse(isTopLevelTransition(HomeRoute, SermonDetailRoute("123")))
         assertFalse(isTopLevelTransition(SermonDetailRoute("123").toString(), HomeRoute.toString()))
         assertFalse(isTopLevelTransition(BibleRoute.toString(), BibleVerseSermonsRoute("JHN", "John", 3, 16).toString()))
+        assertFalse(isTopLevelTransition(ScriptureRoute, ScriptureChaptersRoute("JHN", "John", 21)))
+        assertFalse(isTopLevelTransition(ScriptureChaptersRoute("JHN", "John", 21), ScriptureVerseHeatMapRoute("JHN", "John", 3)))
+        assertFalse(isTopLevelTransition(ScriptureVerseHeatMapRoute("JHN", "John", 3), BibleVerseSermonsRoute("JHN", "John", 3, 16)))
         assertFalse(isTopLevelTransition(SearchRoute, SpeakerDetailRoute("spurgeon")))
         assertFalse(isTopLevelTransition(SpeakersRoute, SpeakerDetailRoute("spurgeon")))
         assertFalse(isTopLevelTransition(SermonDetailRoute("123"), PlayerRoute))
         assertFalse(isTopLevelTransition(null, HomeRoute))
         assertFalse(isTopLevelTransition(HomeRoute, null))
+    }
+
+    @Test
+    fun scriptureHierarchicalDrillDownAndBackPopsStepByStep() {
+        val topLevelState = mutableStateOf<NavKey>(ScriptureRoute)
+        val homeStack = NavBackStack<NavKey>(HomeRoute)
+        val scriptureStack = NavBackStack<NavKey>(ScriptureRoute)
+
+        val navState = NavigationState(
+            startRoute = HomeRoute,
+            topLevelRoute = topLevelState,
+            backStacks = mapOf(
+                HomeRoute to homeStack,
+                ScriptureRoute to scriptureStack
+            )
+        )
+        val navigator = Navigator(navState)
+
+        // Level 1 -> Level 2 (Book selected -> Chapters Grid)
+        val chaptersRoute = ScriptureChaptersRoute("ROM", "Romans", 16)
+        navigator.navigate(chaptersRoute)
+        assertEquals(2, scriptureStack.size)
+        assertEquals(chaptersRoute, navState.currentRoute)
+
+        // Level 2 -> Level 3 (Chapter selected -> Verse Heat Map)
+        val heatMapRoute = ScriptureVerseHeatMapRoute("ROM", "Romans", 8)
+        navigator.navigate(heatMapRoute)
+        assertEquals(3, scriptureStack.size)
+        assertEquals(heatMapRoute, navState.currentRoute)
+
+        // Level 3 -> Level 4 (Verse selected -> Shared BibleVerseSermonsRoute)
+        val verseSermonsRoute = BibleVerseSermonsRoute("ROM", "Romans", 8, 28)
+        navigator.navigate(verseSermonsRoute)
+        assertEquals(4, scriptureStack.size)
+        assertEquals(verseSermonsRoute, navState.currentRoute)
+
+        // Pop Level 4 -> Level 3
+        navigator.goBack()
+        assertEquals(3, scriptureStack.size)
+        assertEquals(heatMapRoute, navState.currentRoute)
+
+        // Pop Level 3 -> Level 2
+        navigator.goBack()
+        assertEquals(2, scriptureStack.size)
+        assertEquals(chaptersRoute, navState.currentRoute)
+
+        // Pop Level 2 -> Level 1 (ScriptureRoute root)
+        navigator.goBack()
+        assertEquals(1, scriptureStack.size)
+        assertEquals(ScriptureRoute, navState.currentRoute)
+
+        // Pop from ScriptureRoute root -> exits through HomeRoute
+        navigator.goBack()
+        assertEquals(HomeRoute, navState.topLevelRoute)
     }
 }
