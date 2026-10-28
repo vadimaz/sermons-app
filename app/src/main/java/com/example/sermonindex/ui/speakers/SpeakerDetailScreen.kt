@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.paging.LoadState
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemContentType
 import androidx.paging.compose.itemKey
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,7 +43,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.sermonindex.R
@@ -220,7 +221,10 @@ fun SpeakerDetailContent(
                         contentPadding = PaddingValues(vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(currentSpeaker.topTopics) { topic ->
+                        items(
+                            items = currentSpeaker.topTopics,
+                            key = { it.slug }
+                        ) { topic ->
                             FilterChip(
                                 selected = false,
                                 onClick = { onEvent(SpeakerDetailUiEvent.ClickTopic(topic.slug)) },
@@ -297,7 +301,8 @@ fun SpeakerDetailContent(
             // Sermon list items
             items(
                 count = sermons.itemCount,
-                key = sermons.itemKey { it.id }
+                key = sermons.itemKey { it.id },
+                contentType = sermons.itemContentType { "sermon" }
             ) { index ->
                 val sermon = sermons[index]
                 if (sermon != null) {

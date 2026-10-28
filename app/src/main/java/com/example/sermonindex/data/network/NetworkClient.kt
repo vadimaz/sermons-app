@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.kotlinx.serialization.asConverterFactory
+import retrofit2.create
 import java.io.File
 import java.util.concurrent.TimeUnit
 
@@ -40,8 +41,9 @@ object NetworkClient {
             .build()
     }
 
-    fun createApiService(context: Context): SermonIndexApiService {
-        val okHttpClient = createOkHttpClient(context)
+    fun createApiService(
+        okHttpClient: OkHttpClient
+    ): SermonIndexApiService {
         val contentType = "application/json".toMediaType()
 
         val retrofit = Retrofit.Builder()
@@ -50,6 +52,10 @@ object NetworkClient {
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
 
-        return retrofit.create(SermonIndexApiService::class.java)
+        return retrofit.create<SermonIndexApiService>()
+    }
+
+    fun createApiService(context: Context): SermonIndexApiService {
+        return createApiService(createOkHttpClient(context))
     }
 }

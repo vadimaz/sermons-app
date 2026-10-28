@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
@@ -135,7 +136,8 @@ class NavigationState(
     ): List<NavEntry<NavKey>> {
         val decoratedEntries = backStacks.mapValues { (_, stack) ->
             val decorators = listOf(
-                rememberSaveableStateHolderNavEntryDecorator<NavKey>()
+                rememberSaveableStateHolderNavEntryDecorator<NavKey>(),
+                rememberViewModelStoreNavEntryDecorator<NavKey>()
             )
             rememberDecoratedNavEntries(
                 backStack = stack,

@@ -22,7 +22,7 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideSermonIndexApiService(@ApplicationContext context: Context): SermonIndexApiService {
-        return NetworkClient.createApiService(context)
+    fun provideSermonIndexApiService(okHttpClient: okhttp3.OkHttpClient): SermonIndexApiService {
+        return NetworkClient.createApiService(okHttpClient)
     }
 }

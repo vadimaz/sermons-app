@@ -9,14 +9,14 @@
 
 | Component | Technology / Version | Details |
 |---|---|---|
-| **OS / Runtime** | Android SDK | `minSdk = 26` (Android 8.0), `compileSdk = 36`, `targetSdk = 36` |
+| **OS / Runtime** | Android SDK | `minSdk = 26` (Android 8.0), `compileSdk = 37`, `targetSdk = 36` |
 | **JDK** | Java 17 | `jvmToolchain(17)`, Gradle 9.8.2, AGP 9.4.1 |
 | **Language** | Kotlin 2.3.21 | KSP 2.3.12, Kotlin Serialization 1.11.0 |
 | **UI Toolkit** | Jetpack Compose | BOM 2026.09.00, Material 3 (1.4.0), Material Icons Extended |
-| **Navigation** | Navigation 3 (`androidx.navigation3`) | Version 1.2.0 (`NavDisplay`, `NavKey`, multi-backstacks with `rememberSaveableStateHolderNavEntryDecorator`) |
-| **Dependency Injection** | Dagger Hilt 2.60.1 | `androidx.hilt:hilt-navigation-compose:1.4.0`, `@AndroidEntryPoint`, `@HiltViewModel` |
+| **Navigation** | Navigation 3 (`androidx.navigation3`) | Version 1.2.0 (`NavDisplay`, `NavKey`, multi-backstacks with `rememberSaveableStateHolderNavEntryDecorator` & `rememberViewModelStoreNavEntryDecorator`) |
+| **Dependency Injection** | Dagger Hilt 2.60.1 | `androidx.hilt:hilt-navigation-compose:1.4.0` (`androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`), `@AndroidEntryPoint`, `@HiltViewModel` |
 | **Async / Reactive** | Coroutines 1.11.0 & Flow | `StateFlow`, `SharedFlow`, `flowOn(ioDispatcher)` |
-| **Media Player** | AndroidX Media3 1.11.1 | `ExoPlayer`, `MediaSessionService`, `MediaController` |
+| **Media Player** | AndroidX Media3 1.11.1 | `ExoPlayer`, `MediaSessionService`, `MediaController`, `media3-ui-compose` (`ContentFrame`) |
 | **Networking** | Retrofit 3.0.0 + OkHttp 5.5.1 | `kotlinx.serialization.json`, custom 404-safe interceptor |
 | **Database & Search** | Android Room 2.8.5 + FTS4 | `AppDatabase.kt` (schema version 2) with full-text search (`sermon_fts`), DAOs (`FavoritesDao`, `HistoryDao`, `DownloadsDao`, `SearchDao`, `BibleBookmarksDao`), schema export |
 | **Preferences** | Jetpack DataStore 1.3.0 | Preferences DataStore (`UserPreferencesRepositoryImpl`) |

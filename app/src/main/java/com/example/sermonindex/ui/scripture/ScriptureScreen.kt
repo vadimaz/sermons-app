@@ -37,7 +37,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
+
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -47,7 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.R
@@ -76,9 +76,9 @@ fun ScriptureScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     val isAtRoot = state.selectedBook == null
-    DisposableEffect(isAtRoot) {
+    LaunchedEffect(isAtRoot) {
         onIsAtRootChanged?.invoke(isAtRoot)
-        onDispose { }
+
     }
 
     ScriptureContent(

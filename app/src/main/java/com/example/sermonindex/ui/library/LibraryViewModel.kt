@@ -7,7 +7,7 @@ import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
-import com.example.sermonindex.domain.repository.SermonRepository
+import com.example.sermonindex.domain.usecase.ClearHistoryUseCase
 import com.example.sermonindex.domain.usecase.DeleteAllDownloadsUseCase
 import com.example.sermonindex.domain.usecase.DeleteBibleBookmarkUseCase
 import com.example.sermonindex.domain.usecase.DeleteDownloadUseCase
@@ -63,7 +63,7 @@ class LibraryViewModel @Inject constructor(
     private val getAllBibleBookmarksUseCase: GetAllBibleBookmarksUseCase,
     private val deleteBibleBookmarkUseCase: DeleteBibleBookmarkUseCase,
     private val saveBibleReadingPositionUseCase: SaveBibleReadingPositionUseCase,
-    private val sermonRepository: SermonRepository,
+    private val clearHistoryUseCase: ClearHistoryUseCase,
     private val playbackManager: PlaybackManager
 ) : ViewModel() {
 
@@ -137,7 +137,7 @@ class LibraryViewModel @Inject constructor(
             }
             is LibraryUiEvent.ClearHistory -> {
                 viewModelScope.launch {
-                    sermonRepository.clearHistory()
+                    clearHistoryUseCase()
                 }
             }
             is LibraryUiEvent.DeleteBookmark -> {

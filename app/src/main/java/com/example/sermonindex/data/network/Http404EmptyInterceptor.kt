@@ -14,6 +14,7 @@ class Http404EmptyInterceptor : Interceptor {
         val request = chain.request()
         val response = chain.proceed(request)
         if (response.code == 404) {
+            response.body.close()
             val emptyJson = "{}"
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val body = emptyJson.toResponseBody(mediaType)

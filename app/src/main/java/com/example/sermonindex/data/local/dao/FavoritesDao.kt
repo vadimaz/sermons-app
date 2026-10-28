@@ -1,9 +1,8 @@
 package com.example.sermonindex.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.example.sermonindex.data.local.entities.FavoriteSermonEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -15,7 +14,7 @@ interface FavoritesDao {
     @Query("SELECT EXISTS(SELECT 1 FROM favorites WHERE id = :id LIMIT 1)")
     fun isFavorite(id: String): Flow<Boolean>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertFavorite(entity: FavoriteSermonEntity)
 
     @Query("DELETE FROM favorites WHERE id = :id")

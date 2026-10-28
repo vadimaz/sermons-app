@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.example.sermonindex.data.local.entities.CatalogMetadataEntity
 import com.example.sermonindex.data.local.entities.SearchHistoryEntity
 import com.example.sermonindex.data.local.entities.SermonFtsEntity
@@ -33,7 +34,7 @@ interface SearchDao {
     @Query("SELECT * FROM catalog_metadata WHERE id = 1")
     suspend fun getCatalogMetadata(): CatalogMetadataEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun saveCatalogMetadata(metadata: CatalogMetadataEntity)
 
     @Query("DELETE FROM catalog_metadata")
@@ -42,7 +43,7 @@ interface SearchDao {
     @Query("SELECT query FROM search_history ORDER BY timestamp DESC LIMIT :limit")
     fun getRecentSearchQueries(limit: Int = 10): Flow<List<String>>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertSearchQuery(query: SearchHistoryEntity)
 
     @Query("DELETE FROM search_history WHERE query = :query")

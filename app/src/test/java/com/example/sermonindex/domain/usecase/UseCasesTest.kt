@@ -68,7 +68,10 @@ class  UseCasesTest {
             durationMs: Long
         ) = Unit
 
-        override suspend fun clearHistory() = Unit
+        var clearHistoryCalled = false
+        override suspend fun clearHistory() {
+            clearHistoryCalled = true
+        }
         val fakeDownloaded = com.example.sermonindex.domain.model.DownloadedSermon(
             id = "1",
             title = "Grace and Truth",
@@ -388,5 +391,12 @@ class  UseCasesTest {
 
         clearQueries()
         assertTrue(fakeRepository.clearedRecentQueries)
+    }
+
+    @Test
+    fun clearHistoryUseCase_delegatesToRepository() = runTest {
+        val useCase = ClearHistoryUseCase(fakeRepository)
+        useCase()
+        assertTrue(fakeRepository.clearHistoryCalled)
     }
 }

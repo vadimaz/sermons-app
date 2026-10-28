@@ -24,12 +24,13 @@ import com.example.sermonindex.MainActivity
 import com.example.sermonindex.R
 import com.example.sermonindex.data.local.dao.SearchDao
 import com.example.sermonindex.data.network.SermonIndexApiService
+import com.example.sermonindex.di.IoDispatcher
 import com.example.sermonindex.domain.repository.UserPreferencesRepository
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
@@ -40,6 +41,8 @@ interface CatalogUpdateWorkerEntryPoint {
     fun getSearchDao(): SearchDao
     fun getApiService(): SermonIndexApiService
     fun getUserPreferencesRepository(): UserPreferencesRepository
+    @IoDispatcher
+    fun getIoDispatcher(): CoroutineDispatcher
 }
 
 /**
@@ -54,7 +57,7 @@ class CatalogUpdateCheckWorker(
     params: WorkerParameters
 ) : CoroutineWorker(context, params) {
 
-    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+    override suspend fun doWork(): Result {
         val entryPoint = EntryPointAccessors.fromApplication(
             applicationContext,
             CatalogUpdateWorkerEntryPoint::class.java
@@ -62,46 +65,49 @@ class CatalogUpdateCheckWorker(
         val searchDao = entryPoint.getSearchDao()
         val apiService = entryPoint.getApiService()
         val userPreferencesRepository = entryPoint.getUserPreferencesRepository()
+        val ioDispatcher = entryPoint.getIoDispatcher()
 
-        try {
-            // 1. Verify user hasn't disabled periodic catalog checks
-            val isCheckEnabled = userPreferencesRepository.isAutoCatalogUpdateCheckEnabled.first()
-            if (!isCheckEnabled) {
-                Log.d(TAG, "Periodic catalog update check is disabled in user preferences.")
-                return@withContext Result.success()
+        return withContext(ioDispatcher) {
+            try {
+                // 1. Verify user hasn't disabled periodic catalog checks
+                val isCheckEnabled = userPreferencesRepository.isAutoCatalogUpdateCheckEnabled.first()
+                if (!isCheckEnabled) {
+                    Log.d(TAG, "Periodic catalog update check is disabled in user preferences.")
+                    return@withContext Result.success()
+                }
+
+                // 2. Check if local catalog exists; skip if user hasn't downloaded it yet
+                val localMeta = searchDao.getCatalogMetadata()
+                val ftsCount = searchDao.getFtsSermonCount()
+                if (localMeta == null || localMeta.sermonCount == 0 || ftsCount == 0) {
+                    Log.d(TAG, "No offline catalog found locally. Skipping background update check.")
+                    return@withContext Result.success()
+                }
+
+                // 3. Fetch latest stats from SermonIndex API
+                val stats = runCatching { apiService.getStats() }.getOrNull()
+                if (stats == null) {
+                    Log.w(TAG, "Failed to connect to /v2/stats API. Retrying later.")
+                    return@withContext Result.retry()
+                }
+
+                // Record check timestamp
+                userPreferencesRepository.setLastCatalogUpdateCheckTimestamp(System.currentTimeMillis())
+
+                // 4. Compare timestamps
+                val hasUpdate = stats.generated.isNotBlank() && stats.generated != localMeta.generatedAt
+                if (hasUpdate) {
+                    Log.i(TAG, "New catalog detected! Server generated: ${stats.generated}, local: ${localMeta.generatedAt}. Showing notification.")
+                    postUpdateNotification(applicationContext, stats.sermons)
+                } else {
+                    Log.d(TAG, "Catalog is up-to-date (generatedAt: ${localMeta.generatedAt}).")
+                }
+
+                Result.success()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking for catalog update: ${e.message}", e)
+                Result.retry()
             }
-
-            // 2. Check if local catalog exists; skip if user hasn't downloaded it yet
-            val localMeta = searchDao.getCatalogMetadata()
-            val ftsCount = searchDao.getFtsSermonCount()
-            if (localMeta == null || localMeta.sermonCount == 0 || ftsCount == 0) {
-                Log.d(TAG, "No offline catalog found locally. Skipping background update check.")
-                return@withContext Result.success()
-            }
-
-            // 3. Fetch latest stats from SermonIndex API
-            val stats = runCatching { apiService.getStats() }.getOrNull()
-            if (stats == null) {
-                Log.w(TAG, "Failed to connect to /v2/stats API. Retrying later.")
-                return@withContext Result.retry()
-            }
-
-            // Record check timestamp
-            userPreferencesRepository.setLastCatalogUpdateCheckTimestamp(System.currentTimeMillis())
-
-            // 4. Compare timestamps
-            val hasUpdate = stats.generated.isNotBlank() && stats.generated != localMeta.generatedAt
-            if (hasUpdate) {
-                Log.i(TAG, "New catalog detected! Server generated: ${stats.generated}, local: ${localMeta.generatedAt}. Showing notification.")
-                postUpdateNotification(applicationContext, stats.sermons)
-            } else {
-                Log.d(TAG, "Catalog is up-to-date (generatedAt: ${localMeta.generatedAt}).")
-            }
-
-            Result.success()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error checking for catalog update: ${e.message}", e)
-            Result.retry()
         }
     }
 
@@ -113,17 +119,15 @@ class CatalogUpdateCheckWorker(
         const val EXTRA_NAVIGATE_TO_SEARCH = "extra_navigate_to_search"
 
         fun createNotificationChannel(context: Context) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(
-                    CHANNEL_ID,
-                    context.getString(R.string.catalog_updates_channel_name),
-                    NotificationManager.IMPORTANCE_DEFAULT
-                ).apply {
-                    description = context.getString(R.string.catalog_updates_channel_desc)
-                }
-                val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                manager.createNotificationChannel(channel)
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                context.getString(R.string.catalog_updates_channel_name),
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = context.getString(R.string.catalog_updates_channel_desc)
             }
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(channel)
         }
 
         @SuppressLint("MissingPermission")

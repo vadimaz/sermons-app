@@ -177,7 +177,8 @@ class SearchViewModelTest {
             getFavoritesUseCase = GetFavoritesUseCase(fakeRepository),
             toggleFavoriteUseCase = ToggleFavoriteUseCase(fakeRepository),
             playbackManager = fakePlaybackManager,
-            getSermonDetailsUseCase = GetSermonDetailsUseCase(fakeRepository)
+            getSermonDetailsUseCase = GetSermonDetailsUseCase(fakeRepository),
+            ioDispatcher = testDispatcher
         )
     }
 

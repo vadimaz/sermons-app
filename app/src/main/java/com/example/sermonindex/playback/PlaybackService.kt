@@ -5,11 +5,10 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.core.net.toUri
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -164,18 +163,16 @@ class PlaybackService : MediaSessionService() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                getString(com.example.sermonindex.R.string.playback_channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = getString(com.example.sermonindex.R.string.playback_channel_description)
-                setShowBadge(false)
-            }
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(channel)
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            getString(com.example.sermonindex.R.string.playback_channel_name),
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = getString(com.example.sermonindex.R.string.playback_channel_description)
+            setShowBadge(false)
         }
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.createNotificationChannel(channel)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -238,13 +235,13 @@ class PlaybackService : MediaSessionService() {
             val metadata = MediaMetadata.Builder()
                 .setTitle(title)
                 .setArtist(speaker)
-                .setArtworkUri(if (speakerImage.isNotBlank()) Uri.parse(speakerImage) else null)
+                .setArtworkUri(if (speakerImage.isNotBlank()) speakerImage.toUri() else null)
                 .setExtras(extras)
                 .build()
 
             return MediaItem.Builder()
                 .setMediaId(sermonId)
-                .setUri(Uri.parse(url))
+                .setUri(url.toUri())
                 .setMediaMetadata(metadata)
                 .build()
         }

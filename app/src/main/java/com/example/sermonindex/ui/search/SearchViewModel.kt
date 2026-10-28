@@ -18,9 +18,11 @@ import com.example.sermonindex.domain.usecase.GetSpeakersUseCase
 import com.example.sermonindex.domain.usecase.GetTopicsUseCase
 import com.example.sermonindex.domain.usecase.SearchUseCase
 import com.example.sermonindex.domain.usecase.SetCatalogReadyBannerDismissedUseCase
+import com.example.sermonindex.di.IoDispatcher
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -53,7 +56,8 @@ class SearchViewModel @Inject constructor(
     private val getFavoritesUseCase: GetFavoritesUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val playbackManager: PlaybackManager,
-    private val getSermonDetailsUseCase: GetSermonDetailsUseCase
+    private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
+    @param:IoDispatcher private val ioDispatcher: CoroutineDispatcher
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SearchUiState())
@@ -92,16 +96,19 @@ class SearchViewModel @Inject constructor(
             }
         }
 
-        // Preload suggestions (popular speakers and topics)
+        // Preload suggestions (popular speakers and topics) off the Main thread
         viewModelScope.launch {
-            val speakers = getSpeakersUseCase().getOrNull()
-                ?.sortedByDescending { it.sermonCount }
-                ?.take(10)
-                ?: emptyList()
-            val topics = getTopicsUseCase().getOrNull()
-                ?.sortedByDescending { it.count }
-                ?.take(12)
-                ?: emptyList()
+            val (speakers, topics) = withContext(ioDispatcher) {
+                val topSpeakers = getSpeakersUseCase().getOrNull()
+                    ?.sortedByDescending { it.sermonCount }
+                    ?.take(10)
+                    ?: emptyList()
+                val topTopics = getTopicsUseCase().getOrNull()
+                    ?.sortedByDescending { it.count }
+                    ?.take(12)
+                    ?: emptyList()
+                topSpeakers to topTopics
+            }
             _uiState.update {
                 it.copy(
                     popularSpeakers = speakers,
@@ -115,10 +122,12 @@ class SearchViewModel @Inject constructor(
             checkCatalogUpdateUseCase()
         }
 
-        // Debounced search query flow
+        // Debounced search query flow (instant on clear or category switch)
         viewModelScope.launch {
             combine(
-                queryInputFlow.debounce(250L).distinctUntilChanged(),
+                queryInputFlow
+                    .debounce { if (it.isBlank()) 0L else 200L }
+                    .distinctUntilChanged(),
                 categoryInputFlow
             ) { query, category ->
                 query to category

@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -64,7 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import coil3.compose.AsyncImage
@@ -82,6 +81,7 @@ import com.example.sermonindex.ui.search.components.CatalogSyncBanner
 import com.example.sermonindex.ui.search.components.RecentSearchItem
 import com.example.sermonindex.ui.search.components.SpeakerSearchItem
 import com.example.sermonindex.ui.search.components.TopicSearchBadge
+import com.example.sermonindex.ui.search.components.TopicSearchItem
 import kotlinx.coroutines.flow.SharedFlow
 
 @Composable
@@ -129,10 +129,12 @@ fun SearchContent(
         }
     }
 
+    LaunchedEffect(state.selectedCategory) {
+        listState.scrollToItem(0)
+    }
+
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .statusBarsPadding()
+        modifier = modifier.fillMaxSize()
     ) {
         // Search Input Bar
         OutlinedTextField(
@@ -193,7 +195,10 @@ fun SearchContent(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 2.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(SearchCategory.entries.toTypedArray()) { category ->
+                items(
+                    items = SearchCategory.entries,
+                    key = { it.name }
+                ) { category ->
                     val selected = state.selectedCategory == category
                     val label = when (category) {
                         SearchCategory.ALL -> stringResource(R.string.search_filter_all)
@@ -218,7 +223,12 @@ fun SearchContent(
 
         // Content Area
         Box(modifier = Modifier.fillMaxSize()) {
-            if (state.isSearching) {
+            val result = state.searchResult
+            val hasAnyResults = result.speakers.isNotEmpty() ||
+                result.topics.isNotEmpty() ||
+                result.sermons.isNotEmpty()
+
+            if (state.isSearching && !hasAnyResults) {
                 LoadingView(modifier = Modifier.fillMaxSize())
             } else if (state.query.isBlank()) {
                 // Empty query: Show catalog sync banner, recent searches, suggestions
@@ -350,11 +360,6 @@ fun SearchContent(
                 }
             } else {
                 // Active search results
-                val result = state.searchResult
-                val hasAnyResults = result.speakers.isNotEmpty() ||
-                    result.topics.isNotEmpty() ||
-                    result.sermons.isNotEmpty()
-
                 if (!hasAnyResults) {
                     EmptyStateView(
                         title = stringResource(R.string.search_empty_title),
@@ -380,7 +385,11 @@ fun SearchContent(
                                         onSeeAll = { onEvent(SearchUiEvent.SelectCategory(SearchCategory.SPEAKERS)) }
                                     )
                                 }
-                                items(result.speakers, key = { "speaker_${it.id}" }) { speaker ->
+                                items(
+                                    items = result.speakers,
+                                    key = { "speaker_${it.id}" },
+                                    contentType = { "speaker" }
+                                ) { speaker ->
                                     SpeakerSearchItem(
                                         speaker = speaker,
                                         onClick = {
@@ -432,7 +441,11 @@ fun SearchContent(
                                         onSeeAll = { onEvent(SearchUiEvent.SelectCategory(SearchCategory.SERMONS)) }
                                     )
                                 }
-                                items(result.sermons, key = { "sermon_${it.id}" }) { sermon ->
+                                items(
+                                    items = result.sermons,
+                                    key = { "sermon_${it.id}" },
+                                    contentType = { "sermon" }
+                                ) { sermon ->
                                     SermonListItem(
                                         sermon = sermon,
                                         isFavorite = state.favoriteIds.contains(sermon.id),
@@ -458,7 +471,11 @@ fun SearchContent(
 
                         // === SPEAKERS ONLY ===
                         if (state.selectedCategory == SearchCategory.SPEAKERS) {
-                            items(result.speakers, key = { "speaker_only_${it.id}" }) { speaker ->
+                            items(
+                                items = result.speakers,
+                                key = { "speaker_only_${it.id}" },
+                                contentType = { "speaker" }
+                            ) { speaker ->
                                 SpeakerSearchItem(
                                     speaker = speaker,
                                     onClick = {
@@ -471,30 +488,28 @@ fun SearchContent(
 
                         // === TOPICS ONLY ===
                         if (state.selectedCategory == SearchCategory.TOPICS) {
-                            item {
-                                FlowRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp)
-                                    ) {
-                                    result.topics.forEach { topic ->
-                                        TopicSearchBadge(
-                                            topic = topic,
-                                            onClick = {
-                                                onEvent(SearchUiEvent.ExecuteSearch(state.query))
-                                                onTopicSelect(topic.slug)
-                                            }
-                                        )
+                            items(
+                                items = result.topics,
+                                key = { "topic_only_${it.slug}" },
+                                contentType = { "topic" }
+                            ) { topic ->
+                                TopicSearchItem(
+                                    topic = topic,
+                                    onClick = {
+                                        onEvent(SearchUiEvent.ExecuteSearch(state.query))
+                                        onTopicSelect(topic.slug)
                                     }
-                                }
+                                )
                             }
                         }
 
                         // === SERMONS ONLY ===
                         if (state.selectedCategory == SearchCategory.SERMONS) {
-                            items(result.sermons, key = { "sermon_only_${it.id}" }) { sermon ->
+                            items(
+                                items = result.sermons,
+                                key = { "sermon_only_${it.id}" },
+                                contentType = { "sermon" }
+                            ) { sermon ->
                                 SermonListItem(
                                     sermon = sermon,
                                     isFavorite = state.favoriteIds.contains(sermon.id),

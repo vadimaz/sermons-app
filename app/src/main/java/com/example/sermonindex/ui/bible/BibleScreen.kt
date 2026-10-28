@@ -1,5 +1,6 @@
 package com.example.sermonindex.ui.bible
 
+import android.content.ClipData
 import android.os.Build
 import android.widget.Toast
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -18,13 +19,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,7 +35,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.res.stringResource
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.BibleRoute
@@ -50,6 +52,7 @@ import com.example.sermonindex.ui.bible.components.QuoteCardSheet
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 /**
  * Stateful entry point for BibleScreen.
@@ -100,7 +103,8 @@ fun BibleContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     var isTopBarVisible by rememberSaveable { mutableStateOf(true) }
 
@@ -263,8 +267,12 @@ fun BibleContent(
                     val chapter = state.currentChapter?.chapterNumber ?: state.preferences.chapter
                     val verse = state.selectedVerse ?: 1
                     val translationName = state.currentTranslation?.shortName ?: state.preferences.translationId
-                    val copyContent = "«$verseText»\n— $bookName $chapter:$verse ($translationName)"
-                    clipboardManager.setText(AnnotatedString(copyContent))
+                    val referenceLabel = "$bookName $chapter:$verse"
+                    val copyContent = "«$verseText»\n— $referenceLabel ($translationName)"
+                    coroutineScope.launch {
+                        val clipData = ClipData.newPlainText(referenceLabel, copyContent)
+                        clipboard.setClipEntry(clipData.toClipEntry())
+                    }
                     if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2) {
                         Toast.makeText(context, R.string.toast_copied, Toast.LENGTH_SHORT).show()
                     }

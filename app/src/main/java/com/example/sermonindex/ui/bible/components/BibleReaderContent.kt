@@ -140,7 +140,11 @@ fun BibleReaderContent(
         }
 
         // Chapter Content Items
-        itemsIndexed(chapter.items, key = { index, _ -> "item_$index" }) { _, item ->
+        itemsIndexed(
+            items = chapter.items,
+            key = { index, _ -> "item_$index" },
+            contentType = { _, item -> item::class }
+        ) { _, item ->
             when (item) {
                 is BibleChapterItem.Heading -> {
                     Text(

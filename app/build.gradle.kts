@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.sermonindex"
         minSdk = 26
         targetSdk = 36
-        versionCode = 24
-        versionName = "1.13.1"
+        versionCode = 25
+        versionName = "1.13.2"
     }
 
     buildTypes {
@@ -43,6 +43,9 @@ android {
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        freeCompilerArgs.add("-Xannotation-default-target=param-property")
+    }
 }
 
 ksp {
@@ -93,6 +96,7 @@ dependencies {
   implementation(libs.media3.exoplayer)
   implementation(libs.media3.session)
   implementation(libs.media3.ui)
+  implementation(libs.media3.ui.compose)
 
   // Retrofit & OkHttp & Serialization
   implementation(libs.retrofit)

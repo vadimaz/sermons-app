@@ -36,7 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.R
@@ -88,6 +88,10 @@ fun TopicsContent(
     modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
+
+    LaunchedEffect(state.searchQuery) {
+        listState.scrollToItem(0)
+    }
 
     LaunchedEffect(reselectEvents) {
         reselectEvents?.collect { route ->
@@ -158,7 +162,11 @@ fun TopicsContent(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(filtered, key = { it.slug }) { topic ->
+                items(
+                    items = filtered,
+                    key = { it.slug },
+                    contentType = { "topic" }
+                ) { topic ->
                     TopicRow(
                         topic = topic,
                         onClick = { onEvent(TopicsUiEvent.SelectTopic(topic.slug)) }

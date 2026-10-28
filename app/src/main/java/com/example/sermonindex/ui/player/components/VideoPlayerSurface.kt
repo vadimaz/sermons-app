@@ -26,10 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -41,16 +38,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
+import androidx.media3.ui.compose.ContentFrame
 import com.example.sermonindex.R
 import kotlinx.coroutines.delay
 
 /**
- * Composable wrapper embedding Media3 [PlayerView] for video rendering.
+ * Composable wrapper embedding Media3 Compose [ContentFrame] for video rendering.
  * Provides interactive Compose overlay controls: play/pause, mode switch, and fullscreen toggle.
  */
 @OptIn(UnstableApi::class)
@@ -87,27 +82,10 @@ fun VideoPlayerSurface(
             },
         contentAlignment = Alignment.Center
     ) {
-        AndroidView(
-            factory = { context ->
-                PlayerView(context).apply {
-                    useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    this.player = player
-                }
-            },
-            update = { playerView ->
-                if (playerView.player != player) {
-                    playerView.player = player
-                }
-            },
+        ContentFrame(
+            player = player,
             modifier = Modifier.fillMaxSize()
         )
-
-        DisposableEffect(player) {
-            onDispose {
-                // Surface cleanup on dispose
-            }
-        }
 
         // Overlay controls (hidden in PiP mode)
         if (!isPipMode) {

@@ -43,7 +43,6 @@ import com.example.sermonindex.domain.repository.SermonRepository
 import com.example.sermonindex.domain.repository.UserPreferencesRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -464,7 +463,6 @@ class SermonRepositoryImpl @Inject constructor(
             }
         }
 
-        val meta = searchDao.getCatalogMetadata()
         val ftsCount = searchDao.getFtsSermonCount()
         if (meta != null && meta.sermonCount > 0 && ftsCount > 0) {
             CatalogSyncState.Ready(
@@ -534,12 +532,12 @@ class SermonRepositoryImpl @Inject constructor(
             emit(SearchAggregateResult(query = query))
             return@flow
         }
-        val q = cleanQuery.lowercase()
 
         val allMatchingSpeakers = if (category == SearchCategory.ALL || category == SearchCategory.SPEAKERS) {
             val allSpeakers = cachedSpeakers ?: getSpeakers().getOrDefault(emptyList())
             allSpeakers.filter { speaker ->
-                speaker.name.lowercase().contains(q) || speaker.slug.lowercase().contains(q)
+                speaker.name.contains(cleanQuery, ignoreCase = true) ||
+                    speaker.slug.contains(cleanQuery, ignoreCase = true)
             }
         } else emptyList()
         val totalSpeakerMatches = allMatchingSpeakers.size
@@ -548,16 +546,16 @@ class SermonRepositoryImpl @Inject constructor(
         val allMatchingTopics = if (category == SearchCategory.ALL || category == SearchCategory.TOPICS) {
             val allTopics = cachedTopics ?: getTopics().getOrDefault(emptyList())
             allTopics.filter { topic ->
-                topic.name.lowercase().contains(q) || topic.slug.lowercase().contains(q)
+                topic.name.contains(cleanQuery, ignoreCase = true) ||
+                    topic.slug.contains(cleanQuery, ignoreCase = true)
             }
         } else emptyList()
         val totalTopicMatches = allMatchingTopics.size
         val matchingTopics = if (category == SearchCategory.ALL) allMatchingTopics.take(8) else allMatchingTopics
 
-        val ftsCount = searchDao.getFtsSermonCount()
-        val hasCatalog = ftsCount > 0
-
         val (matchingSermons, totalSermonMatches) = if (category == SearchCategory.ALL || category == SearchCategory.SERMONS) {
+            val ftsCount = searchDao.getFtsSermonCount()
+            val hasCatalog = ftsCount > 0
             if (hasCatalog) {
                 val ftsQuery = formatFtsMatchQuery(cleanQuery)
                 if (ftsQuery.isBlank()) {
@@ -574,7 +572,8 @@ class SermonRepositoryImpl @Inject constructor(
                 val hist = history.first().map { it.toSermon() }
                 val combined = (popular + favs + hist).distinctBy { it.id }
                 val filtered = combined.filter { sermon ->
-                    sermon.title.lowercase().contains(q) || sermon.speaker.lowercase().contains(q)
+                    sermon.title.contains(cleanQuery, ignoreCase = true) ||
+                        sermon.speaker.contains(cleanQuery, ignoreCase = true)
                 }
                 val list = if (category == SearchCategory.ALL) filtered.take(10) else filtered
                 Pair(list, filtered.size)

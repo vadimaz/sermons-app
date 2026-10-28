@@ -58,15 +58,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
+import androidx.media3.ui.compose.ContentFrame
 import com.example.sermonindex.LocalPictureInPictureMode
 import com.example.sermonindex.R
 import kotlinx.coroutines.delay
@@ -113,26 +111,23 @@ fun FullscreenVideoScreen(
     val isInPipMode = LocalPictureInPictureMode.current
     var areControlsVisible by remember { mutableStateOf(false) }
 
-    // Configure window status bar and navigation bar to be fully transparent, extend past cutouts, and hide in fullscreen
-    @Suppress("DEPRECATION")
+    // Configure window to extend past display cutouts and hide system bars in fullscreen
     DisposableEffect(activity, isInPipMode) {
         val window = activity?.window ?: return@DisposableEffect onDispose {}
         val insetsController = WindowCompat.getInsetsController(window, window.decorView)
 
-        val originalStatusBarColor = window.statusBarColor
-        val originalNavBarColor = window.navigationBarColor
         val originalCutoutMode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             window.attributes.layoutInDisplayCutoutMode
         } else null
 
-        window.statusBarColor = android.graphics.Color.TRANSPARENT
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            window.isStatusBarContrastEnforced = false
             window.isNavigationBarContrastEnforced = false
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            @Suppress("DEPRECATION")
             window.attributes.layoutInDisplayCutoutMode =
                 WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
         }
@@ -145,8 +140,6 @@ fun FullscreenVideoScreen(
 
         onDispose {
             insetsController.show(WindowInsetsCompat.Type.systemBars())
-            window.statusBarColor = originalStatusBarColor
-            window.navigationBarColor = originalNavBarColor
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && originalCutoutMode != null) {
                 window.attributes.layoutInDisplayCutoutMode = originalCutoutMode
             }
@@ -155,7 +148,7 @@ fun FullscreenVideoScreen(
 
     // Configure auto-enter Picture-in-Picture on swipe to home (Android 12+)
     LaunchedEffect(activity, isPlaying) {
-        if (activity != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (activity != null) {
             val builder = PictureInPictureParams.Builder()
                 .setAspectRatio(Rational(16, 9))
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -206,19 +199,8 @@ fun FullscreenVideoScreen(
             },
         contentAlignment = Alignment.Center
     ) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    this.player = player
-                }
-            },
-            update = { playerView ->
-                if (playerView.player != player) {
-                    playerView.player = player
-                }
-            },
+        ContentFrame(
+            player = player,
             modifier = Modifier.fillMaxSize()
         )
 
@@ -277,21 +259,19 @@ fun FullscreenVideoScreen(
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             // Picture-in-Picture Button
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                IconButton(
-                                    onClick = {
-                                        val params = PictureInPictureParams.Builder()
-                                            .setAspectRatio(Rational(16, 9))
-                                            .build()
-                                        activity?.enterPictureInPictureMode(params)
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.PictureInPictureAlt,
-                                        contentDescription = stringResource(R.string.pip_mode),
-                                        tint = Color.White
-                                    )
+                            IconButton(
+                                onClick = {
+                                    val params = PictureInPictureParams.Builder()
+                                        .setAspectRatio(Rational(16, 9))
+                                        .build()
+                                    activity?.enterPictureInPictureMode(params)
                                 }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PictureInPictureAlt,
+                                    contentDescription = stringResource(R.string.pip_mode),
+                                    tint = Color.White
+                                )
                             }
 
                             // Fullscreen Exit Button

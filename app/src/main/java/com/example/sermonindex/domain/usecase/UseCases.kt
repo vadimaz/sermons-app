@@ -39,6 +39,10 @@ class GetHistoryUseCase @Inject constructor(private val repository: SermonReposi
     operator fun invoke(): Flow<List<ListeningHistory>> = repository.history
 }
 
+class ClearHistoryUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke() = repository.clearHistory()
+}
+
 class GetScriptureBooksUseCase @Inject constructor(private val repository: SermonRepository) {
     suspend operator fun invoke(): Result<List<BibleBook>> = repository.getScriptureBooks()
 }

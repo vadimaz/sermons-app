@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.1` | **Version Code:** `24`
+> **Current Version:** `1.13.2` | **Version Code:** `25`
 
 ---
 
@@ -208,6 +208,25 @@
 - **Media & Networking**: Updated AndroidX Media3 to `1.11.1`, Retrofit to `3.0.0`, OkHttp to `5.5.1`, and Coil 3 to `3.6.3`.
 - **Unit Test File System Isolation**: Hardened `UserPreferencesRepositoryTest` to isolate DataStore file handles using per-test `backgroundScope` and single-mutation test execution.
 
+### 1.17 Modern API Alignment, Zero-Warning Build & Search Virtualization
+- **Navigation 3 & Hilt Compose Lifecycle**:
+  - Wired `rememberViewModelStoreNavEntryDecorator<NavKey>()` alongside `rememberSaveableStateHolderNavEntryDecorator<NavKey>()` in `Navigation.kt` to properly scope and clear `ViewModelStore` instances per navigation entry.
+  - Migrated all 14 screens from deprecated `androidx.hilt.navigation.compose.hiltViewModel` to `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`.
+- **Media3 Native Compose UI (`media3-ui-compose`)**:
+  - Replaced legacy `AndroidView(PlayerView)` wrappers in `VideoPlayerSurface.kt` and `FullscreenVideoScreen.kt` with official `ContentFrame` from `androidx.media3:media3-ui-compose:1.11.1`.
+- **Modern Platform APIs & Zero Compiler Warnings**:
+  - Enabled `-Xannotation-default-target=param-property` for Kotlin 2.3+.
+  - Migrated `BibleScreen.kt` from deprecated `LocalClipboardManager` to `LocalClipboard` and `ClipEntry`.
+  - Removed deprecated window color/cutout flags (`LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES`, `statusBarColor`, `navigationBarColor`) in favor of `enableEdgeToEdge()`, and stripped redundant `SDK_INT` checks below `minSdk = 26`.
+- **Networking, WorkManager & Room `@Upsert` Optimization**:
+  - Deduplicated `@Singleton OkHttpClient` across `NetworkModule` and `NetworkClient`; migrated `AudioDownloadWorker` from `HttpURLConnection` to the shared `OkHttpClient`.
+  - Injected `@IoDispatcher` across `AudioDownloadWorker`, `CatalogSyncWorker`, and `CatalogUpdateCheckWorker`.
+  - Migrated Room DAOs (`FavoritesDao`, `DownloadsDao`, `SearchDao`, `BibleBookmarksDao`) from `@Insert(onConflict = REPLACE)` to SQLite-native `@Upsert`, and added `ClearHistoryUseCase`.
+- **Topics & Speakers Search Performance (14,087 Topics Catalog)**:
+  - Replaced non-lazy `FlowRow` in `SearchScreen` (`SearchCategory.TOPICS`) with lazy `LazyColumn` virtualization (`TopicSearchItem`) and `contentType` keys across all lazy lists.
+  - Offloaded in-memory filtering of 14,087 topics (`TopicsViewModel`) and 2,210 preachers (`SpeakersViewModel`) from the Main UI thread to `@IoDispatcher` using `mapLatest`.
+  - Replaced `.lowercase().contains(q)` with zero-allocation `contains(cleanQuery, ignoreCase = true)` in `SermonRepositoryImpl.search()`, skipped unnecessary FTS count queries when filtering by `TOPICS`/`SPEAKERS`, and prevented `LazyColumn` composition teardown during active typing or category chip switches.
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -374,9 +393,9 @@ interface BibleBookmarksDao {
     fun getBookmarksForChapter(translationId: String, bookId: String, chapter: Int): Flow<List<BibleBookmarkEntity>>
     fun getAllBookmarks(): Flow<List<BibleBookmarkEntity>>
     suspend fun getBookmarkForVerse(translationId: String, bookId: String, chapter: Int, verse: Int): BibleBookmarkEntity?
-    suspend fun insertBookmark(bookmark: BibleBookmarkEntity)
+    suspend fun upsertBookmark(bookmark: BibleBookmarkEntity)
     suspend fun deleteBookmarkForVerse(translationId: String, bookId: String, chapter: Int, verse: Int)
-    suspend fun deleteBookmarkById(id: Long)
+    suspend fun deleteBookmark(id: String)
 }
 ```
 

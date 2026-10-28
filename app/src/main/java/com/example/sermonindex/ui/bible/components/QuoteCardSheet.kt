@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
@@ -65,6 +64,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import androidx.core.graphics.createBitmap
 import com.example.sermonindex.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -392,7 +392,7 @@ private fun generateQuoteCardBitmap(
 ): Bitmap {
     val width = 1080
     val height = 1080
-    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(width, height)
     val canvas = Canvas(bitmap)
 
     val (bgArgb, textArgb, accentArgb) = when (theme) {
@@ -436,29 +436,16 @@ private fun generateQuoteCardBitmap(
 
     val contentWidth = width - 180
     val formattedText = "«$verseText»"
-    val textLayout = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        StaticLayout.Builder.obtain(
-            formattedText,
-            0,
-            formattedText.length,
-            textPaint,
-            contentWidth
-        )
-            .setAlignment(Layout.Alignment.ALIGN_CENTER)
-            .setLineSpacing(16f, 1.25f)
-            .build()
-    } else {
-        @Suppress("DEPRECATION")
-        StaticLayout(
-            formattedText,
-            textPaint,
-            contentWidth,
-            Layout.Alignment.ALIGN_CENTER,
-            1.25f,
-            16f,
-            true
-        )
-    }
+    val textLayout = StaticLayout.Builder.obtain(
+        formattedText,
+        0,
+        formattedText.length,
+        textPaint,
+        contentWidth
+    )
+        .setAlignment(Layout.Alignment.ALIGN_CENTER)
+        .setLineSpacing(16f, 1.25f)
+        .build()
 
     // 5. Reference Text Paint
     val refPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {

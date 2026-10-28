@@ -1,9 +1,8 @@
 package com.example.sermonindex.data.local.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.example.sermonindex.data.local.entities.DownloadedSermonEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -18,7 +17,7 @@ interface DownloadsDao {
     @Query("SELECT EXISTS(SELECT 1 FROM downloads WHERE id = :id LIMIT 1)")
     fun isDownloaded(id: String): Flow<Boolean>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertDownload(entity: DownloadedSermonEntity)
 
     @Query("DELETE FROM downloads WHERE id = :id")

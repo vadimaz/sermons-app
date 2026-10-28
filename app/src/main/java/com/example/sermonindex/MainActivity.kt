@@ -64,9 +64,7 @@ class MainActivity : ComponentActivity() {
       statusBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT),
       navigationBarStyle = SystemBarStyle.auto(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
     )
-    @Suppress("DEPRECATION")
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-      window.isStatusBarContrastEnforced = false
       window.isNavigationBarContrastEnforced = false
     }
     setContent {
@@ -122,17 +120,15 @@ class MainActivity : ComponentActivity() {
 
   override fun onUserLeaveHint() {
     super.onUserLeaveHint()
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val state = playbackManager.playbackState.value
-      if (state.hasVideo && state.isPlaying) {
-        runCatching {
-          val builder = PictureInPictureParams.Builder()
-            .setAspectRatio(Rational(16, 9))
-          if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            builder.setAutoEnterEnabled(true)
-          }
-          enterPictureInPictureMode(builder.build())
+    val state = playbackManager.playbackState.value
+    if (state.hasVideo && state.isPlaying) {
+      runCatching {
+        val builder = PictureInPictureParams.Builder()
+          .setAspectRatio(Rational(16, 9))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+          builder.setAutoEnterEnabled(true)
         }
+        enterPictureInPictureMode(builder.build())
       }
     }
   }

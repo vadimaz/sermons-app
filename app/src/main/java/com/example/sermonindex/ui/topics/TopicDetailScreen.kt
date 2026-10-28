@@ -31,7 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
@@ -167,7 +167,11 @@ fun TopicDetailContent(
                     )
                 }
 
-                items(detail.topScriptures) { scripture ->
+                items(
+                    items = detail.topScriptures,
+                    key = { it.text },
+                    contentType = { "scripture" }
+                ) { scripture ->
                     ScriptureVerseCard(scripture = scripture)
                 }
             }
@@ -184,7 +188,11 @@ fun TopicDetailContent(
                     )
                 }
 
-                items(detail.sermons, key = { it.id }) { sermon ->
+                items(
+                    items = detail.sermons,
+                    key = { it.id },
+                    contentType = { "sermon" }
+                ) { sermon ->
                     SermonListItem(
                         sermon = sermon,
                         onPlayClick = { onEvent(TopicDetailUiEvent.PlaySermon(sermon)) },

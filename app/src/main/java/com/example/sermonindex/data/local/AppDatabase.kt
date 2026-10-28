@@ -38,12 +38,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun searchDao(): SearchDao
     abstract fun bibleBookmarksDao(): BibleBookmarksDao
 
-    val favoritesDao: FavoritesDao get() = favoritesDao()
-    val historyDao: HistoryDao get() = historyDao()
-    val downloadsDao: DownloadsDao get() = downloadsDao()
-    val searchDao: SearchDao get() = searchDao()
-    val bibleBookmarksDao: BibleBookmarksDao get() = bibleBookmarksDao()
-
     companion object {
         const val DATABASE_NAME = "sermonindex.db"
 
