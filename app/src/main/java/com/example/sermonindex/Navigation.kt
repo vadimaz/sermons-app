@@ -110,7 +110,11 @@ class Navigator(val state: NavigationState) {
     fun goBack() {
         val currentStack = state.backStacks[state.topLevelRoute] ?: return
         val currentRoute = currentStack.lastOrNull()
-        if (currentRoute != state.topLevelRoute) {
+        if (currentRoute == state.topLevelRoute) {
+            if (state.topLevelRoute != state.startRoute) {
+                state.topLevelRoute = state.startRoute
+            }
+        } else {
             currentStack.removeLastOrNull()
         }
     }
@@ -146,17 +150,27 @@ class NavigationState(
             )
         }
 
-        return decoratedEntries[topLevelRoute] ?: emptyList()
+        return getTopLevelRoutesInUse()
+            .flatMap { decoratedEntries[it] ?: emptyList() }
     }
+
+    internal fun getTopLevelRoutesInUse(): List<NavKey> =
+        if (topLevelRoute == startRoute) {
+            listOf(startRoute)
+        } else {
+            listOf(startRoute, topLevelRoute)
+        }
 }
 
 @Composable
 fun rememberNavigationState(
     startRoute: NavKey,
-    topLevelRoutes: Set<NavKey>
+    topLevelRoutes: Set<NavKey>,
+    initialTopLevelRoute: NavKey = startRoute
 ): NavigationState {
     val topLevelRoute = rememberSaveable(
         startRoute,
+        initialTopLevelRoute,
         saver = Saver(
             save = { it.value.toString() },
             restore = { savedString ->
@@ -166,7 +180,7 @@ fun rememberNavigationState(
             }
         )
     ) {
-        mutableStateOf(startRoute)
+        mutableStateOf(initialTopLevelRoute)
     }
 
     val backStacks = topLevelRoutes.associateWith { key -> rememberNavBackStack(key) }
@@ -188,8 +202,9 @@ fun MainNavigation(
     navigateToRoute: NavKey? = null
 ) {
     val navigationState = rememberNavigationState(
-        startRoute = initialRoute,
-        topLevelRoutes = TOP_LEVEL_ROUTES
+        startRoute = HomeRoute,
+        topLevelRoutes = TOP_LEVEL_ROUTES,
+        initialTopLevelRoute = initialRoute
     )
     val navigator = remember { Navigator(navigationState) }
 

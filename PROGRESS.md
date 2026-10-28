@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.2` | **Version Code:** `25`
+> **Current Version:** `1.13.3` | **Version Code:** `26`
 
 ---
 
@@ -20,7 +20,7 @@
   - **Synchronized Transcript Reading Mode (Karaoke Style)**: WebVTT cues parsing, unified 22sp typography with smooth color/weight highlight transitions, sticky playback controls header, auto-scroll anchoring keeping 3–4 preceding lines visible, instant deactivation on manual touch scroll (`NestedScrollConnection` + `DragInteraction`), and tap-to-seek functionality.
 
 ### 1.2 Screens & Presentation (Jetpack Compose + Navigation 3)
-- **Navigation 3 Architecture**: 4 primary top-level tabs (Home, Bible Reader, Scripture Explorer, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator`; bottom bar strictly hidden on all sub-screens/detail routes and when drilled down into scripture chapters/verses; bottom bar reselection dispatches scroll-to-top without popping stacks or clearing state; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
+- **Navigation 3 Architecture**: 5 primary top-level tabs (Home, Search, Bible Reader, Scripture Explorer, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator` and `rememberViewModelStoreNavEntryDecorator`, following the canonical "exit through Home" fixed start destination pattern; bottom bar strictly hidden on all sub-screens/detail routes and when drilled down into scripture chapters/verses; bottom bar reselection dispatches scroll-to-top without popping stacks or clearing state; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
@@ -69,7 +69,7 @@
 - **Interactive Textual Footnotes**: Fixed API DTO parser to capture `chapter.footnotes` from SermonIndex CDN; superscript blue asterisks `*` styled with `tertiary` color without underline (`TextDecoration.None`); tap-to-inspect opens `BibleFootnoteDialog` with verse number and combined comments for verses with multiple notes, also accessible via verse tooltip button.
 - **In-Chapter Search**: Real-time client-side text search highlighting matches and allowing quick navigation between occurrences.
 - **Verse Tooltip & Cross-Linking**: Simple tap on any verse marker opens a tooltip with direct navigation to a dedicated `BibleVerseSermonsRoute` screen (displaying the verse in primary and secondary translations alongside related sermons) with standard back navigation.
-- **Pure Isolated Navigation 3 Backstacks**: Removed artificial "exit through home" route nesting. Each top-level tab (Home, Search, Bible, Scripture, Library) maintains its own independent backstack. Top-level screens cleanly delegate back presses to the OS for native minimization (Predictive Back on Android 12+).
+- **Navigation 3 Multi-Backstack ("Exit Through Home")**: Each top-level tab (Home, Search, Bible, Scripture, Library) maintains its own independent backstack with state and ViewModel retention. Pressing Back from the root of any secondary tab returns to `HomeRoute` (`startRoute`) before delegating back presses to the OS for native minimization (Predictive Back on Android 12+).
 - **Persistent State**: SQLite storage in `bible_reading_state` table for last read translation, book, chapter, verse, and typography settings.
 
 ### 1.8 Search & Offline Catalog (SQLite FTS4 + REST API Fallback)

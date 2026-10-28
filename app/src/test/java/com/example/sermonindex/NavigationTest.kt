@@ -160,9 +160,11 @@ class NavigationTest {
     }
 
     @Test
-    fun goBackDoesNotChangeTopLevelRouteFromSecondaryTabRoot() {
+    fun goBackReturnsToStartRouteFromSecondaryTabRoot() {
         val topLevelState = mutableStateOf<NavKey>(ScriptureRoute)
         val homeStack = NavBackStack<NavKey>(HomeRoute)
+        val searchStack = NavBackStack<NavKey>(SearchRoute)
+        val bibleStack = NavBackStack<NavKey>(BibleRoute)
         val scriptureStack = NavBackStack<NavKey>(ScriptureRoute)
         val libraryStack = NavBackStack<NavKey>(LibraryRoute)
 
@@ -171,17 +173,53 @@ class NavigationTest {
             topLevelRoute = topLevelState,
             backStacks = mapOf(
                 HomeRoute to homeStack,
+                SearchRoute to searchStack,
+                BibleRoute to bibleStack,
                 ScriptureRoute to scriptureStack,
                 LibraryRoute to libraryStack
             )
         )
         val navigator = Navigator(navState)
 
+        // From ScriptureRoute root -> returns to HomeRoute ("exit through home")
         navigator.goBack()
-
-        // At top-level route, navigator does not redirect back to HomeRoute;
-        // top-level back press is handled to finish activity instead of bouncing to Home.
-        assertEquals(ScriptureRoute, navState.topLevelRoute)
+        assertEquals(HomeRoute, navState.topLevelRoute)
         assertEquals(1, scriptureStack.size)
+
+        // From SearchRoute root -> returns to HomeRoute
+        navigator.navigate(SearchRoute)
+        assertEquals(SearchRoute, navState.topLevelRoute)
+        navigator.goBack()
+        assertEquals(HomeRoute, navState.topLevelRoute)
+
+        // At HomeRoute root -> remains at HomeRoute with size 1
+        navigator.goBack()
+        assertEquals(HomeRoute, navState.topLevelRoute)
+        assertEquals(1, homeStack.size)
+    }
+
+    @Test
+    fun getTopLevelRoutesInUseIncludesStartRouteUnderSecondaryTab() {
+        val topLevelState = mutableStateOf<NavKey>(HomeRoute)
+        val homeStack = NavBackStack<NavKey>(HomeRoute)
+        val bibleStack = NavBackStack<NavKey>(BibleRoute)
+
+        val navState = NavigationState(
+            startRoute = HomeRoute,
+            topLevelRoute = topLevelState,
+            backStacks = mapOf(
+                HomeRoute to homeStack,
+                BibleRoute to bibleStack
+            )
+        )
+        val navigator = Navigator(navState)
+
+        assertEquals(listOf<NavKey>(HomeRoute), navState.getTopLevelRoutesInUse())
+
+        navigator.navigate(BibleRoute)
+        assertEquals(listOf<NavKey>(HomeRoute, BibleRoute), navState.getTopLevelRoutesInUse())
+
+        navigator.goBack()
+        assertEquals(listOf<NavKey>(HomeRoute), navState.getTopLevelRoutesInUse())
     }
 }
