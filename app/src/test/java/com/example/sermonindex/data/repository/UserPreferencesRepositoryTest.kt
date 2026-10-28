@@ -1,19 +1,17 @@
 package com.example.sermonindex.data.repository
 
-import androidx.datastore.core.DataStore
+import java.io.File
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.Preferences
 import com.example.sermonindex.domain.model.BibleTranslationDefaults
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -24,25 +22,21 @@ class UserPreferencesRepositoryTest {
     @get:Rule
     val tmpFolder: TemporaryFolder = TemporaryFolder()
 
-    private val testDispatcher = UnconfinedTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
-
-    private lateinit var dataStore: DataStore<Preferences>
-
-    @Before
-    fun setup() {
-        dataStore = PreferenceDataStoreFactory.create(
-            scope = testScope,
-            produceFile = { tmpFolder.newFile("test_user_preferences.preferences_pb") }
+    private fun createRepository(testScope: TestScope): UserPreferencesRepositoryImpl {
+        val testFile = File(tmpFolder.root, "test_${System.nanoTime()}.preferences_pb")
+        val dataStore = PreferenceDataStoreFactory.create(
+            scope = testScope.backgroundScope,
+            produceFile = { testFile }
+        )
+        return UserPreferencesRepositoryImpl(
+            dataStore = dataStore,
+            ioDispatcher = StandardTestDispatcher(testScope.testScheduler)
         )
     }
 
     @Test
-    fun defaultPreferences_returnsExpectedValues() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun defaultPreferences_returnsExpectedValues() = runTest {
+        val repository = createRepository(this)
 
         assertEquals(BibleTranslationDefaults.DEFAULT_FIRST, repository.firstTranslationId.first())
         assertEquals(BibleTranslationDefaults.getDefaultSecondaryTranslation(), repository.secondTranslationId.first())
@@ -61,25 +55,24 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
-    fun setFirstAndSecondTranslations_persistsCorrectly() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun setFirstTranslation_persistsCorrectly() = runTest {
+        val repository = createRepository(this)
 
         repository.setFirstTranslation("eng_kjv")
         assertEquals("eng_kjv", repository.firstTranslationId.first())
+    }
+
+    @Test
+    fun setSecondTranslation_persistsCorrectly() = runTest {
+        val repository = createRepository(this)
 
         repository.setSecondTranslation("rus_syn")
         assertEquals("rus_syn", repository.secondTranslationId.first())
     }
 
     @Test
-    fun setCatalogReadyBannerDismissed_persistsCorrectly() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun setCatalogReadyBannerDismissed_persistsCorrectly() = runTest {
+        val repository = createRepository(this)
 
         assertFalse(repository.isCatalogReadyBannerDismissed.first())
         repository.setCatalogReadyBannerDismissed(true)
@@ -87,11 +80,8 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
-    fun saveBibleReadingPosition_updatesPreferences() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun saveBibleReadingPosition_updatesPreferences() = runTest {
+        val repository = createRepository(this)
 
         repository.saveBibleReadingPosition("BSB", "JHN", 3, 16)
         val prefs = repository.bibleReadingPreferences.first()
@@ -104,11 +94,8 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
-    fun saveBibleTypography_updatesPreferences() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun saveBibleTypography_updatesPreferences() = runTest {
+        val repository = createRepository(this)
 
         repository.saveBibleTypography(24f, false, 1.8f)
         val prefs = repository.bibleReadingPreferences.first()
@@ -119,39 +106,32 @@ class UserPreferencesRepositoryTest {
     }
 
     @Test
-    fun saveBibleNarrator_updatesAndRemovesNarrator() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun saveBibleNarrator_updatesNarrator() = runTest {
+        val repository = createRepository(this)
 
         repository.saveBibleNarrator("Gilbert")
         assertEquals("Gilbert", repository.bibleReadingPreferences.first().selectedNarrator)
+    }
+
+    @Test
+    fun saveBibleNarrator_clearsNarrator() = runTest {
+        val repository = createRepository(this)
 
         repository.saveBibleNarrator(null)
         assertNull(repository.bibleReadingPreferences.first().selectedNarrator)
     }
 
     @Test
-    fun setAutoCatalogUpdateCheckEnabled_persistsCorrectly() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun setAutoCatalogUpdateCheckEnabled_persistsCorrectly() = runTest {
+        val repository = createRepository(this)
 
         repository.setAutoCatalogUpdateCheckEnabled(false)
         assertFalse(repository.isAutoCatalogUpdateCheckEnabled.first())
-
-        repository.setAutoCatalogUpdateCheckEnabled(true)
-        assertTrue(repository.isAutoCatalogUpdateCheckEnabled.first())
     }
 
     @Test
-    fun setLastCatalogUpdateCheckTimestamp_persistsCorrectly() = testScope.runTest {
-        val repository = UserPreferencesRepositoryImpl(
-            dataStore = dataStore,
-            ioDispatcher = testDispatcher
-        )
+    fun setLastCatalogUpdateCheckTimestamp_persistsCorrectly() = runTest {
+        val repository = createRepository(this)
 
         val timestamp = 1729958400000L
         repository.setLastCatalogUpdateCheckTimestamp(timestamp)

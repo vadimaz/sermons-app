@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.0` | **Version Code:** `23`
+> **Current Version:** `1.13.1` | **Version Code:** `24`
 
 ---
 
@@ -55,7 +55,7 @@
 - Domain UseCase test suite (`UseCasesTest.kt`) passing via `./gradlew testDebugUnitTest`.
 
 ### 1.6 Pagination & Catalog Streaming (Paging 3)
-- **`SpeakerSermonsPagingSource`**: PagingSource implementation connecting `androidx.paging:paging-runtime` and `androidx.paging:paging-compose` (version 3.3.6) with pure Kotlin domain UseCase `GetSpeakerSermonsPageUseCase`.
+- **`SpeakerSermonsPagingSource`**: PagingSource implementation connecting `androidx.paging:paging-runtime` and `androidx.paging:paging-compose` (version 3.5.3) with pure Kotlin domain UseCase `GetSpeakerSermonsPageUseCase`.
 - **UI Integration**: `collectAsLazyPagingItems()` in `SpeakerDetailScreen` with prefetch distance, centered loading indicator during initial and append fetches, and inline error retry view on failure.
 - **Unit Testing**: Complete unit test suite (`SpeakerSermonsPagingSourceTest.kt`) verifying first page, last page, and network failure mappings.
 
@@ -99,7 +99,7 @@
   - Compared with local `catalog_metadata` table; displays an update available badge/banner if a newer dataset is detected on the CDN.
 
 ### 1.9 User Preferences & State Persistence (Jetpack DataStore)
-- **Preferences DataStore Architecture**: Replaced legacy `SharedPreferences` and single-row SQLite table `bible_reading_state` with modern, reactive `androidx.datastore:datastore-preferences:1.1.3`.
+- **Preferences DataStore Architecture**: Replaced legacy `SharedPreferences` and single-row SQLite table `bible_reading_state` with modern, reactive `androidx.datastore:datastore-preferences:1.3.0`.
 - **Clean Architecture Boundaries**: Extracted pure domain contract `UserPreferencesRepository` and UseCases (`GetFirstTranslationUseCase`, `SetFirstTranslationUseCase`, `GetSecondTranslationUseCase`, `SetSecondTranslationUseCase`). Removed direct `data.local` dependencies from `ScriptureViewModel` and `BibleVerseSermonsViewModel`.
 - **Pure Direct DataStore**: No legacy migration overhead needed during pre-release development — preferences flow directly into and out of DataStore with clean defaults.
 - **Removed SQLite Tech Debt**: Dropped `bibleChangeSignal` flow polling, `bible_reading_state` SQLite table, and `BibleReadingStateEntity` completely.
@@ -200,6 +200,13 @@
 - **Reader State & Navigation Fixes**:
   - Preserved reader scroll position across navigation tabs via `rememberSaveable` chapter key tracking.
   - DataStore reading position timestamp tracking (`positionUpdatedAt: Long = 0L` in `BibleReadingPreferences`) ensuring reliable auto-scroll on bookmark navigation without false-positive triggers during typography or narrator adjustments.
+
+### 1.16 Dependency Stack Modernization & Android 37 Alignment
+- **Gradle & Tooling Upgrades**: Upgraded Gradle wrapper to `9.8.2` and AGP to `9.4.1`, updating `compileSdk` to `37` (Android 37.0).
+- **Kotlin & Compiler Ecosystem**: Updated to Kotlin `2.3.21`, KSP `2.3.12`, Coroutines `1.11.0`, and Kotlinx Serialization `1.11.0`.
+- **Jetpack Libraries**: Updated Compose BOM to `2026.09.00` (Material 3 `1.4.0`), Navigation 3 to `1.2.0`, Lifecycle to `2.11.0`, WorkManager to `2.12.0`, Paging 3 to `3.5.3`, and DataStore to `1.3.0`.
+- **Media & Networking**: Updated AndroidX Media3 to `1.11.1`, Retrofit to `3.0.0`, OkHttp to `5.5.1`, and Coil 3 to `3.6.3`.
+- **Unit Test File System Isolation**: Hardened `UserPreferencesRepositoryTest` to isolate DataStore file handles using per-test `backgroundScope` and single-mutation test execution.
 
 ---
 

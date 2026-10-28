@@ -8,13 +8,13 @@ plugins {
 
 android {
     namespace = "com.example.sermonindex"
-    compileSdk = 36
+    compileSdk = 37
     defaultConfig {
         applicationId = "com.example.sermonindex"
         minSdk = 26
         targetSdk = 36
-        versionCode = 23
-        versionName = "1.13.0"
+        versionCode = 24
+        versionName = "1.13.1"
     }
 
     buildTypes {
