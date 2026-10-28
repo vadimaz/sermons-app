@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.3` | **Version Code:** `26`
+> **Current Version:** `1.13.4` | **Version Code:** `27`
 
 ---
 
@@ -20,7 +20,7 @@
   - **Synchronized Transcript Reading Mode (Karaoke Style)**: WebVTT cues parsing, unified 22sp typography with smooth color/weight highlight transitions, sticky playback controls header, auto-scroll anchoring keeping 3–4 preceding lines visible, instant deactivation on manual touch scroll (`NestedScrollConnection` + `DragInteraction`), and tap-to-seek functionality.
 
 ### 1.2 Screens & Presentation (Jetpack Compose + Navigation 3)
-- **Navigation 3 Architecture**: 5 primary top-level tabs (Home, Search, Bible Reader, Scripture Explorer, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator` and `rememberViewModelStoreNavEntryDecorator`, following the canonical "exit through Home" fixed start destination pattern; bottom bar strictly hidden on all sub-screens/detail routes and when drilled down into scripture chapters/verses; bottom bar reselection dispatches scroll-to-top without popping stacks or clearing state; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
+- **Navigation 3 Architecture & Motion Transitions**: 5 primary top-level tabs (Home, Search, Bible Reader, Scripture Explorer, Library) with persistent backstacks via `rememberSaveableStateHolderNavEntryDecorator` and `rememberViewModelStoreNavEntryDecorator`, following the canonical "exit through Home" fixed start destination pattern; Material 3 **Fade Through** (`fadeOut` 90ms + `fadeIn` 210ms + `scaleIn` 0.94f -> 1.0f) transitions between all 5 top-level tabs (including "exit through Home" return) and Material 3 **Shared X-Axis** (`18%` horizontal slide + fade) transitions for hierarchical drill-down and back navigation (`transitionSpec`, `popTransitionSpec`, `predictivePopTransitionSpec`); bottom bar strictly hidden on all sub-screens/detail routes and when drilled down into scripture chapters/verses; bottom bar reselection dispatches scroll-to-top without popping stacks or clearing state; sub-screens (Speakers, Topics) accessible via Home shelves with back navigation.
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |

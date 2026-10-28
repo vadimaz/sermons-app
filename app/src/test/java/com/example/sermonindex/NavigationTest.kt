@@ -8,6 +8,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -221,5 +223,36 @@ class NavigationTest {
 
         navigator.goBack()
         assertEquals(listOf<NavKey>(HomeRoute), navState.getTopLevelRoutesInUse())
+    }
+
+    @Test
+    fun isTopLevelTransitionReturnsTrueBetweenAllTopLevelRoutesAndContentKeys() {
+        val topLevelRoutes = listOf(
+            HomeRoute,
+            SearchRoute,
+            BibleRoute,
+            ScriptureRoute,
+            LibraryRoute
+        )
+
+        for (initial in topLevelRoutes) {
+            for (target in topLevelRoutes) {
+                assertTrue(isTopLevelTransition(initial, target))
+                assertTrue(isTopLevelTransition(initial.toString(), target.toString()))
+                assertTrue(isTopLevelTransition(initial, target.toString()))
+            }
+        }
+    }
+
+    @Test
+    fun isTopLevelTransitionReturnsFalseForHierarchicalAndDetailTransitions() {
+        assertFalse(isTopLevelTransition(HomeRoute, SermonDetailRoute("123")))
+        assertFalse(isTopLevelTransition(SermonDetailRoute("123").toString(), HomeRoute.toString()))
+        assertFalse(isTopLevelTransition(BibleRoute.toString(), BibleVerseSermonsRoute("JHN", "John", 3, 16).toString()))
+        assertFalse(isTopLevelTransition(SearchRoute, SpeakerDetailRoute("spurgeon")))
+        assertFalse(isTopLevelTransition(SpeakersRoute, SpeakerDetailRoute("spurgeon")))
+        assertFalse(isTopLevelTransition(SermonDetailRoute("123"), PlayerRoute))
+        assertFalse(isTopLevelTransition(null, HomeRoute))
+        assertFalse(isTopLevelTransition(HomeRoute, null))
     }
 }

@@ -1,8 +1,17 @@
 package com.example.sermonindex
 
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -87,6 +96,95 @@ private val TOP_LEVEL_ROUTES = setOf<NavKey>(
     ScriptureRoute,
     LibraryRoute
 )
+
+private val TOP_LEVEL_CONTENT_KEYS: Set<Any> = TOP_LEVEL_ROUTES.flatMapTo(linkedSetOf()) {
+    listOf(it, it.toString())
+}
+
+internal fun isTopLevelTransition(initialKey: Any?, targetKey: Any?): Boolean =
+    initialKey != null && targetKey != null &&
+        initialKey in TOP_LEVEL_CONTENT_KEYS &&
+        targetKey in TOP_LEVEL_CONTENT_KEYS
+
+/**
+ * Material 3 Fade Through transition for switching between peer top-level destinations.
+ */
+private fun topLevelFadeThroughTransition(): ContentTransform =
+    (
+        fadeIn(
+            animationSpec = tween(
+                durationMillis = 210,
+                delayMillis = 90,
+                easing = LinearOutSlowInEasing
+            )
+        ) + scaleIn(
+            initialScale = 0.94f,
+            animationSpec = tween(
+                durationMillis = 210,
+                delayMillis = 90,
+                easing = FastOutSlowInEasing
+            )
+        )
+        ) togetherWith fadeOut(
+        animationSpec = tween(
+            durationMillis = 90,
+            easing = FastOutLinearInEasing
+        )
+    )
+
+/**
+ * Material 3 Shared X-Axis forward transition for drilling down into sub-screens.
+ */
+private fun hierarchicalForwardTransition(): ContentTransform =
+    (
+        slideInHorizontally(
+            initialOffsetX = { fullWidth -> (fullWidth * 0.18f).toInt() },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeIn(
+            animationSpec = tween(
+                durationMillis = 210,
+                delayMillis = 90,
+                easing = LinearOutSlowInEasing
+            )
+        )
+        ) togetherWith (
+        slideOutHorizontally(
+            targetOffsetX = { fullWidth -> -(fullWidth * 0.18f).toInt() },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeOut(
+            animationSpec = tween(
+                durationMillis = 90,
+                easing = FastOutLinearInEasing
+            )
+        )
+        )
+
+/**
+ * Material 3 Shared X-Axis pop transition for returning from sub-screens.
+ */
+private fun hierarchicalPopTransition(): ContentTransform =
+    (
+        slideInHorizontally(
+            initialOffsetX = { fullWidth -> -(fullWidth * 0.18f).toInt() },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeIn(
+            animationSpec = tween(
+                durationMillis = 210,
+                delayMillis = 90,
+                easing = LinearOutSlowInEasing
+            )
+        )
+        ) togetherWith (
+        slideOutHorizontally(
+            targetOffsetX = { fullWidth -> (fullWidth * 0.18f).toInt() },
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
+        ) + fadeOut(
+            animationSpec = tween(
+                durationMillis = 90,
+                easing = FastOutLinearInEasing
+            )
+        )
+        )
 
 /**
  * Handles navigation events (forward, back, and reselect) across multiple back stacks.
@@ -599,7 +697,34 @@ fun MainNavigation(
 
                 NavDisplay(
                     entries = entries,
-                    onBack = { navigator.goBack() }
+                    onBack = { navigator.goBack() },
+                    transitionSpec = {
+                        val initialKey = initialState.entries.lastOrNull()?.contentKey
+                        val targetKey = targetState.entries.lastOrNull()?.contentKey
+                        if (isTopLevelTransition(initialKey, targetKey)) {
+                            topLevelFadeThroughTransition()
+                        } else {
+                            hierarchicalForwardTransition()
+                        }
+                    },
+                    popTransitionSpec = {
+                        val initialKey = initialState.entries.lastOrNull()?.contentKey
+                        val targetKey = targetState.entries.lastOrNull()?.contentKey
+                        if (isTopLevelTransition(initialKey, targetKey)) {
+                            topLevelFadeThroughTransition()
+                        } else {
+                            hierarchicalPopTransition()
+                        }
+                    },
+                    predictivePopTransitionSpec = {
+                        val initialKey = initialState.entries.lastOrNull()?.contentKey
+                        val targetKey = targetState.entries.lastOrNull()?.contentKey
+                        if (isTopLevelTransition(initialKey, targetKey)) {
+                            topLevelFadeThroughTransition()
+                        } else {
+                            hierarchicalPopTransition()
+                        }
+                    }
                 )
             }
         }
