@@ -14,7 +14,6 @@ import com.example.sermonindex.domain.model.SpeakerPagedSermons
 import com.example.sermonindex.domain.model.Topic
 import com.example.sermonindex.domain.model.TopicDetail
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
 
 /**
  * Pure domain repository interface.
@@ -46,7 +45,7 @@ interface SermonRepository {
     )
 
     suspend fun getPopularSermons(): Result<List<Sermon>>
-    suspend fun getRandomSermons(shard: Int? = null): Result<List<Sermon>> = Result.success(emptyList())
+    suspend fun getRandomSermons(shard: Int? = null): Result<List<Sermon>>
     suspend fun getScriptureBooks(): Result<List<BibleBook>>
     suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails>
     suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>>
@@ -67,11 +66,11 @@ interface SermonRepository {
     suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
     suspend fun saveBibleNarrator(narrator: String?)
 
-    val bibleBookmarks: Flow<List<BibleBookmark>> get() = emptyFlow()
-    fun getBibleBookmarksForChapter(translationId: String, bookId: String, chapter: Int): Flow<List<BibleBookmark>> = emptyFlow()
-    suspend fun saveBibleBookmark(bookmark: BibleBookmark) {}
-    suspend fun deleteBibleBookmark(id: String) {}
-    suspend fun deleteBibleBookmarkForVerse(translationId: String, bookId: String, chapter: Int, verse: Int) {}
+    val bibleBookmarks: Flow<List<BibleBookmark>>
+    fun getBibleBookmarksForChapter(translationId: String, bookId: String, chapter: Int): Flow<List<BibleBookmark>>
+    suspend fun saveBibleBookmark(bookmark: BibleBookmark)
+    suspend fun deleteBibleBookmark(id: String)
+    suspend fun deleteBibleBookmarkForVerse(translationId: String, bookId: String, chapter: Int, verse: Int)
 
     suspend fun clearHistory()
 

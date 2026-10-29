@@ -3,16 +3,13 @@ package com.example.sermonindex
 import androidx.compose.runtime.mutableStateOf
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import app.cash.turbine.test
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-@OptIn(ExperimentalCoroutinesApi::class)
 class NavigationTest {
 
     @Test
@@ -36,19 +33,15 @@ class NavigationTest {
         )
         val navigator = Navigator(navState)
 
-        val emittedEvents = mutableListOf<NavKey>()
-        val job = launch(UnconfinedTestDispatcher(testScheduler)) {
-            navigator.reselectEvents.collect { emittedEvents.add(it) }
+        navigator.reselectEvents.test {
+            navigator.onReselect(HomeRoute)
+            assertEquals(HomeRoute, awaitItem())
+            cancelAndIgnoreRemainingEvents()
         }
 
-        navigator.onReselect(HomeRoute)
-
-        assertEquals(listOf<NavKey>(HomeRoute), emittedEvents)
         // Verify stack was NOT truncated or popped
         assertEquals(3, homeStack.size)
         assertEquals(SpeakerDetailRoute("test-speaker"), homeStack.last())
-
-        job.cancel()
     }
 
     @Test

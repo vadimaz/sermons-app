@@ -1,27 +1,21 @@
 package com.example.sermonindex.domain.usecase
 
-import com.example.sermonindex.domain.model.BibleBook
-import com.example.sermonindex.domain.model.BibleTranslation
-import com.example.sermonindex.domain.model.ChapterDetails
+import com.example.sermonindex.domain.model.CatalogSyncState
+import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
-import com.example.sermonindex.domain.model.ListeningHistory
+import com.example.sermonindex.domain.model.SearchCategory
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
-import com.example.sermonindex.domain.model.Speaker
-import com.example.sermonindex.domain.model.SpeakerPagedSermons
-import com.example.sermonindex.domain.model.Topic
-import com.example.sermonindex.domain.model.TopicDetail
-import com.example.sermonindex.domain.repository.SermonRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.emptyFlow
+import com.example.sermonindex.testing.FakeSermonRepository
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
-class  UseCasesTest {
+class UseCasesTest {
 
     private val fakeSermon = Sermon(
         id = "1",
@@ -30,11 +24,21 @@ class  UseCasesTest {
         mp3Url = "https://example.com/audio.mp3"
     )
 
-    private val fakeRepository = object : SermonRepository {
-        var toggleCalledWith: Sermon? = null
+    private val fakeDownloaded = DownloadedSermon(
+        id = "1",
+        title = "Grace and Truth",
+        speaker = "A.W. Tozer",
+        localPath = "/fake/path/1.mp3",
+        fileSizeBytes = 15_000_000L,
+        downloadedAt = 2000L
+    )
 
-        override val favorites: Flow<List<FavoriteSermon>> = flowOf(
-            listOf(
+    private lateinit var fakeRepository: FakeSermonRepository
+
+    @Before
+    fun setUp() {
+        fakeRepository = FakeSermonRepository().apply {
+            favoritesFlow.value = listOf(
                 FavoriteSermon(
                     id = "1",
                     title = "Grace and Truth",
@@ -44,128 +48,12 @@ class  UseCasesTest {
                     addedAt = 1000L
                 )
             )
-        )
-        override val history: Flow<List<ListeningHistory>> = emptyFlow()
-
-        override suspend fun getPopularSermons(): Result<List<Sermon>> =
-            Result.success(listOf(fakeSermon))
-
-        override suspend fun getSermonDetails(id: String): Result<SermonDetail> =
-            Result.failure(NotImplementedError())
-
-        override suspend fun toggleFavorite(sermon: Sermon) {
-            toggleCalledWith = sermon
-        }
-
-        override fun isFavorite(id: String): Flow<Boolean> = flowOf(id == "1")
-
-        override suspend fun updateHistory(
-            sermonId: String,
-            title: String,
-            speaker: String,
-            speakerImage: String,
-            positionMs: Long,
-            durationMs: Long
-        ) = Unit
-
-        var clearHistoryCalled = false
-        override suspend fun clearHistory() {
-            clearHistoryCalled = true
-        }
-        val fakeDownloaded = com.example.sermonindex.domain.model.DownloadedSermon(
-            id = "1",
-            title = "Grace and Truth",
-            speaker = "A.W. Tozer",
-            localPath = "/fake/path/1.mp3",
-            fileSizeBytes = 15_000_000L,
-            downloadedAt = 2000L
-        )
-
-        var downloadedSermonPassed: Sermon? = null
-        var deletedDownloadId: String? = null
-        var deleteAllDownloadsCalled: Boolean = false
-
-        override val downloads: Flow<List<com.example.sermonindex.domain.model.DownloadedSermon>> = flowOf(listOf(fakeDownloaded))
-        override fun isDownloaded(sermonId: String): Flow<Boolean> = flowOf(sermonId == "1")
-        override fun getDownloadProgress(sermonId: String): Flow<Int?> = flowOf(50)
-        override suspend fun downloadSermon(sermon: Sermon) {
-            downloadedSermonPassed = sermon
-        }
-        override suspend fun cancelDownload(sermonId: String) = Unit
-        override suspend fun deleteDownload(sermonId: String) {
-            deletedDownloadId = sermonId
-        }
-        override suspend fun deleteAllDownloads() {
-            deleteAllDownloadsCalled = true
-        }
-        override suspend fun getLocalAudioPath(sermonId: String): String? = if (sermonId == "1") "/fake/path/1.mp3" else null
-
-        override suspend fun getScriptureBooks(): Result<List<BibleBook>> = Result.success(emptyList())
-        override suspend fun getScriptureChapter(bookId: String, chapter: Int): Result<ChapterDetails> = Result.failure(NotImplementedError())
-        override suspend fun getScriptureVerse(bookId: String, chapter: Int, verse: Int): Result<List<Sermon>> = Result.failure(NotImplementedError())
-        override suspend fun getAvailableBibleTranslations(): Result<List<BibleTranslation>> = Result.success(emptyList())
-        override suspend fun getBibleVerseText(translationId: String, bookId: String, chapter: Int, verse: Int): Result<String> = Result.success("For God so loved the world")
-        override suspend fun getSpeakers(): Result<List<Speaker>> = Result.success(emptyList())
-        override suspend fun getSpeakerDetails(slug: String): Result<Speaker> = Result.failure(NotImplementedError())
-        override suspend fun getSpeakerSermonsPage(slug: String, page: Int): Result<SpeakerPagedSermons> = Result.failure(NotImplementedError())
-        override suspend fun getTopics(): Result<List<Topic>> = Result.success(emptyList())
-        override suspend fun getTopicDetails(slug: String): Result<TopicDetail> = Result.failure(NotImplementedError())
-        override suspend fun getTranscriptCues(vttUrl: String): Result<List<com.example.sermonindex.domain.model.TranscriptCue>> = Result.success(emptyList())
-
-        override val bibleReadingPreferences: Flow<com.example.sermonindex.domain.model.BibleReadingPreferences> =
-            flowOf(com.example.sermonindex.domain.model.BibleReadingPreferences())
-        override suspend fun getBibleChapter(translationId: String, bookId: String, chapter: Int): Result<com.example.sermonindex.domain.model.BibleChapter> =
-            Result.failure(NotImplementedError())
-        override suspend fun getBibleBooksForTranslation(translationId: String): Result<List<BibleBook>> =
-            Result.success(emptyList())
-        override suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int) = Unit
-        override suspend fun saveBibleTypographyPreferences(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float) = Unit
-        override suspend fun saveBibleNarrator(narrator: String?) = Unit
-
-        override fun search(
-            query: String,
-            category: com.example.sermonindex.domain.model.SearchCategory
-        ): Flow<com.example.sermonindex.domain.model.SearchAggregateResult> =
-            flowOf(com.example.sermonindex.domain.model.SearchAggregateResult(query = query))
-
-        override val catalogSyncState: Flow<com.example.sermonindex.domain.model.CatalogSyncState> =
-            flowOf(com.example.sermonindex.domain.model.CatalogSyncState.NotDownloaded)
-
-        var downloadCatalogCalled = false
-        override suspend fun downloadOrUpdateCatalog() {
-            downloadCatalogCalled = true
-        }
-
-        var updateAvailable = false
-        override suspend fun checkForCatalogUpdate(): Boolean = updateAvailable
-
-        var recentQueriesList = listOf("tozer", "prayer")
-        override val recentSearchQueries: Flow<List<String>>
-            get() = flowOf(recentQueriesList)
-
-        var addedRecentQuery: String? = null
-        override suspend fun addRecentSearchQuery(query: String) {
-            addedRecentQuery = query
-        }
-
-        var deletedRecentQuery: String? = null
-        override suspend fun deleteRecentSearchQuery(query: String) {
-            deletedRecentQuery = query
-        }
-
-        var clearedRecentQueries = false
-        override suspend fun clearRecentSearchQueries() {
-            clearedRecentQueries = true
-        }
-
-        override val isCatalogReadyBannerDismissed: Flow<Boolean> = flowOf(false)
-        override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {}
-
-        var requestedRandomShard: Int? = null
-        var randomSermonsResult: Result<List<Sermon>> = Result.success(listOf(fakeSermon))
-        override suspend fun getRandomSermons(shard: Int?): Result<List<Sermon>> {
-            requestedRandomShard = shard
-            return randomSermonsResult
+            downloadsFlow.value = listOf(fakeDownloaded)
+            downloadProgressMap["1"] = 50
+            popularSermonsResult = Result.success(listOf(fakeSermon))
+            randomSermonsResult = Result.success(listOf(fakeSermon))
+            bibleVerseTextResult = Result.success("For God so loved the world")
+            recentSearchQueriesFlow.value = listOf("tozer", "prayer")
         }
     }
 
@@ -190,7 +78,7 @@ class  UseCasesTest {
     fun toggleFavoriteUseCase_delegatesToRepository() = runTest {
         val useCase = ToggleFavoriteUseCase(fakeRepository)
         useCase(fakeSermon)
-        assertEquals(fakeSermon, fakeRepository.toggleCalledWith)
+        assertEquals(fakeSermon, fakeRepository.lastToggledFavorite)
     }
 
     @Test
@@ -226,14 +114,14 @@ class  UseCasesTest {
     fun downloadSermonUseCase_delegatesToRepository() = runTest {
         val useCase = DownloadSermonUseCase(fakeRepository)
         useCase(fakeSermon)
-        assertEquals(fakeSermon, fakeRepository.downloadedSermonPassed)
+        assertEquals(fakeSermon, fakeRepository.lastDownloadedSermon)
     }
 
     @Test
     fun deleteDownloadUseCase_delegatesToRepository() = runTest {
         val useCase = DeleteDownloadUseCase(fakeRepository)
         useCase("1")
-        assertEquals("1", fakeRepository.deletedDownloadId)
+        assertEquals("1", fakeRepository.lastDeletedDownloadId)
     }
 
     @Test
@@ -271,8 +159,8 @@ class  UseCasesTest {
         val cdnOnlySermon = Sermon(id = "3", title = "CDN Sermon", speaker = "Ravenhill", hasAudio = false, cdnMp3Url = "https://example.com/cdn.mp3")
 
         assertTrue(textSermon.isTextOnly)
-        org.junit.Assert.assertFalse(audioSermon.isTextOnly)
-        org.junit.Assert.assertFalse(cdnOnlySermon.isTextOnly)
+        assertFalse(audioSermon.isTextOnly)
+        assertFalse(cdnOnlySermon.isTextOnly)
     }
 
     @Test
@@ -287,7 +175,7 @@ class  UseCasesTest {
             mp4Url = "https://example.com/video.mp4"
         )
         assertTrue(videoSermon.hasVideo)
-        org.junit.Assert.assertFalse(videoSermon.isTextOnly)
+        assertFalse(videoSermon.isTextOnly)
     }
 
     @Test
@@ -296,7 +184,7 @@ class  UseCasesTest {
         val audioDetail = SermonDetail(id = "2", title = "Audio Sermon", speaker = "Tozer", hasAudio = true, mp3Url = "https://example.com/audio.mp3")
 
         assertTrue(textDetail.isTextOnly)
-        org.junit.Assert.assertFalse(audioDetail.isTextOnly)
+        assertFalse(audioDetail.isTextOnly)
     }
 
     @Test
@@ -311,12 +199,12 @@ class  UseCasesTest {
             videoUrl = "https://youtube.com/watch?v=123"
         )
         assertTrue(videoDetail.hasVideo)
-        org.junit.Assert.assertFalse(videoDetail.isTextOnly)
+        assertFalse(videoDetail.isTextOnly)
     }
 
     @Test
     fun downloadedSermon_toSermon_mapsMp4ToVideoOfflinePlayback() {
-        val videoDownload = com.example.sermonindex.domain.model.DownloadedSermon(
+        val videoDownload = DownloadedSermon(
             id = "vid_123",
             title = "Video Sermon",
             speaker = "Art Katz",
@@ -332,7 +220,7 @@ class  UseCasesTest {
 
     @Test
     fun downloadedSermon_toSermon_mapsMp3ToAudioOfflinePlayback() {
-        val audioDownload = com.example.sermonindex.domain.model.DownloadedSermon(
+        val audioDownload = DownloadedSermon(
             id = "aud_123",
             title = "Audio Sermon",
             speaker = "A.W. Tozer",
@@ -341,7 +229,7 @@ class  UseCasesTest {
             downloadedAt = 1000L
         )
         val sermon = audioDownload.toSermon()
-        org.junit.Assert.assertFalse(sermon.hasVideo)
+        assertFalse(sermon.hasVideo)
         assertEquals("", sermon.mp4Url)
         assertEquals("file:///data/user/0/com.example.sermonindex/files/audio_downloads/aud_123.mp3", sermon.mp3Url)
     }
@@ -349,7 +237,7 @@ class  UseCasesTest {
     @Test
     fun searchUseCase_returnsMatchingResults() = runTest {
         val useCase = SearchUseCase(fakeRepository)
-        val result = useCase("tozer", com.example.sermonindex.domain.model.SearchCategory.ALL).first()
+        val result = useCase("tozer", SearchCategory.ALL).first()
         assertEquals("tozer", result.query)
     }
 
@@ -357,7 +245,7 @@ class  UseCasesTest {
     fun getCatalogSyncStateUseCase_returnsState() = runTest {
         val useCase = GetCatalogSyncStateUseCase(fakeRepository)
         val state = useCase().first()
-        assertEquals(com.example.sermonindex.domain.model.CatalogSyncState.NotDownloaded, state)
+        assertEquals(CatalogSyncState.NotDownloaded, state)
     }
 
     @Test
@@ -370,7 +258,7 @@ class  UseCasesTest {
     @Test
     fun checkCatalogUpdateUseCase_returnsUpdateStatus() = runTest {
         val useCase = CheckCatalogUpdateUseCase(fakeRepository)
-        fakeRepository.updateAvailable = true
+        fakeRepository.checkForCatalogUpdateResult = true
         assertTrue(useCase())
     }
 
@@ -384,13 +272,13 @@ class  UseCasesTest {
         assertEquals(listOf("tozer", "prayer"), getQueries().first())
 
         addQuery("holiness")
-        assertEquals("holiness", fakeRepository.addedRecentQuery)
+        assertEquals(listOf("holiness"), fakeRepository.addedSearchQueries)
 
         deleteQuery("prayer")
-        assertEquals("prayer", fakeRepository.deletedRecentQuery)
+        assertEquals(listOf("prayer"), fakeRepository.deletedSearchQueries)
 
         clearQueries()
-        assertTrue(fakeRepository.clearedRecentQueries)
+        assertTrue(fakeRepository.clearRecentQueriesCalled)
     }
 
     @Test

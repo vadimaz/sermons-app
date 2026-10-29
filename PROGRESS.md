@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.5` | **Version Code:** `28`
+> **Current Version:** `1.13.6` | **Version Code:** `29`
 
 ---
 
@@ -52,7 +52,7 @@
 - Pure domain models (`domain/model/Models.kt`), UseCases (`domain/usecase/UseCases.kt`), and pure repository interface (`SermonRepository`).
 - Full Dagger Hilt DI with modules for Database, Network, Media, Dispatchers, and Repositories.
 - Complete string extraction in `res/values/strings.xml` for internationalization and accessibility.
-- Domain UseCase test suite (`UseCasesTest.kt`) passing via `./gradlew testDebugUnitTest`.
+- Shared JVM unit testing infrastructure in `com.example.sermonindex.testing` (`MainDispatcherRule`, `FakeSermonRepository`, `FakeUserPreferencesRepository`, `FakePlaybackManager`) with `kotlinx-coroutines-test` and `CashApp Turbine`, governed by hierarchical AI guidelines (`GEMINI.md` and `app/src/test/GEMINI.md`).
 
 ### 1.6 Pagination & Catalog Streaming (Paging 3)
 - **`SpeakerSermonsPagingSource`**: PagingSource implementation connecting `androidx.paging:paging-runtime` and `androidx.paging:paging-compose` (version 3.5.3) with pure Kotlin domain UseCase `GetSpeakerSermonsPageUseCase`.

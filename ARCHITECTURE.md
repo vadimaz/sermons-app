@@ -23,6 +23,7 @@
 | **Image Loading** | Coil 3.6.3 | `coil-compose`, `coil-network-okhttp` |
 | **Paging** | AndroidX Paging 3 (3.5.3) | `androidx.paging:paging-runtime`, `androidx.paging:paging-compose` |
 | **Background Work** | AndroidX WorkManager 2.12.0 | `CoroutineWorker`, Hilt `@EntryPoint` integration |
+| **Testing** | JUnit 4 + Coroutines Test + Turbine 1.2.1 | JVM-first unit tests in `app/src/test/`, shared state-backed Fakes & `MainDispatcherRule` in `testing/` |
 
 ---
 
@@ -182,11 +183,21 @@ The project adheres to **Semantic Versioning (`MAJOR.MINOR.PATCH`)**:
   - `MINOR`: new user-facing features, screens, offline sync mechanisms (`feat:`).
   - `MAJOR`: fundamental architecture redesign or breaking data/schema changes.
 
+### 4.7 Testing & Verification (`app/src/test/GEMINI.md`)
+- **Fakes Over Mocks**: Prefer reusable state-backed fakes in `com.example.sermonindex.testing` over mocking frameworks or duplicated inline stubs, evolving them alongside domain contracts.
+- **Flow & ViewModel Verification**: Use `runTest`, `MainDispatcherRule`, direct state assertions (`.value` / `.first()`) for single-state checks, and CashApp Turbine (`flow.test {}`) for multi-step emission sequences or cold `Flow` streams.
+
 ---
 
 ## 5. Verification Commands
 
-Run unit tests:
+Run single test class (fast iterative loop):
+```powershell
+$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
+./gradlew testDebugUnitTest --tests "com.example.sermonindex.path.ClassName"
+```
+
+Run full unit test suite:
 ```powershell
 $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
 ./gradlew testDebugUnitTest

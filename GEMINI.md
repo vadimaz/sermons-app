@@ -39,8 +39,8 @@ When the user gives a **direct command to commit** (e.g., *"Сделай ком�
    - Add any newly introduced public interfaces, repository methods, or services to *API Contracts*.
    - Record any known trade-offs, deferred items, or technical debt into *Backlog & Tech Debt*.
    - Update the *Next Steps* section with the upcoming priority.
-3. **Check & Update `ARCHITECTURE.md`** *(only if applicable)*:
-   - Update if new foundational dependencies, architectural patterns, top-level packages, or coding conventions were introduced.
+3. **Check & Update `ARCHITECTURE.md` / `GEMINI.md`** *(only if applicable)*:
+   - Update if new foundational dependencies, architectural patterns, top-level packages, testing conventions, or coding guidelines were introduced.
 4. **Stage, Commit & Push**:
    - Stage code changes together with the updated documentation and build files.
    - Create a conventional commit message (`feat:`, `fix:`, `refactor:`, `docs:`, etc.) accurately describing the changes.
@@ -48,9 +48,11 @@ When the user gives a **direct command to commit** (e.g., *"Сделай ком�
 
 ---
 
-## 4. Verification Before Committing
-Run unit tests to ensure stability:
-```powershell
-$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
-./gradlew testDebugUnitTest
-```
+## 4. Verification & Testing
+- **Unit Tests:** Run `./gradlew testDebugUnitTest` (or `--tests "..."` for targeted checks) to verify changes:
+  ```powershell
+  $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
+  ./gradlew testDebugUnitTest
+  ```
+- **Testing Principles:** Follow general MAD testing practices — prefer shared state-backed Fakes in `testing/` over mocks, and use `runTest` / `Turbine` for coroutines and flows (see [`app/src/test/GEMINI.md`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/test/GEMINI.md)).
+- **Live Device Checks (`android` CLI):** Inspect layout hierarchy (`android layout`) before capturing screenshots, and store temporary captures in `build/tmp/`.
