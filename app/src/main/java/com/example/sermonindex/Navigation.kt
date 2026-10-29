@@ -314,7 +314,7 @@ fun MainNavigation(
         }
     }
 
-    val playbackState by playbackManager.playbackState.collectAsStateWithLifecycle()
+    val activeMediaInfo by playbackManager.activeMediaInfo.collectAsStateWithLifecycle()
     val isOnline by networkMonitor.isOnline.collectAsStateWithLifecycle(initialValue = true)
 
     val currentRoute = navigationState.currentRoute
@@ -322,12 +322,12 @@ fun MainNavigation(
     var isBibleBottomBarVisible by rememberSaveable { mutableStateOf(true) }
 
     val isAtTopLevel = currentRoute in TOP_LEVEL_ROUTES
-    val isBibleTrack = playbackState.currentSermon?.id?.startsWith("bible_") == true
+    val isBibleTrack = activeMediaInfo.isBibleTrack
     val isBibleTab = navigationState.topLevelRoute == BibleRoute
     val effectivelyShowBottomBar = if (isBibleTab) isBibleBottomBarVisible else true
 
     val showBottomBar = isAtTopLevel
-    val showMiniPlayer = !isFullscreenPlayer && playbackState.hasActiveMedia && !isBibleTrack
+    val showMiniPlayer = !isFullscreenPlayer && activeMediaInfo.hasActiveMedia && !isBibleTrack
 
     val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val totalBottomBarHeight = 80.dp + navBarInset
@@ -356,7 +356,8 @@ fun MainNavigation(
                     // Persistent MiniPlayer floating above bottom navigation or anchored above system nav bar
                     if (showMiniPlayer) {
                         MiniPlayer(
-                            playbackState = playbackState,
+                            mediaInfo = activeMediaInfo,
+                            progressProvider = { playbackManager.progressFraction },
                             onTogglePlayPause = { playbackManager.togglePlayPause() },
                             onExpandClick = { navigator.navigate(PlayerRoute) },
                             onCloseClick = { playbackManager.stop() }

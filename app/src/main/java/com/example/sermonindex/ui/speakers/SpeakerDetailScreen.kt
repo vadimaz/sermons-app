@@ -223,7 +223,8 @@ fun SpeakerDetailContent(
                     ) {
                         items(
                             items = currentSpeaker.topTopics,
-                            key = { it.slug }
+                            key = { it.slug },
+                            contentType = { "topic_chip" }
                         ) { topic ->
                             FilterChip(
                                 selected = false,

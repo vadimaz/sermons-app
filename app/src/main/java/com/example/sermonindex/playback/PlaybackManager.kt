@@ -18,8 +18,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -33,6 +37,20 @@ open class PlaybackManager(private val context: Context? = null) {
 
     private val _playbackState = MutableStateFlow(PlaybackState())
     open val playbackState: StateFlow<PlaybackState> = _playbackState.asStateFlow()
+
+    private val _activeMediaInfo = MutableStateFlow(ActiveMediaInfo())
+    open val activeMediaInfo: StateFlow<ActiveMediaInfo> = _activeMediaInfo.asStateFlow()
+
+    open val progressFraction: Float
+        get() = _playbackState.value.progressFraction
+
+    private fun setPlaybackState(newState: PlaybackState) {
+        _playbackState.value = newState
+        val newInfo = newState.toActiveMediaInfo()
+        if (_activeMediaInfo.value != newInfo) {
+            _activeMediaInfo.value = newInfo
+        }
+    }
 
     open val player: Player?
         get() = mediaController
@@ -61,7 +79,7 @@ open class PlaybackManager(private val context: Context? = null) {
                     }
                 }
             } catch (e: Exception) {
-                _playbackState.value = _playbackState.value.copy(errorMessage = e.message)
+                setPlaybackState(_playbackState.value.copy(errorMessage = e.message))
             }
         }, MoreExecutors.directExecutor())
     }
@@ -73,8 +91,10 @@ open class PlaybackManager(private val context: Context? = null) {
                 sermon.cdnMp3Url.isNotBlank()
 
         if (!hasStream) {
-            _playbackState.value = _playbackState.value.copy(
-                errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio or video stream available"
+            setPlaybackState(
+                _playbackState.value.copy(
+                    errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio or video stream available"
+                )
             )
             return
         }
@@ -112,8 +132,10 @@ open class PlaybackManager(private val context: Context? = null) {
         }
 
         if (playUrl.isBlank()) {
-            _playbackState.value = _playbackState.value.copy(
-                errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio stream available"
+            setPlaybackState(
+                _playbackState.value.copy(
+                    errorMessage = context?.getString(R.string.no_audio_stream_available) ?: "No audio stream available"
+                )
             )
             return
         }
@@ -141,21 +163,23 @@ open class PlaybackManager(private val context: Context? = null) {
         controller.prepare()
         controller.play()
 
-        _playbackState.value = _playbackState.value.copy(
-            currentSermon = sermon,
-            isPlaying = true,
-            isBuffering = true,
-            errorMessage = null,
-            currentPositionMs = startPositionMs,
-            isLocalAudio = isLocal,
-            isVideoActive = hasVideo
+        setPlaybackState(
+            _playbackState.value.copy(
+                currentSermon = sermon,
+                isPlaying = true,
+                isBuffering = true,
+                errorMessage = null,
+                currentPositionMs = startPositionMs,
+                isLocalAudio = isLocal,
+                isVideoActive = hasVideo
+            )
         )
 
         startPositionPolling()
     }
 
     fun setVideoActive(active: Boolean) {
-        _playbackState.value = _playbackState.value.copy(isVideoActive = active)
+        setPlaybackState(_playbackState.value.copy(isVideoActive = active))
     }
 
     private var sleepTimerJob: Job? = null
@@ -169,22 +193,28 @@ open class PlaybackManager(private val context: Context? = null) {
 
         val totalMs = minutes * 60 * 1000L
         var remainingMs = totalMs
-        _playbackState.value = _playbackState.value.copy(
-            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Active(remainingMs, totalMs)
+        setPlaybackState(
+            _playbackState.value.copy(
+                sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Active(remainingMs, totalMs)
+            )
         )
 
         sleepTimerJob = scope.launch {
             while (isActive && remainingMs > 0) {
                 delay(1000L)
                 remainingMs = (remainingMs - 1000L).coerceAtLeast(0L)
-                _playbackState.value = _playbackState.value.copy(
-                    sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Active(remainingMs, totalMs)
+                setPlaybackState(
+                    _playbackState.value.copy(
+                        sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Active(remainingMs, totalMs)
+                    )
                 )
             }
             if (isActive) {
                 pause()
-                _playbackState.value = _playbackState.value.copy(
-                    sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Off
+                setPlaybackState(
+                    _playbackState.value.copy(
+                        sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Off
+                    )
                 )
             }
         }
@@ -193,16 +223,20 @@ open class PlaybackManager(private val context: Context? = null) {
     fun setSleepTimerEndOfSermon() {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
-        _playbackState.value = _playbackState.value.copy(
-            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon
+        setPlaybackState(
+            _playbackState.value.copy(
+                sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon
+            )
         )
     }
 
     fun cancelSleepTimer() {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
-        _playbackState.value = _playbackState.value.copy(
-            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Off
+        setPlaybackState(
+            _playbackState.value.copy(
+                sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Off
+            )
         )
     }
 
@@ -225,14 +259,14 @@ open class PlaybackManager(private val context: Context? = null) {
 
     fun seekTo(positionMs: Long) {
         mediaController?.seekTo(positionMs)
-        _playbackState.value = _playbackState.value.copy(currentPositionMs = positionMs)
+        setPlaybackState(_playbackState.value.copy(currentPositionMs = positionMs))
     }
 
     fun rewind(seconds: Int = 15) {
         val controller = mediaController ?: return
         val newPos = (controller.currentPosition - seconds * 1000L).coerceAtLeast(0L)
         controller.seekTo(newPos)
-        _playbackState.value = _playbackState.value.copy(currentPositionMs = newPos)
+        setPlaybackState(_playbackState.value.copy(currentPositionMs = newPos))
     }
 
     fun fastForward(seconds: Int = 30) {
@@ -244,17 +278,17 @@ open class PlaybackManager(private val context: Context? = null) {
             controller.currentPosition + seconds * 1000L
         }
         controller.seekTo(newPos)
-        _playbackState.value = _playbackState.value.copy(currentPositionMs = newPos)
+        setPlaybackState(_playbackState.value.copy(currentPositionMs = newPos))
     }
 
     fun setSpeed(speed: Float) {
         mediaController?.setPlaybackSpeed(speed)
-        _playbackState.value = _playbackState.value.copy(playbackSpeed = speed)
+        setPlaybackState(_playbackState.value.copy(playbackSpeed = speed))
     }
 
     fun stop() {
         mediaController?.stop()
-        _playbackState.value = PlaybackState()
+        setPlaybackState(PlaybackState())
         stopPositionPolling()
     }
 
@@ -281,16 +315,18 @@ open class PlaybackManager(private val context: Context? = null) {
         val buffered = player.bufferedPosition.coerceAtLeast(0L)
         val isBuffering = player.playbackState == Player.STATE_BUFFERING
 
-        _playbackState.value = _playbackState.value.copy(
-            currentSermon = activeSermon,
-            isPlaying = player.isPlaying,
-            isBuffering = isBuffering,
-            currentPositionMs = position,
-            durationMs = duration,
-            bufferedPositionMs = buffered,
-            playbackSpeed = player.playbackParameters.speed,
-            isUsingFailoverCdn = isFailover,
-            isLocalAudio = isLocal
+        setPlaybackState(
+            _playbackState.value.copy(
+                currentSermon = activeSermon,
+                isPlaying = player.isPlaying,
+                isBuffering = isBuffering,
+                currentPositionMs = position,
+                durationMs = duration,
+                bufferedPositionMs = buffered,
+                playbackSpeed = player.playbackParameters.speed,
+                isUsingFailoverCdn = isFailover,
+                isLocalAudio = isLocal
+            )
         )
     }
 

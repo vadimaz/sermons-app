@@ -52,7 +52,7 @@ data class PlayerUiState(
     val transcriptCues: List<TranscriptCue> = emptyList(),
     val isLoadingCues: Boolean = false,
     val highlightQuery: String? = null,
-    val matchingCueIndices: List<Int> = emptyList()
+    val matchingCueIndices: Set<Int> = emptySet()
 ) {
     val displayPositionMs: Long
         get() = if (isDraggingSlider) {
@@ -65,7 +65,14 @@ data class PlayerUiState(
         get() {
             if (transcriptCues.isEmpty()) return -1
             val pos = displayPositionMs
-            return transcriptCues.indexOfLast { it.startMs <= pos }
+            if (pos < transcriptCues.first().startMs) return -1
+            val searchIndex = transcriptCues.binarySearchBy(pos) { it.startMs }
+            return if (searchIndex >= 0) {
+                searchIndex
+            } else {
+                val insertionPoint = -(searchIndex + 1)
+                (insertionPoint - 1).coerceAtLeast(0)
+            }
         }
 }
 
@@ -215,8 +222,8 @@ class PlayerViewModel @Inject constructor(
             getTranscriptCuesUseCase(vttUrl).fold(
                 onSuccess = { cues ->
                     val query = _uiState.value.highlightQuery
-                    val matching = if (query.isNullOrBlank()) emptyList()
-                    else cues.mapIndexedNotNull { idx, cue ->
+                    val matching = if (query.isNullOrBlank()) emptySet()
+                    else cues.mapIndexedNotNullTo(mutableSetOf()) { idx, cue ->
                         if (cue.text.contains(query, ignoreCase = true)) idx else null
                     }
                     _uiState.update {
@@ -302,8 +309,8 @@ class PlayerViewModel @Inject constructor(
             }
             is PlayerUiEvent.SetHighlightQuery -> {
                 val query = event.query?.trim()?.ifBlank { null }
-                val matching = if (query == null) emptyList()
-                else _uiState.value.transcriptCues.mapIndexedNotNull { idx, cue ->
+                val matching = if (query.isNullOrBlank()) emptySet()
+                else _uiState.value.transcriptCues.mapIndexedNotNullTo(mutableSetOf()) { idx, cue ->
                     if (cue.text.contains(query, ignoreCase = true)) idx else null
                 }
                 _uiState.update {

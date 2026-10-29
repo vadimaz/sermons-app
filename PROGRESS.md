@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.6` | **Version Code:** `29`
+> **Current Version:** `1.13.7` | **Version Code:** `30`
 
 ---
 
@@ -230,6 +230,29 @@
   - Replaced 4-level internal state switching in `ScriptureScreen` with canonical Navigation 3 routes (`ScriptureRoute` $\rightarrow$ `ScriptureChaptersRoute` $\rightarrow$ `ScriptureVerseHeatMapRoute` $\rightarrow$ `BibleVerseSermonsRoute`), enabling Material 3 Shared X-Axis transitions and native Predictive Back gestures across all levels.
   - Extracted `@HiltViewModel(assistedFactory = ...)` `ScriptureChapterViewModel` for the verse heat map level and unified Level 4 with `BibleVerseSermonsScreen` / `BibleVerseSermonsViewModel`, eliminating ~250 lines of duplicate translation and sermon loading logic and removing the `isScriptureAtRoot` workaround from `Navigation.kt`.
 
+### 1.18 Jetpack Compose UI & Recomposition Performance Optimization
+- **Root State Decoupling (`ActiveMediaInfo`)**:
+  - Separated fast-moving audio playback position polling (500ms ExoPlayer ticks) from structural playback metadata via `@Immutable data class ActiveMediaInfo`.
+  - Migrated `MainNavigation` to observe `activeMediaInfo: StateFlow<ActiveMediaInfo>` instead of `playbackState`.
+  - Completely eliminated 120 unneeded recompositions per minute across root `Scaffold`, 5-item `NavigationBar`, and Navigation 3 entry decorators during media playback.
+- **Draw-Phase Progress Isolation**:
+  - Refactored `MiniPlayer` to accept `ActiveMediaInfo` and a lambda provider `progressProvider: () -> Float`, evaluating progress in the draw phase of `LinearProgressIndicator` without triggering full component recompositions.
+- **Transcript Karaoke Acceleration ($O(1)$ and $O(\log N)$)**:
+  - Replaced linear cue scan in `PlayerViewModel` with binary search `binarySearchBy { it.startMs }` ($O(\log N)$).
+  - Hoisted active cue evaluation before `itemsIndexed` in `FullscreenPlayerScreen`.
+  - Converted transcript search match check from `List<Int>` to `Set<Int>` ($O(1)$ lookup).
+  - Added `contentType = { _, _ -> "transcript_cue" }` to allow slot table recycling.
+- **Lazy Layout Virtualization & Slot Recycling**:
+  - Added explicit stable keys and `contentType` attributes across all lazy lists and grids (`HomeScreen`, `LibraryScreen`, `ScriptureScreen`, `SpeakerDetailScreen`, `TopicDetailScreen`).
+  - Replaced range list allocation `(1..totalChapters).toList()` in `ScriptureChaptersScreen` with zero-allocation `items(count = totalChapters, key = { it + 1 }, contentType = { "chapter_cell" })`.
+- **Bible Reader In-Item Pre-Indexing & Caching**:
+  - Pre-indexed chapter bookmarks and footnotes into hash maps once at the chapter level in `BibleReaderContent` (`associateBy`, `groupBy`) instead of running linear searches inside each verse row during scrolling.
+  - Wrapped `buildAnnotatedString` in `remember` keyed by verse content and theme colors.
+  - Assigned stable semantic keys (`"verse_${item.number}"`) to chapter items.
+- **Static Regex Hoisting & Layout Flattening**:
+  - Precompiled and hoisted static regexes (`HTML_TAG_REGEX`, `WHITESPACE_REGEX`, `TOKEN_DELIMITER_REGEX`) to file top-level scopes across `TextHighlightUtils`, `TopicDetailScreen`, and `FullscreenPlayerScreen`.
+  - Flattened triple-nested layout nodes (`Box -> Surface -> Box -> Icon`) in `SermonListItem` to a single `Box` with background and alignment.
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -324,13 +347,14 @@ interface UserPreferencesRepository {
 
 ### 2.4 Playback Manager (`PlaybackManager`)
 ```kotlin
-class PlaybackManager(context: Context) {
-    val playbackState: StateFlow<PlaybackState>
-    val isVideoActive: StateFlow<Boolean>
-    val player: Player?
+open class PlaybackManager(context: Context? = null) {
+    open val playbackState: StateFlow<PlaybackState>
+    open val activeMediaInfo: StateFlow<ActiveMediaInfo>
+    open val progressFraction: Float
+    open val player: Player?
     fun setVideoActive(active: Boolean)
-    fun playSermon(sermon: Sermon, startPositionMs: Long = 0L)
-    fun togglePlayPause()
+    open fun playSermon(sermon: Sermon, startPositionMs: Long = 0L)
+    open fun togglePlayPause()
     fun pause()
     fun resume()
     fun stop()
@@ -342,6 +366,15 @@ class PlaybackManager(context: Context) {
     fun setSleepTimerEndOfSermon()
     fun cancelSleepTimer()
 }
+
+@Immutable
+data class ActiveMediaInfo(
+    val currentSermon: Sermon? = null,
+    val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
+    val isUsingFailoverCdn: Boolean = false,
+    val isLocalAudio: Boolean = false
+)
 ```
 
 ### 2.5 Room Local Data Access Contracts (DAOs)

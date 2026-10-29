@@ -315,7 +315,11 @@ private fun SpeakersShelf(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(speakers, key = { it.slug }) { speaker ->
+        items(
+            items = speakers,
+            key = { it.slug },
+            contentType = { "speaker_card" }
+        ) { speaker ->
             SpeakerCard(
                 speaker = speaker,
                 onClick = { onSpeakerClick(speaker) }
@@ -394,7 +398,11 @@ private fun TopicsShelf(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(topics, key = { it.slug }) { topic ->
+        items(
+            items = topics,
+            key = { it.slug },
+            contentType = { "topic_card" }
+        ) { topic ->
             TopicCard(
                 topic = topic,
                 onClick = { onTopicClick(topic) }
@@ -475,7 +483,11 @@ private fun HeroCarousel(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(sermons) { sermon ->
+        items(
+            items = sermons,
+            key = { it.id },
+            contentType = { "hero_sermon" }
+        ) { sermon ->
             HeroCard(
                 sermon = sermon,
                 onPlayClick = { onPlayClick(sermon) },
@@ -660,7 +672,11 @@ private fun RandomSermonsShelf(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            items(sermons, key = { it.id }) { sermon ->
+            items(
+                items = sermons,
+                key = { it.id },
+                contentType = { "random_sermon" }
+            ) { sermon ->
                 RandomSermonCard(
                     sermon = sermon,
                     onPlayClick = { onPlayClick(sermon) },
@@ -817,7 +833,11 @@ private fun ContinueListeningShelf(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        items(history) { item ->
+        items(
+            items = history,
+            key = { it.sermonId },
+            contentType = { "history_card" }
+        ) { item ->
             Card(
                 modifier = Modifier
                     .width(220.dp)

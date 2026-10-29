@@ -8,11 +8,14 @@ import androidx.compose.ui.text.font.FontWeight
 
 object TextHighlightUtils {
 
+    private val WHITESPACE_REGEX = Regex("\\s+")
+    private val TOKEN_DELIMITER_REGEX = Regex("[^\\p{L}\\p{Nd}]+")
+
     fun extractSnippet(text: String, query: String, maxChars: Int = 130): String {
         if (text.isBlank() || query.isBlank()) return text.take(maxChars)
-        val cleanText = text.replace(Regex("\\s+"), " ").trim()
+        val cleanText = text.replace(WHITESPACE_REGEX, " ").trim()
         val lowerText = cleanText.lowercase()
-        val tokens = query.trim().lowercase().split(Regex("[^\\p{L}\\p{Nd}]+")).filter { it.isNotBlank() }
+        val tokens = query.trim().lowercase().split(TOKEN_DELIMITER_REGEX).filter { it.isNotBlank() }
         if (tokens.isEmpty()) return cleanText.take(maxChars)
 
         // Find earliest match index among tokens
@@ -43,7 +46,7 @@ object TextHighlightUtils {
         activeMatchRange: IntRange? = null
     ): AnnotatedString {
         if (query.isBlank() || text.isBlank()) return AnnotatedString(text)
-        val tokens = query.trim().lowercase().split(Regex("[^\\p{L}\\p{Nd}]+")).filter { it.isNotBlank() }
+        val tokens = query.trim().lowercase().split(TOKEN_DELIMITER_REGEX).filter { it.isNotBlank() }
         if (tokens.isEmpty()) return AnnotatedString(text)
 
         val lowerText = text.lowercase()

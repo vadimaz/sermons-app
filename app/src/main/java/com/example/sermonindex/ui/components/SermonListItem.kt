@@ -1,11 +1,13 @@
 package com.example.sermonindex.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -98,22 +100,22 @@ fun SermonListItem(
                             modifier = Modifier.size(56.dp)
                         )
                     } else {
-                        Surface(
-                            color = if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                            modifier = Modifier.size(56.dp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    imageVector = if (isTextOnly) {
-                                        Icons.AutoMirrored.Outlined.MenuBook
-                                    } else {
-                                        Icons.Outlined.PlayCircle
-                                    },
-                                    contentDescription = null,
-                                    tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(28.dp)
-                                )
-                            }
+                            Icon(
+                                imageVector = if (isTextOnly) {
+                                    Icons.AutoMirrored.Outlined.MenuBook
+                                } else {
+                                    Icons.Outlined.PlayCircle
+                                },
+                                contentDescription = null,
+                                tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
                         }
                     }
                 }

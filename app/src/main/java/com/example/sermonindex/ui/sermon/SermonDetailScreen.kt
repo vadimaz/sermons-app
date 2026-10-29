@@ -42,6 +42,7 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -417,12 +418,16 @@ private fun SermonOverviewSection(detail: SermonDetail, highlightQuery: String? 
                     if (highlightQuery.isNullOrBlank()) {
                         Text(text = detail.summary, style = MaterialTheme.typography.bodyMedium)
                     } else {
-                        val annotated = com.example.sermonindex.ui.search.components.TextHighlightUtils.buildHighlightedText(
-                            text = detail.summary,
-                            query = highlightQuery,
-                            highlightColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
-                            activeHighlightColor = MaterialTheme.colorScheme.primaryContainer
-                        )
+                        val highlightColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                        val activeHighlightColor = MaterialTheme.colorScheme.primaryContainer
+                        val annotated = remember(detail.summary, highlightQuery, highlightColor, activeHighlightColor) {
+                            com.example.sermonindex.ui.search.components.TextHighlightUtils.buildHighlightedText(
+                                text = detail.summary,
+                                query = highlightQuery,
+                                highlightColor = highlightColor,
+                                activeHighlightColor = activeHighlightColor
+                            )
+                        }
                         Text(text = annotated, style = MaterialTheme.typography.bodyMedium)
                     }
                 }

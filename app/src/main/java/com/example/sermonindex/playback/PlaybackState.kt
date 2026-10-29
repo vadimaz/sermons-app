@@ -1,8 +1,25 @@
 package com.example.sermonindex.playback
 
+import androidx.compose.runtime.Immutable
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SleepTimerState
 
+@Immutable
+data class ActiveMediaInfo(
+    val currentSermon: Sermon? = null,
+    val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
+    val isUsingFailoverCdn: Boolean = false,
+    val isLocalAudio: Boolean = false
+) {
+    val hasActiveMedia: Boolean
+        get() = currentSermon != null
+
+    val isBibleTrack: Boolean
+        get() = currentSermon?.id?.startsWith("bible_") == true
+}
+
+@Immutable
 data class PlaybackState(
     val currentSermon: Sermon? = null,
     val isPlaying: Boolean = false,
@@ -25,4 +42,13 @@ data class PlaybackState(
 
     val progressFraction: Float
         get() = if (durationMs > 0) (currentPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+
+    fun toActiveMediaInfo(): ActiveMediaInfo = ActiveMediaInfo(
+        currentSermon = currentSermon,
+        isPlaying = isPlaying,
+        isBuffering = isBuffering,
+        isUsingFailoverCdn = isUsingFailoverCdn,
+        isLocalAudio = isLocalAudio
+    )
 }
+

@@ -36,17 +36,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.example.sermonindex.playback.ActiveMediaInfo
 import com.example.sermonindex.playback.PlaybackState
 
 @Composable
 fun MiniPlayer(
-    playbackState: PlaybackState,
+    mediaInfo: ActiveMediaInfo,
+    progressProvider: () -> Float,
     onTogglePlayPause: () -> Unit,
     onExpandClick: () -> Unit,
     onCloseClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val sermon = playbackState.currentSermon ?: return
+    val sermon = mediaInfo.currentSermon ?: return
 
     Surface(
         modifier = modifier
@@ -59,9 +61,9 @@ fun MiniPlayer(
         tonalElevation = 6.dp
     ) {
         Column {
-            // Linear progress indicator on top
+            // Linear progress indicator on top - evaluates progressProvider directly in Draw phase
             LinearProgressIndicator(
-                progress = { playbackState.progressFraction },
+                progress = progressProvider,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(3.dp),
@@ -110,7 +112,7 @@ fun MiniPlayer(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        if (playbackState.isUsingFailoverCdn) {
+                        if (mediaInfo.isUsingFailoverCdn) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
                                 shape = RoundedCornerShape(4.dp),
@@ -130,7 +132,7 @@ fun MiniPlayer(
                 Spacer(modifier = Modifier.width(8.dp))
 
                 // Play / Pause / Buffering button
-                if (playbackState.isBuffering) {
+                if (mediaInfo.isBuffering) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(36.dp),
                         strokeWidth = 3.dp,
@@ -146,9 +148,9 @@ fun MiniPlayer(
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
-                            imageVector = if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                            imageVector = if (mediaInfo.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                             contentDescription = androidx.compose.ui.res.stringResource(
-                                if (playbackState.isPlaying) com.example.sermonindex.R.string.pause else com.example.sermonindex.R.string.play
+                                if (mediaInfo.isPlaying) com.example.sermonindex.R.string.pause else com.example.sermonindex.R.string.play
                             ),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
@@ -168,4 +170,22 @@ fun MiniPlayer(
             }
         }
     }
+}
+
+@Composable
+fun MiniPlayer(
+    playbackState: PlaybackState,
+    onTogglePlayPause: () -> Unit,
+    onExpandClick: () -> Unit,
+    onCloseClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    MiniPlayer(
+        mediaInfo = playbackState.toActiveMediaInfo(),
+        progressProvider = { playbackState.progressFraction },
+        onTogglePlayPause = onTogglePlayPause,
+        onExpandClick = onExpandClick,
+        onCloseClick = onCloseClick,
+        modifier = modifier
+    )
 }

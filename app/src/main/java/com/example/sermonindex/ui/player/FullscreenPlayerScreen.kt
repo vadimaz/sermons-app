@@ -705,11 +705,13 @@ fun PlayerContent(
                     )
                 }
 
+                val currentActiveCueIndex = state.activeCueIndex
                 itemsIndexed(
                     items = state.transcriptCues,
-                    key = { _, cue -> "cue_${cue.index}" }
+                    key = { _, cue -> "cue_${cue.index}" },
+                    contentType = { _, _ -> "transcript_cue" }
                 ) { index, cue ->
-                    val isActive = index == state.activeCueIndex
+                    val isActive = index == currentActiveCueIndex
                     val isMatch = state.matchingCueIndices.contains(index)
                     val targetColor = if (isActive) {
                         MaterialTheme.colorScheme.primary
@@ -785,6 +787,8 @@ fun PlayerContent(
 }
 }
 
+private val HTML_TAG_REGEX = Regex("<[^>]*>")
+
 @Composable
 private fun TranscriptSection(transcriptHtml: String, transcriptText: String) {
     Column(
@@ -801,7 +805,7 @@ private fun TranscriptSection(transcriptHtml: String, transcriptText: String) {
 
         val cleanText = remember(transcriptHtml, transcriptText) {
             if (transcriptText.isNotBlank()) transcriptText
-            else transcriptHtml.replace(Regex("<[^>]*>"), "")
+            else transcriptHtml.replace(HTML_TAG_REGEX, "")
         }
 
         if (cleanText.isBlank()) {

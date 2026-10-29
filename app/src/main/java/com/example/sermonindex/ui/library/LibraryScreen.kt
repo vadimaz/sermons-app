@@ -278,7 +278,11 @@ private fun FavoritesList(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(favorites, key = { it.id }) { item ->
+            items(
+                items = favorites,
+                key = { it.id },
+                contentType = { "favorite_item" }
+            ) { item ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -380,7 +384,11 @@ private fun HistoryList(
                 }
             }
 
-            items(history, key = { it.sermonId }) { item ->
+            items(
+                items = history,
+                key = { it.sermonId },
+                contentType = { "history_item" }
+            ) { item ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -534,7 +542,11 @@ private fun DownloadsList(
                 }
             }
 
-            items(downloads, key = { it.id }) { item ->
+            items(
+                items = downloads,
+                key = { it.id },
+                contentType = { "download_item" }
+            ) { item ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -638,7 +650,11 @@ private fun BookmarksList(
             verticalArrangement = Arrangement.spacedBy(10.dp),
             modifier = modifier.fillMaxSize()
         ) {
-            items(bookmarks, key = { it.id }) { item ->
+            items(
+                items = bookmarks,
+                key = { it.id },
+                contentType = { "bookmark_item" }
+            ) { item ->
                 Card(
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),

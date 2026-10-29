@@ -25,6 +25,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -39,6 +40,10 @@ import com.example.sermonindex.domain.model.TopicScripture
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.SermonListItem
+
+private val HTML_TAG_REGEX = Regex("<[^>]*>")
+
+
 
 /**
  * Stateful entry point for TopicDetailScreen.
@@ -71,10 +76,14 @@ fun TopicDetailScreen(
     )
 }
 
+
+
 /**
  * Stateless TopicDetailContent.
  */
 @Composable
+
+
 fun TopicDetailContent(
     state: TopicDetailUiState,
     onEvent: (TopicDetailUiEvent) -> Unit,
@@ -145,7 +154,9 @@ fun TopicDetailContent(
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Spacer(modifier = Modifier.height(6.dp))
-                            val cleanDescription = detail.description.replace(Regex("<[^>]*>"), "")
+                            val cleanDescription = remember(detail.description) {
+                                detail.description.replace(HTML_TAG_REGEX, "")
+                            }
                             Text(
                                 text = cleanDescription,
                                 style = MaterialTheme.typography.bodyMedium,

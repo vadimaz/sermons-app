@@ -79,6 +79,16 @@ fun BibleReaderContent(
     val fontSize = preferences.fontSizeSp.sp
     val lineHeight = (preferences.fontSizeSp * preferences.lineSpacingMultiplier).sp
 
+    val bookmarksByVerse = remember(state.chapterBookmarks) {
+        state.chapterBookmarks.associateBy { it.verse }
+    }
+    val footnotesById = remember(chapter.footnotes) {
+        chapter.footnotes.associateBy { it.noteId }
+    }
+    val footnotesByVerse = remember(chapter.footnotes) {
+        chapter.footnotes.groupBy { it.verse }
+    }
+
     // Scroll to target verse if requested (e.g. from Library bookmarks)
     LaunchedEffect(state.targetScrollVerse, chapter) {
         val targetVerse = state.targetScrollVerse ?: return@LaunchedEffect
@@ -142,7 +152,14 @@ fun BibleReaderContent(
         // Chapter Content Items
         itemsIndexed(
             items = chapter.items,
-            key = { index, _ -> "item_$index" },
+            key = { index, item ->
+                when (item) {
+                    is BibleChapterItem.Verse -> "verse_${item.number}"
+                    is BibleChapterItem.Heading -> "heading_${item.text.hashCode()}_$index"
+                    is BibleChapterItem.HebrewSubtitle -> "sub_${item.text.hashCode()}_$index"
+                    is BibleChapterItem.LineBreak -> "br_$index"
+                }
+            },
             contentType = { _, item -> item::class }
         ) { _, item ->
             when (item) {
@@ -175,9 +192,7 @@ fun BibleReaderContent(
                 }
                 is BibleChapterItem.Verse -> {
                     val isSelected = item.number == state.selectedVerse
-                    val matchingBookmark = state.chapterBookmarks.firstOrNull { bm ->
-                        item.number == bm.verse
-                    }
+                    val matchingBookmark = bookmarksByVerse[item.number]
 
                     VerseItemRow(
                         verse = item,
@@ -187,7 +202,8 @@ fun BibleReaderContent(
                         fontFamily = fontFamily,
                         fontSize = fontSize,
                         lineHeight = lineHeight,
-                        footnotes = chapter.footnotes,
+                        footnotesById = footnotesById,
+                        footnotesByVerse = footnotesByVerse,
                         isSelectionMode = state.isSelectionMode,
                         isSelected = isSelected,
                         matchingBookmark = matchingBookmark,
@@ -223,7 +239,8 @@ private fun VerseItemRow(
     fontFamily: FontFamily,
     fontSize: androidx.compose.ui.unit.TextUnit,
     lineHeight: androidx.compose.ui.unit.TextUnit,
-    footnotes: List<BibleFootnote>,
+    footnotesById: Map<Int, BibleFootnote>,
+    footnotesByVerse: Map<Int, List<BibleFootnote>>,
     isSelectionMode: Boolean,
     isSelected: Boolean,
     matchingBookmark: BibleBookmark?,
@@ -232,12 +249,11 @@ private fun VerseItemRow(
     onStartSelection: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val matchingFootnotes = remember(verse, footnotes) {
-        val byId = footnotes.filter { it.noteId in verse.footnoteIds }
-        if (byId.isNotEmpty()) {
-            byId
+    val matchingFootnotes = remember(verse, footnotesById, footnotesByVerse) {
+        if (verse.footnoteIds.isNotEmpty()) {
+            verse.footnoteIds.mapNotNull { footnotesById[it] }
         } else {
-            footnotes.filter { (it.chapter == chapterNumber || it.chapter == 0) && it.verse == verse.number }
+            footnotesByVerse[verse.number] ?: footnotesByVerse[0] ?: emptyList()
         }
     }
     val matchingFootnote = remember(matchingFootnotes) {
@@ -265,53 +281,57 @@ private fun VerseItemRow(
         else -> Color.Transparent
     }
 
-    val annotatedText = buildAnnotatedString {
-        // Verse Number
-        withStyle(
-            SpanStyle(
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
-                fontSize = (fontSize.value * 0.75f).sp,
-                baselineShift = BaselineShift.Superscript
-            )
-        ) {
-            append("${verse.number} ")
-        }
-
-        // Verse Text
-        append(verse.text)
-
-        // Footnote Indicators
-        if (verse.footnoteIds.isNotEmpty() || matchingFootnote != null) {
-            val link = if (matchingFootnote != null) {
-                LinkAnnotation.Clickable(
-                    tag = "footnote_${verse.number}",
-                    styles = TextLinkStyles(
-                        style = SpanStyle(
-                            color = MaterialTheme.colorScheme.tertiary,
-                            textDecoration = TextDecoration.None
-                        )
-                    ),
-                    linkInteractionListener = {
-                        onFootnoteClick(matchingFootnote)
-                    }
-                )
-            } else null
-
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val tertiaryColor = MaterialTheme.colorScheme.tertiary
+    val annotatedText = remember(verse.number, verse.text, fontSize, matchingFootnote, primaryColor, tertiaryColor) {
+        buildAnnotatedString {
+            // Verse Number
             withStyle(
                 SpanStyle(
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = primaryColor,
                     fontWeight = FontWeight.Bold,
-                    fontSize = (fontSize.value * 0.7f).sp,
+                    fontSize = (fontSize.value * 0.75f).sp,
                     baselineShift = BaselineShift.Superscript
                 )
             ) {
-                if (link != null) {
-                    withLink(link) {
+                append("${verse.number} ")
+            }
+
+            // Verse Text
+            append(verse.text)
+
+            // Footnote Indicators
+            if (verse.footnoteIds.isNotEmpty() || matchingFootnote != null) {
+                val link = if (matchingFootnote != null) {
+                    LinkAnnotation.Clickable(
+                        tag = "footnote_${verse.number}",
+                        styles = TextLinkStyles(
+                            style = SpanStyle(
+                                color = tertiaryColor,
+                                textDecoration = TextDecoration.None
+                            )
+                        ),
+                        linkInteractionListener = {
+                            onFootnoteClick(matchingFootnote)
+                        }
+                    )
+                } else null
+
+                withStyle(
+                    SpanStyle(
+                        color = tertiaryColor,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = (fontSize.value * 0.7f).sp,
+                        baselineShift = BaselineShift.Superscript
+                    )
+                ) {
+                    if (link != null) {
+                        withLink(link) {
+                            append(" *")
+                        }
+                    } else {
                         append(" *")
                     }
-                } else {
-                    append(" *")
                 }
             }
         }

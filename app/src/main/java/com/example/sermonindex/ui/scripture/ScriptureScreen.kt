@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -150,7 +151,11 @@ fun ScriptureContent(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(filteredBooks, key = { it.id }) { book ->
+            items(
+                items = filteredBooks,
+                key = { it.id },
+                contentType = { "bible_book" }
+            ) { book ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -251,7 +256,12 @@ fun ScriptureChaptersScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items((1..totalChapters).toList(), key = { it }) { chapterNum ->
+                items(
+                    count = totalChapters,
+                    key = { it + 1 },
+                    contentType = { "chapter_cell" }
+                ) { index ->
+                    val chapterNum = index + 1
                     Surface(
                         modifier = Modifier
                             .aspectRatio(1f)
@@ -343,10 +353,13 @@ fun ScriptureVerseHeatMapContent(
         }
 
         val chapterData = state.chapterData
-        val heatMap = chapterData?.verseHeatMap ?: emptyMap()
-        val verseCount = chapterData?.verseCount ?: heatMap.size
-        val versesList = (1..verseCount.coerceAtLeast(1)).map { v -> v to (heatMap[v] ?: 0) }
-        val maxCount = versesList.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
+        val (versesList, maxCount) = remember(chapterData) {
+            val heatMap = chapterData?.verseHeatMap ?: emptyMap()
+            val verseCount = (chapterData?.verseCount ?: heatMap.size).coerceAtLeast(1)
+            val list = (1..verseCount).map { v -> v to (heatMap[v] ?: 0) }
+            val max = list.maxOfOrNull { it.second }?.coerceAtLeast(1) ?: 1
+            list to max
+        }
 
         Column(
             modifier = Modifier
@@ -372,7 +385,11 @@ fun ScriptureVerseHeatMapContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(versesList, key = { it.first }) { (verseNum, count) ->
+                    items(
+                        items = versesList,
+                        key = { it.first },
+                        contentType = { "verse_heat_cell" }
+                    ) { (verseNum, count) ->
                         VerseHeatMapCell(
                             verse = verseNum,
                             count = count,
