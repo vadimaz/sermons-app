@@ -260,7 +260,9 @@ fun PlayerContent(
     LaunchedEffect(state.activeCueIndex) {
         if (state.isReadingMode && state.activeCueIndex >= 0) {
             val target = if (state.activeCueIndex >= 3) state.activeCueIndex - 1 else 1
-            listState.animateScrollToItem(target)
+            if (listState.firstVisibleItemIndex != target) {
+                listState.animateScrollToItem(target)
+            }
         }
     }
 
@@ -407,6 +409,7 @@ fun PlayerContent(
         }
 
         // Scrollable content with sticky controls row
+        val onSeekToCue = remember(currentOnEvent) { { ms: Long -> currentOnEvent(PlayerUiEvent.SeekToCue(ms)) } }
         Box(
             modifier = Modifier
                 .weight(1f)
@@ -706,56 +709,21 @@ fun PlayerContent(
                 }
 
                 val currentActiveCueIndex = state.activeCueIndex
+                val matchingIndices = state.matchingCueIndices
+                val highlightQuery = state.highlightQuery
+
                 itemsIndexed(
                     items = state.transcriptCues,
                     key = { _, cue -> "cue_${cue.index}" },
                     contentType = { _, _ -> "transcript_cue" }
                 ) { index, cue ->
-                    val isActive = index == currentActiveCueIndex
-                    val isMatch = state.matchingCueIndices.contains(index)
-                    val targetColor = if (isActive) {
-                        MaterialTheme.colorScheme.primary
-                    } else if (isMatch) {
-                        MaterialTheme.colorScheme.tertiary
-                    } else {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-                    }
-                    val animatedColor by animateColorAsState(targetValue = targetColor, label = "cueTextColor")
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onEvent(PlayerUiEvent.SeekToCue(cue.startMs)) }
-                            .padding(vertical = 8.dp, horizontal = 4.dp)
-                    ) {
-                        if (state.highlightQuery.isNullOrBlank()) {
-                            Text(
-                                text = cue.text,
-                                fontSize = 22.sp,
-                                lineHeight = 30.sp,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                                color = animatedColor,
-                                textAlign = TextAlign.Start
-                            )
-                        } else {
-                            val annotated = remember(cue.text, state.highlightQuery) {
-                                TextHighlightUtils.buildHighlightedText(
-                                    text = cue.text,
-                                    query = state.highlightQuery,
-                                    highlightColor = Color(0x66FFC107)
-                                )
-                            }
-                            Text(
-                                text = annotated,
-                                fontSize = 22.sp,
-                                lineHeight = 30.sp,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                                color = animatedColor,
-                                textAlign = TextAlign.Start
-                            )
-                        }
-                    }
+                    TranscriptCueItem(
+                        cue = cue,
+                        isActive = index == currentActiveCueIndex,
+                        isMatch = matchingIndices.contains(index),
+                        highlightQuery = highlightQuery,
+                        onSeekToCue = onSeekToCue
+                    )
                 }
             } else if (state.isLoadingCues) {
                 item(key = "loading_cues") {
@@ -820,6 +788,60 @@ private fun TranscriptSection(transcriptHtml: String, transcriptText: String) {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 lineHeight = MaterialTheme.typography.bodyMedium.lineHeight * 1.3
+            )
+        }
+    }
+}
+
+@Composable
+private fun TranscriptCueItem(
+    cue: com.example.sermonindex.domain.model.TranscriptCue,
+    isActive: Boolean,
+    isMatch: Boolean,
+    highlightQuery: String?,
+    onSeekToCue: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val targetColor = if (isActive) {
+        MaterialTheme.colorScheme.primary
+    } else if (isMatch) {
+        MaterialTheme.colorScheme.tertiary
+    } else {
+        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+    }
+    val animatedColor by animateColorAsState(targetValue = targetColor, label = "cueTextColor")
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable { onSeekToCue(cue.startMs) }
+            .padding(vertical = 8.dp, horizontal = 4.dp)
+    ) {
+        if (highlightQuery.isNullOrBlank()) {
+            Text(
+                text = cue.text,
+                fontSize = 22.sp,
+                lineHeight = 30.sp,
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                color = animatedColor,
+                textAlign = TextAlign.Start
+            )
+        } else {
+            val annotated = remember(cue.text, highlightQuery) {
+                com.example.sermonindex.ui.search.components.TextHighlightUtils.buildHighlightedText(
+                    text = cue.text,
+                    query = highlightQuery,
+                    highlightColor = androidx.compose.ui.graphics.Color(0x66FFC107)
+                )
+            }
+            Text(
+                text = annotated,
+                fontSize = 22.sp,
+                lineHeight = 30.sp,
+                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
+                color = animatedColor,
+                textAlign = TextAlign.Start
             )
         }
     }

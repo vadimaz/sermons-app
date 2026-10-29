@@ -9,7 +9,7 @@
 
 | Component | Technology / Version | Details |
 |---|---|---|
-| **OS / Runtime** | Android SDK | `minSdk = 26` (Android 8.0), `compileSdk = 37`, `targetSdk = 36` |
+| **OS / Runtime** | Android SDK | `minSdk = 26` (Android 8.0), `compileSdk = 37`, `targetSdk = 36`, `<profileable>` shell enabled |
 | **JDK** | Java 17 | `jvmToolchain(17)`, Gradle 9.8.2, AGP 9.4.1 |
 | **Language** | Kotlin 2.3.21 | KSP 2.3.12, Kotlin Serialization 1.11.0 |
 | **UI Toolkit** | Jetpack Compose | BOM 2026.09.00, Material 3 (1.4.0), Material Icons Extended |
