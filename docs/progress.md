@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.9` | **Version Code:** `32`
+> **Current Version:** `1.14.0` | **Version Code:** `33`
 
 ---
 
@@ -58,7 +58,7 @@
   - Decomposed bloated monolithic screen files: `HomeScreen.kt` (880 $\rightarrow$ 264 lines), `LibraryScreen.kt` (755 $\rightarrow$ 232 lines), `SermonDetailScreen.kt` (659 $\rightarrow$ 390 lines), and `CommonComponents.kt` into isolated Single Responsibility files (`LoadingView.kt`, `ErrorView.kt`, `EmptyStateView.kt`, `SearchTextField.kt`).
   - Created centralized `@ThemePreviews` annotation in `theme/ThemePreviews.kt` providing dual Light & Dark Material 3 preview rendering.
   - Introduced `PreviewFixtures.kt` supplying shared mock data across all component previews without test or production clutter.
-- Shared JVM unit testing infrastructure in `com.example.sermonindex.testing` (`MainDispatcherRule`, `FakeSermonRepository`, `FakeUserPreferencesRepository`, `FakePlaybackManager`) with `kotlinx-coroutines-test` and `CashApp Turbine`, governed by hierarchical AI guidelines (`GEMINI.md` and `app/src/test/GEMINI.md`).
+- Shared JVM unit testing infrastructure in `com.example.sermonindex.testing` (`MainDispatcherRule`, `FakeSermonRepository`, `FakeUserPreferencesRepository`, `FakePlaybackManager`) with `kotlinx-coroutines-test` and `CashApp Turbine`, governed by [`AGENTS.md`](../AGENTS.md) and [`docs/testing.md`](testing.md).
 
 ### 1.6 Pagination & Catalog Streaming (Paging 3)
 - **`SpeakerSermonsPagingSource`**: PagingSource implementation connecting `androidx.paging:paging-runtime` and `androidx.paging:paging-compose` (version 3.5.3) with pure Kotlin domain UseCase `GetSpeakerSermonsPageUseCase`.
@@ -111,7 +111,6 @@
 - **Pure Direct DataStore**: No legacy migration overhead needed during pre-release development — preferences flow directly into and out of DataStore with clean defaults.
 - **Removed SQLite Tech Debt**: Dropped `bibleChangeSignal` flow polling, `bible_reading_state` SQLite table, and `BibleReadingStateEntity` completely.
 
-
 ### 1.10 Android Room Database & Local Storage Architecture
 - **Room v2.8.5 Migration**: Completely replaced 670 lines of low-level `SQLiteOpenHelper`, raw SQL queries, and manual `ContentValues` with canonical Modern Android Development (MAD) Room `@Database` (version 1) and KSP2 code generation.
 - **Full-Text Search FTS4 Virtual Table**: Integrated `@Entity(tableName = "sermon_fts")` with `@Fts4(tokenizer = FtsOptions.TOKENIZER_UNICODE61)` with explicit `rowid` handling, preserving sub-millisecond search performance across 70,000+ sermon titles, speakers, and transcripts.
@@ -163,7 +162,7 @@
   - `UserPreferencesRepository` contracts and single-responsibility domain UseCases (`GetAutoCatalogUpdateCheckEnabledUseCase`, `SetAutoCatalogUpdateCheckEnabledUseCase`, `GetLastCatalogUpdateCheckTimestampUseCase`, `SetLastCatalogUpdateCheckTimestampUseCase`).
 
 ### 1.13 Comprehensive SermonIndex API v2 Specification
-- **Single Source of Truth (`SERMONINDEX_API.md`)**: Complete English technical reference document describing the entire SermonIndex API v2 platform, Edge CDN distribution, zero-authentication model, rate-limiting policies, and HTTP conventions.
+- **Single Source of Truth ([`docs/api.md`](api.md))**: Complete English technical reference document describing the entire SermonIndex API v2 platform, Edge CDN distribution, zero-authentication model, rate-limiting policies, and HTTP conventions.
 - **Complete Endpoints & Contracts**: Fully documented request/response schemas for Metadata (`/v2`, `/v2/stats`), Scripture Index (`/v2/scripture/...` with chapter verse heatmaps), Topics (`/v2/topics/...` with BSB texts), Speakers & 50-item Pagination (`/v2/speakers/...`), Sermons & 500-item Pagination (`/v2/sermons/...`, `/v2/sermons/{id}` with 39 fields), Random discovery shards (`/v2/random/{1..80}`), and hosted Bible corpus (1,253 translations and 6 historical commentaries).
 - **Offline & Media Resilience**: Formalized media failover patterns (Internet Archive primary with automatic BunnyCDN fallback), bulk database specifications (`sermonindex.db` SQLite 3 and `sermons.json.gz`), Kiwix offline ZIM packages, and OSIS canonical book codes.
 - **Android Integration Guidelines**: Clear technical conventions for Retrofit interceptors, Room FTS4 sync, Media3 ExoPlayer error recovery, and Paging 3 pagination sources.
@@ -259,6 +258,25 @@
 - **Static Regex Hoisting & Layout Flattening**:
   - Precompiled and hoisted static regexes (`HTML_TAG_REGEX`, `WHITESPACE_REGEX`, `TOKEN_DELIMITER_REGEX`) to file top-level scopes across `TextHighlightUtils`, `TopicDetailScreen`, and `FullscreenPlayerScreen`.
   - Flattened triple-nested layout nodes (`Box -> Surface -> Box -> Icon`) in `SermonListItem` to a single `Box` with background and alignment.
+
+### 1.19 Modern JVM Testing Architecture & Test Pyramid (MAD 2026)
+- **Universal JVM-First Strategy**:
+  - Completely replaced fragile instrumented stub tests with 100% JVM-executable tests running in ~14 seconds via `./gradlew testDebugUnitTest`.
+  - Established canonical testing standard governed by [`AGENTS.md`](../AGENTS.md) and [`docs/testing.md`](testing.md).
+- **In-Memory Room Database & Migration Testing**:
+  - In-memory SQLite testing using `Room.inMemoryDatabaseBuilder()` and Robolectric: `FavoritesDaoTest`, `HistoryDaoTest`, `DownloadsDaoTest`, `BibleBookmarksDaoTest`, and `SearchDaoAndFtsTest` (verifying FTS4 prefix matching and multilingual unicode61 tokenization).
+  - Production database migration verification (`DatabaseMigrationTest` verifying `MIGRATION_1_2` schema transitions via `MigrationTestHelper`).
+- **MVI / MVVM StateFlow Testing**:
+  - 100% coverage of core ViewModels (`HomeViewModel`, `LibraryViewModel`, `PlayerViewModel`, `SpeakersViewModel`, `TopicsViewModel`, `ScriptureViewModel`, `SearchViewModel`, `BibleViewModel`, `TextSermonViewModel`).
+  - Verifying initial states, asynchronous effect handling, and state transitions using `kotlinx-coroutines-test` (`runTest`), `StandardTestDispatcher`, and `CashApp Turbine` (`flow.test {}`).
+  - Pure state-backed fakes in `com.example.sermonindex.testing` (`FakeSermonRepository`, `FakeUserPreferencesRepository`, `FakePlaybackManager`) ensuring predictable, deterministic behavior without mock runtime overhead.
+- **Headless Jetpack Compose UI Testing (Robolectric + `createComposeRule`)**:
+  - JVM-based semantic node assertions and user interaction dispatch without needing emulators or physical devices.
+  - Tested core components and screens: `CommonViewsTest` (`LoadingView`, `ErrorView`, `EmptyStateView`), `MiniPlayerTest` (playback controls, progress fractions, expand gestures), `SermonListItemTest` (audio and text badges, play/read actions, highlight queries), `LibraryScreenTest` (tab bar navigation, empty states), and `SearchScreenTest` (search input, query update dispatch, dynamic category filter chips).
+- **Code Coverage & Reporting (JaCoCo)**:
+  - Automated `./gradlew jacocoTestReport` task integrated into Gradle KTS.
+  - HTML and XML report generation with surgical exclusion rules filtering out compiler-generated metadata, Dagger/Hilt components, Room DAO implementations, and Android framework classes.
+- **Total Test Suite**: 145 tests passing cleanly across JVM in under 15 seconds.
 
 ---
 
@@ -365,13 +383,13 @@ open class PlaybackManager(context: Context? = null) {
     fun pause()
     fun resume()
     fun stop()
-    fun seekTo(positionMs: Long)
+    open fun seekTo(positionMs: Long)
     fun rewind(seconds: Int = 15)
     fun fastForward(seconds: Int = 30)
-    fun setSpeed(speed: Float)
-    fun setSleepTimerMinutes(minutes: Int)
-    fun setSleepTimerEndOfSermon()
-    fun cancelSleepTimer()
+    open fun setSpeed(speed: Float)
+    open fun setSleepTimerMinutes(minutes: Int)
+    open fun setSleepTimerEndOfSermon()
+    open fun cancelSleepTimer()
 }
 
 @Immutable

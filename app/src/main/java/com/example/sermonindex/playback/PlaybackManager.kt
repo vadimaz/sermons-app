@@ -184,7 +184,7 @@ open class PlaybackManager(private val context: Context? = null) {
 
     private var sleepTimerJob: Job? = null
 
-    fun setSleepTimerMinutes(minutes: Int) {
+    open fun setSleepTimerMinutes(minutes: Int) {
         sleepTimerJob?.cancel()
         if (minutes <= 0) {
             cancelSleepTimer()
@@ -220,7 +220,7 @@ open class PlaybackManager(private val context: Context? = null) {
         }
     }
 
-    fun setSleepTimerEndOfSermon() {
+    open fun setSleepTimerEndOfSermon() {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
         setPlaybackState(
@@ -230,7 +230,7 @@ open class PlaybackManager(private val context: Context? = null) {
         )
     }
 
-    fun cancelSleepTimer() {
+    open fun cancelSleepTimer() {
         sleepTimerJob?.cancel()
         sleepTimerJob = null
         setPlaybackState(
@@ -240,11 +240,11 @@ open class PlaybackManager(private val context: Context? = null) {
         )
     }
 
-    fun resume() {
+    open fun resume() {
         mediaController?.play()
     }
 
-    fun pause() {
+    open fun pause() {
         mediaController?.pause()
     }
 
@@ -257,19 +257,19 @@ open class PlaybackManager(private val context: Context? = null) {
         }
     }
 
-    fun seekTo(positionMs: Long) {
+    open fun seekTo(positionMs: Long) {
         mediaController?.seekTo(positionMs)
         setPlaybackState(_playbackState.value.copy(currentPositionMs = positionMs))
     }
 
-    fun rewind(seconds: Int = 15) {
+    open fun rewind(seconds: Int = 15) {
         val controller = mediaController ?: return
         val newPos = (controller.currentPosition - seconds * 1000L).coerceAtLeast(0L)
         controller.seekTo(newPos)
         setPlaybackState(_playbackState.value.copy(currentPositionMs = newPos))
     }
 
-    fun fastForward(seconds: Int = 30) {
+    open fun fastForward(seconds: Int = 30) {
         val controller = mediaController ?: return
         val duration = controller.duration.coerceAtLeast(0L)
         val newPos = if (duration > 0) {
@@ -281,7 +281,7 @@ open class PlaybackManager(private val context: Context? = null) {
         setPlaybackState(_playbackState.value.copy(currentPositionMs = newPos))
     }
 
-    fun setSpeed(speed: Float) {
+    open fun setSpeed(speed: Float) {
         mediaController?.setPlaybackSpeed(speed)
         setPlaybackState(_playbackState.value.copy(playbackSpeed = speed))
     }

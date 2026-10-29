@@ -4,6 +4,7 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
   alias(libs.plugins.ksp)
   alias(libs.plugins.hilt.android)
+  jacoco
 }
 
 android {
@@ -13,11 +14,14 @@ android {
         applicationId = "com.example.sermonindex"
         minSdk = 26
         targetSdk = 36
-        versionCode = 32
-        versionName = "1.13.9"
+        versionCode = 33
+        versionName = "1.14.0"
     }
 
     buildTypes {
+        debug {
+            enableUnitTestCoverage = true
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -39,6 +43,13 @@ android {
       resources {
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
       }
+    }
+
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+            isReturnDefaultValues = true
+        }
     }
 }
 
@@ -78,10 +89,13 @@ dependencies {
   androidTestImplementation(libs.androidx.compose.ui.test.junit4)
   debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-  // Local tests: jUnit, coroutines, Turbine
+  // Local tests: jUnit, coroutines, Turbine, Robolectric, Room testing, Compose testing
   testImplementation(libs.junit)
   testImplementation(libs.kotlinx.coroutines.test)
   testImplementation(libs.turbine)
+  testImplementation(libs.robolectric)
+  testImplementation(libs.room.testing)
+  testImplementation(libs.androidx.compose.ui.test.junit4)
 
   // Instrumented tests: jUnit rules and runners
   androidTestImplementation(libs.androidx.test.core)
@@ -130,4 +144,50 @@ dependencies {
 
   // DataStore Preferences
   implementation(libs.androidx.datastore.preferences)
+}
+
+tasks.register<JacocoReport>("jacocoTestReport") {
+    dependsOn("testDebugUnitTest")
+
+    reports {
+        xml.required.set(true)
+        html.required.set(true)
+    }
+
+    val fileFilter = listOf(
+        "**/R.class",
+        "**/R$*.class",
+        "**/BuildConfig.*",
+        "**/Manifest*.*",
+        "**/*Test*.*",
+        "android/**/*.*",
+        // Hilt & Dagger
+        "**/*_Hilt*.class",
+        "**/Hilt_*.class",
+        "**/*_Factory.class",
+        "**/*_Factory$*.class",
+        "**/*_MembersInjector.class",
+        "**/Dagger*Component*.class",
+        "**/hilt_aggregated_deps/**",
+        "**/dagger/**",
+        // Room
+        "**/*_Impl*.class"
+    )
+
+    val kotlinClasses = fileTree("${layout.buildDirectory.get()}/intermediates/built_in_kotlinc/debug/compileDebugKotlin/classes") {
+        exclude(fileFilter)
+    }
+    val javaClasses = fileTree("${layout.buildDirectory.get()}/intermediates/javac/debug/compileDebugJavaWithJavac/classes") {
+        exclude(fileFilter)
+    }
+
+    val mainSrc = "${project.projectDir}/src/main/java"
+
+    sourceDirectories.setFrom(files(mainSrc))
+    classDirectories.setFrom(files(kotlinClasses, javaClasses))
+    executionData.setFrom(fileTree(layout.buildDirectory) {
+        include(
+            "outputs/unit_test_code_coverage/debugUnitTest/testDebugUnitTest.exec"
+        )
+    })
 }

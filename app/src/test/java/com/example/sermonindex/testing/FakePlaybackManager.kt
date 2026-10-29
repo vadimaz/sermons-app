@@ -41,14 +41,52 @@ class FakePlaybackManager : PlaybackManager(null) {
     var lastPlayedSermon: Sermon? = null
     var lastStartPositionMs: Long = 0L
     var togglePlayPauseCalled: Boolean = false
+    var lastSeekPosition: Long? = null
+    var lastSpeed: Float? = null
 
     override fun playSermon(sermon: Sermon, startPositionMs: Long) {
         lastPlayedSermon = sermon
         lastStartPositionMs = startPositionMs
+        playbackStateFlow.value = playbackStateFlow.value.copy(
+            currentSermon = sermon,
+            isPlaying = true,
+            currentPositionMs = startPositionMs
+        )
     }
 
     override fun togglePlayPause() {
         togglePlayPauseCalled = true
+        val current = playbackStateFlow.value
+        playbackStateFlow.value = current.copy(isPlaying = !current.isPlaying)
+    }
+
+    override fun seekTo(positionMs: Long) {
+        lastSeekPosition = positionMs
+        playbackStateFlow.value = playbackStateFlow.value.copy(currentPositionMs = positionMs)
+    }
+
+    override fun setSpeed(speed: Float) {
+        lastSpeed = speed
+        playbackStateFlow.value = playbackStateFlow.value.copy(playbackSpeed = speed)
+    }
+
+    override fun setSleepTimerMinutes(minutes: Int) {
+        val totalMs = minutes * 60 * 1000L
+        playbackStateFlow.value = playbackStateFlow.value.copy(
+            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Active(totalMs, totalMs)
+        )
+    }
+
+    override fun setSleepTimerEndOfSermon() {
+        playbackStateFlow.value = playbackStateFlow.value.copy(
+            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon
+        )
+    }
+
+    override fun cancelSleepTimer() {
+        playbackStateFlow.value = playbackStateFlow.value.copy(
+            sleepTimerState = com.example.sermonindex.domain.model.SleepTimerState.Off
+        )
     }
 
     fun setPlaybackState(state: PlaybackState) {
@@ -60,5 +98,7 @@ class FakePlaybackManager : PlaybackManager(null) {
         lastPlayedSermon = null
         lastStartPositionMs = 0L
         togglePlayPauseCalled = false
+        lastSeekPosition = null
+        lastSpeed = null
     }
 }

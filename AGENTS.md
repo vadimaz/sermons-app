@@ -1,9 +1,15 @@
 # SermonIndex Android — Agent Working Guidelines
 
+> Single Entry Point & Operational Guidelines for AI Assistants & Developers.
+
+---
+
 ## 1. Session Initialization (Mandatory)
 At the start of **any new session or task**, the agent must:
-1. Consult `ARCHITECTURE.md` to align with the technical stack, package structure, and strict architectural rules (Clean Architecture, MVI/MVVM, Dagger Hilt, Jetpack Compose, Media3).
-2. Consult `PROGRESS.md` to understand the current implementation status, available API contracts, and roadmap priorities.
+1. Consult [`docs/architecture.md`](docs/architecture.md) to align with the technical stack, package structure, and strict architectural rules (Clean Architecture, MVI/MVVM, Dagger Hilt, Jetpack Compose, Media3).
+2. Consult [`docs/progress.md`](docs/progress.md) to understand the current implementation status, available API contracts, and roadmap priorities.
+3. Consult [`docs/testing.md`](docs/testing.md) whenever creating, updating, or reviewing tests.
+4. Consult [`docs/api.md`](docs/api.md) for REST API endpoints, DTO models, and edge CDN distribution rules.
 
 ---
 
@@ -33,14 +39,14 @@ When the user gives a **direct command to commit** (e.g., *"Сделай ком�
      * `PATCH` (e.g. `1.0.0` -> `1.0.1`): Bug fixes, refactoring, performance/string improvements (`fix:`, `refactor:`, `style:`, `perf:`).
      * `MINOR` (e.g. `1.0.1` -> `1.1.0`): New feature, new screen, new download manager (`feat:`).
      * `MAJOR` (e.g. `1.x.x` -> `2.0.0`): Breaking architectural shift, backward-incompatible DB/API changes.
-2. **Check & Update `PROGRESS.md`**:
+2. **Check & Update [`docs/progress.md`](docs/progress.md)**:
    - Update current version and `versionCode` in the document header.
    - Move completed features/screens from *In Progress / Next Steps* to *Implemented Features*.
    - Add any newly introduced public interfaces, repository methods, or services to *API Contracts*.
    - Record any known trade-offs, deferred items, or technical debt into *Backlog & Tech Debt*.
    - Update the *Next Steps* section with the upcoming priority.
-3. **Check & Update `ARCHITECTURE.md` / `GEMINI.md`** *(only if applicable)*:
-   - Update if new foundational dependencies, architectural patterns, top-level packages, testing conventions, or coding guidelines were introduced.
+3. **Check & Update [`docs/architecture.md`](docs/architecture.md)** *(only if applicable)*:
+   - Update if new foundational dependencies, architectural patterns, top-level packages, or coding guidelines were introduced.
 4. **Stage, Commit & Push**:
    - Stage code changes together with the updated documentation and build files.
    - Create a conventional commit message (`feat:`, `fix:`, `refactor:`, `docs:`, etc.) accurately describing the changes.
@@ -49,10 +55,13 @@ When the user gives a **direct command to commit** (e.g., *"Сделай ком�
 ---
 
 ## 4. Verification & Testing
-- **Unit Tests:** Run `./gradlew testDebugUnitTest` (or `--tests "..."` for targeted checks) to verify changes:
+- **Unit & Robolectric Tests:** Run `./gradlew testDebugUnitTest` (or `--tests "..."` for targeted checks) before completing tasks:
   ```powershell
   $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
   ./gradlew testDebugUnitTest
   ```
-- **Testing Principles:** Follow general MAD testing practices — prefer shared state-backed Fakes in `testing/` over mocks, and use `runTest` / `Turbine` for coroutines and flows (see [`app/src/test/GEMINI.md`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/test/GEMINI.md)).
+- **Testing Architecture & Code Recipes:** Always consult [`docs/testing.md`](docs/testing.md) for testing guidelines:
+  - Prefer shared state-backed Fakes in `com.example.sermonindex.testing` over mocks.
+  - Use `runTest` and `Turbine` (`flow.test {}`) for coroutines and StateFlow.
+  - Use Robolectric + Compose testing APIs for headless UI verification on JVM.
 - **Live Device Checks (`android` CLI):** Inspect layout hierarchy (`android layout`) before capturing screenshots, and store temporary captures in `build/tmp/`.

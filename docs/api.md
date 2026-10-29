@@ -36,7 +36,7 @@ The **SermonIndex API (v2)** is a high-performance, open-access, edge-distribute
    - Correct form: `/v2/topics/prayer`.
 3. **HTTP 404 Returns HTML (Never JSON)**:
    - When a requested resource does not exist (such as an un-preached scripture verse or an invalid slug), the server returns **HTTP 404 with an HTML document** (not a JSON error object).
-   - **Android Client Rule**: The networking layer must verify `response.isSuccessful` prior to parsing JSON to prevent `JsonDecodingException`. In this codebase, [`Http404EmptyInterceptor`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/data/network/Http404EmptyInterceptor.kt) intercepts 404 responses for scripture lookups and safely substitutes an empty JSON payload.
+   - **Android Client Rule**: The networking layer must verify `response.isSuccessful` prior to parsing JSON to prevent `JsonDecodingException`. In this codebase, [`Http404EmptyInterceptor`](../app/src/main/java/com/example/sermonindex/data/network/Http404EmptyInterceptor.kt) intercepts 404 responses for scripture lookups and safely substitutes an empty JSON payload.
 4. **Guaranteed Non-Null Field Values**:
    - Empty values are consistently serialized as `""` (empty string) or `[]` (empty list) rather than `null` or omitted keys, allowing safe property navigation without defensive null checks.
 5. **Strict Case Sensitivity**:
@@ -60,7 +60,7 @@ SermonIndex distributes audio and video through a hybrid infrastructure designed
 
 > [!WARNING]
 > Browsers and standard media players (including ExoPlayer) **do not automatically failover** between multiple `<source>` tags upon HTTP 404 or network timeout.
-> The media engine ([`PlaybackService`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/playback/PlaybackService.kt)) must explicitly listen for media playback errors on `mp3Url` and seamlessly re-prepare playback using `cdnMp3Url`.
+> The media engine ([`PlaybackService`](../app/src/main/java/com/example/sermonindex/playback/PlaybackService.kt)) must explicitly listen for media playback errors on `mp3Url` and seamlessly re-prepare playback using `cdnMp3Url`.
 
 ---
 
@@ -434,7 +434,7 @@ To process or index the entire catalog, clients must download bulk packages inst
 | Package File | Size | Format | Description |
 |---|---|---|---|
 | `sermonindex.db` | ~172 MB | SQLite 3 | Fully indexed relational database with tables: `sermon`, `speaker`, `topic`, `sermon_topic`, `sermon_scripture` |
-| `sermons.json.gz` | ~26.7 MB | JSONL (Gzip) | One sermon JSON object per line. Streamed by [`CatalogSyncWorker`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/data/sync/CatalogSyncWorker.kt) into Room FTS4 |
+| `sermons.json.gz` | ~26.7 MB | JSONL (Gzip) | One sermon JSON object per line. Streamed by [`CatalogSyncWorker`](../app/src/main/java/com/example/sermonindex/data/sync/CatalogSyncWorker.kt) into Room FTS4 |
 | `topics.json.gz` | ~9.9 MB | JSON (Gzip) | Every topic with its description and scripture links |
 | `scripture-index.json.gz` | ~3.6 MB | JSONL (Gzip) | Relational map: scripture reference to sermon IDs |
 | `speakers.json.gz` | ~266 KB | JSON (Gzip) | Preachers catalog with bios and portrait links |
@@ -508,20 +508,20 @@ All scripture endpoints mandate 3-character **uppercase OSIS abbreviations**:
 
 When designing and extending features in the SermonIndex Android codebase (Kotlin, Jetpack Compose, Clean Architecture, Hilt, Room, Media3), follow these rules:
 
-1. **Retrofit Network Client ([`NetworkClient.kt`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/data/network/NetworkClient.kt))**:
+1. **Retrofit Network Client ([`NetworkClient.kt`](../app/src/main/java/com/example/sermonindex/data/network/NetworkClient.kt))**:
    - `Http404EmptyInterceptor`: Safely transforms 404 responses for scripture verse lookups into `{ "sermons": [] }` without throwing unhandled exceptions.
    - Configure a 50 MB OkHttp disk cache (`Cache(cacheDir, CACHE_SIZE)`).
 2. **Paging 3 Integration**:
-   - For preacher sermons, use [`SpeakerSermonsPagingSource`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/ui/speakers/SpeakerDetailViewModel.kt) targeting `/v2/speakers/{slug}/page/{page}` with fixed `pageSize = 50`.
+   - For preacher sermons, use [`SpeakerSermonsPagingSource`](../app/src/main/java/com/example/sermonindex/ui/speakers/SpeakerDetailViewModel.kt) targeting `/v2/speakers/{slug}/page/{page}` with fixed `pageSize = 50`.
 3. **Full-Text Search (Room FTS4)**:
-   - Use [`CatalogSyncWorker`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/data/sync/CatalogSyncWorker.kt) to stream `sermons.json.gz` (26.7 MB) and populate the virtual `sermon_fts` table with `tokenizer=unicode61` for sub-millisecond offline search.
+   - Use [`CatalogSyncWorker`](../app/src/main/java/com/example/sermonindex/data/sync/CatalogSyncWorker.kt) to stream `sermons.json.gz` (26.7 MB) and populate the virtual `sermon_fts` table with `tokenizer=unicode61` for sub-millisecond offline search.
 4. **Periodic Update Checks**:
-   - [`CatalogUpdateCheckWorker`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/data/sync/CatalogUpdateCheckWorker.kt): Periodically poll `/v2/stats`, compare `generated` against `catalog_metadata.generatedAt`, and notify the user via system notifications when a new catalog is available.
-5. **Media3 Playback Engine ([`PlaybackService.kt`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/playback/PlaybackService.kt))**:
+   - [`CatalogUpdateCheckWorker`](../app/src/main/java/com/example/sermonindex/data/sync/CatalogUpdateCheckWorker.kt): Periodically poll `/v2/stats`, compare `generated` against `catalog_metadata.generatedAt`, and notify the user via system notifications when a new catalog is available.
+5. **Media3 Playback Engine ([`PlaybackService.kt`](../app/src/main/java/com/example/sermonindex/playback/PlaybackService.kt))**:
    - Check local file storage first.
    - If streaming, attempt `sermon.mp3Url` first; upon playback error, automatically switch to `sermon.cdnMp3Url`.
    - Download synchronized WebVTT transcript from `sermon.vttUrl` for Karaoke-style highlighted reading.
 6. **Bible Reader & Cross-Linking**:
    - Fetch translation books and chapters via `/v2/bible/...`.
-   - Use `thisChapterAudioLinks` with [`PlaybackManager`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/app/src/main/java/com/example/sermonindex/playback/PlaybackManager.kt) for spoken audio narration.
+   - Use `thisChapterAudioLinks` with [`PlaybackManager`](../app/src/main/java/com/example/sermonindex/playback/PlaybackManager.kt) for spoken audio narration.
    - Cross-link verse markers to `/v2/scripture/{bookId}/{chapter}/{verse}` to surface relevant sermons.

@@ -1,8 +1,8 @@
 # SermonIndex Android App
 
-[![Version](https://img.shields.io/badge/version-1.0.2-blue.svg)](PROGRESS.md)
+[![Version](https://img.shields.io/badge/version-1.13.9-blue.svg)](docs/progress.md)
 [![Platform](https://img.shields.io/badge/platform-Android%208.0%2B%20(API%2026%2B)-green.svg)](app/build.gradle.kts)
-[![Architecture](https://img.shields.io/badge/architecture-Clean%20%2B%20MAD-orange.svg)](ARCHITECTURE.md)
+[![Architecture](https://img.shields.io/badge/architecture-Clean%20%2B%20MAD-orange.svg)](docs/architecture.md)
 
 Native Android application designed for streaming, exploring, and studying classical sermons, preachers, and scripture-based audio from [SermonIndex](https://sermonindex.net).
 
@@ -42,8 +42,8 @@ The application strictly adheres to **Clean Architecture** (Presentation → Dom
 - **Minimum SDK:** Android 8.0 (API 26)
 - **Target SDK:** Android 15 / 16 (API 36)
 
-For detailed architectural guidelines and package conventions, see [ARCHITECTURE.md](ARCHITECTURE.md).  
-For the current roadmap and implementation status, see [PROGRESS.md](PROGRESS.md).
+For detailed architectural guidelines and package conventions, see [docs/architecture.md](docs/architecture.md).  
+For the current roadmap and implementation status, see [docs/progress.md](docs/progress.md).
 
 ---
 

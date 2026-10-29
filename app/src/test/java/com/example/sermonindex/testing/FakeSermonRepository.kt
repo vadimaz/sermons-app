@@ -326,4 +326,30 @@ open class FakeSermonRepository : SermonRepository {
     override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {
         catalogReadyBannerDismissedFlow.value = dismissed
     }
+
+    fun setPopularSermons(list: List<Sermon>) {
+        popularSermonsResult = Result.success(list)
+    }
+
+    fun setRandomSermons(list: List<Sermon>) {
+        randomSermonsResult = Result.success(list)
+    }
+
+    fun setSpeakers(list: List<Speaker>) {
+        speakersResult = Result.success(list)
+    }
+
+    fun setTopics(list: List<Topic>) {
+        topicsResult = Result.success(list)
+    }
+
+    fun setFavorites(list: List<FavoriteSermon>) {
+        favoritesFlow.value = list
+    }
+
+    fun setHistory(list: List<ListeningHistory>) {
+        historyFlow.value = list
+    }
+
+    fun isFavoriteSync(id: String): Boolean = favoritesFlow.value.any { it.id == id }
 }

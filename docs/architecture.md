@@ -1,7 +1,8 @@
 # Technical Architecture & Guidelines
 
 > Single Source of Truth for AI assistants and developers working on SermonIndex Android App.  
-> Complete API specification & contracts: see [`SERMONINDEX_API.md`](file:///c:/Users/vzore/AntigravityProjects/Sermons%20App/SERMONINDEX_API.md).
+> Complete API specification & contracts: see [`api.md`](api.md).  
+> Testing standards & recipes: see [`testing.md`](testing.md).
 
 ---
 
@@ -23,7 +24,7 @@
 | **Image Loading** | Coil 3.6.3 | `coil-compose`, `coil-network-okhttp` |
 | **Paging** | AndroidX Paging 3 (3.5.3) | `androidx.paging:paging-runtime`, `androidx.paging:paging-compose` |
 | **Background Work** | AndroidX WorkManager 2.12.0 | `CoroutineWorker`, Hilt `@EntryPoint` integration |
-| **Testing** | JUnit 4 + Coroutines Test + Turbine 1.2.1 | JVM-first unit tests in `app/src/test/`, shared state-backed Fakes & `MainDispatcherRule` in `testing/` |
+| **Testing** | JUnit 4 + Robolectric 4.14 + Turbine 1.2.1 + JaCoCo | JVM-first testing pyramid (75% Unit / 20% Headless UI & Room / 5% E2E) in `app/src/test/`, shared state-backed Fakes & `MainDispatcherRule` in `testing/`, governed by [`docs/testing.md`](testing.md) |
 
 ---
 
@@ -190,9 +191,10 @@ The project adheres to **Semantic Versioning (`MAJOR.MINOR.PATCH`)**:
   - `MINOR`: new user-facing features, screens, offline sync mechanisms (`feat:`).
   - `MAJOR`: fundamental architecture redesign or breaking data/schema changes.
 
-### 4.7 Testing & Verification (`app/src/test/GEMINI.md`)
+### 4.7 Testing & Verification ([`docs/testing.md`](testing.md))
 - **Fakes Over Mocks**: Prefer reusable state-backed fakes in `com.example.sermonindex.testing` over mocking frameworks or duplicated inline stubs, evolving them alongside domain contracts.
 - **Flow & ViewModel Verification**: Use `runTest`, `MainDispatcherRule`, direct state assertions (`.value` / `.first()`) for single-state checks, and CashApp Turbine (`flow.test {}`) for multi-step emission sequences or cold `Flow` streams.
+- **Headless UI & Screenshot Tests**: Run Compose tests on JVM via Robolectric and Roborazzi without emulators.
 
 ---
 
