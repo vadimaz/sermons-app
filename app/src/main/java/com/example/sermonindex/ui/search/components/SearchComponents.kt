@@ -52,6 +52,9 @@ import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.CatalogSyncState
 import com.example.sermonindex.domain.model.Speaker
 import com.example.sermonindex.domain.model.Topic
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
+import com.example.sermonindex.ui.components.PreviewFixtures
 
 @Composable
 fun CatalogSyncBanner(
@@ -468,6 +471,68 @@ fun RecentSearchItem(
                 contentDescription = stringResource(R.string.remove),
                 modifier = Modifier.size(16.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun CatalogSyncBannerPreview() {
+    SermonIndexTheme {
+        Surface {
+            CatalogSyncBanner(
+                state = CatalogSyncState.Ready(
+                    sermonCount = 74500,
+                    generatedAt = "2026-10-29",
+                    hasUpdate = true
+                ),
+                onDownloadClick = {},
+                onUpdateClick = {},
+                onDismissClick = {}
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SpeakerSearchItemPreview() {
+    SermonIndexTheme {
+        Surface {
+            SpeakerSearchItem(
+                speaker = PreviewFixtures.previewSpeaker,
+                onClick = {},
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun TopicSearchItemPreview() {
+    SermonIndexTheme {
+        Surface {
+            TopicSearchItem(
+                topic = PreviewFixtures.previewTopic,
+                onClick = {},
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun RecentSearchItemPreview() {
+    SermonIndexTheme {
+        Surface {
+            RecentSearchItem(
+                query = "Ravenhill Prayer",
+                onClick = {},
+                onDelete = {},
+                modifier = Modifier.padding(16.dp)
             )
         }
     }

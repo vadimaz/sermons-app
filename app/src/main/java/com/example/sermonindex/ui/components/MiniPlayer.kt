@@ -38,6 +38,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.sermonindex.playback.ActiveMediaInfo
 import com.example.sermonindex.playback.PlaybackState
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
 
 @Composable
 fun MiniPlayer(
@@ -188,4 +190,42 @@ fun MiniPlayer(
         onCloseClick = onCloseClick,
         modifier = modifier
     )
+}
+
+@ThemePreviews
+@Composable
+private fun MiniPlayerPlayingPreview() {
+    SermonIndexTheme {
+        Surface {
+            MiniPlayer(
+                mediaInfo = ActiveMediaInfo(
+                    currentSermon = PreviewFixtures.previewAudioSermon,
+                    isPlaying = true
+                ),
+                progressProvider = { 0.45f },
+                onTogglePlayPause = {},
+                onExpandClick = {},
+                onCloseClick = {}
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun MiniPlayerPausedPreview() {
+    SermonIndexTheme {
+        Surface {
+            MiniPlayer(
+                mediaInfo = ActiveMediaInfo(
+                    currentSermon = PreviewFixtures.previewAudioSermon,
+                    isPlaying = false
+                ),
+                progressProvider = { 0.15f },
+                onTogglePlayPause = {},
+                onExpandClick = {},
+                onCloseClick = {}
+            )
+        }
+    }
 }

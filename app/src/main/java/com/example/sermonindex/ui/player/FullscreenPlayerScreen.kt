@@ -81,6 +81,11 @@ import coil3.compose.AsyncImage
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.domain.model.SermonDetail
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
+import com.example.sermonindex.ui.components.PreviewFixtures
+import com.example.sermonindex.ui.player.components.SleepTimerDialog
+import com.example.sermonindex.ui.player.components.TranscriptCueItem
 import com.example.sermonindex.ui.player.components.VideoPlayerSurface
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -277,64 +282,12 @@ fun PlayerContent(
     }
 
     if (state.showSleepTimerDialog) {
-        val currentTimer = state.sleepTimerState
-        AlertDialog(
+        SleepTimerDialog(
+            sleepTimerState = state.sleepTimerState,
             onDismissRequest = { onEvent(PlayerUiEvent.SetSleepTimerDialogVisible(false)) },
-            title = { Text(stringResource(R.string.sleep_timer)) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    val options = listOf(
-                        0 to stringResource(R.string.sleep_timer_off),
-                        15 to stringResource(R.string.sleep_timer_15m),
-                        30 to stringResource(R.string.sleep_timer_30m),
-                        45 to stringResource(R.string.sleep_timer_45m),
-                        60 to stringResource(R.string.sleep_timer_60m),
-                        -1 to stringResource(R.string.sleep_timer_end_of_sermon)
-                    )
-
-                    options.forEach { (minutes, label) ->
-                        val isSelected = when (minutes) {
-                            0 -> currentTimer is com.example.sermonindex.domain.model.SleepTimerState.Off
-                            -1 -> currentTimer is com.example.sermonindex.domain.model.SleepTimerState.EndOfSermon
-                            else -> currentTimer is com.example.sermonindex.domain.model.SleepTimerState.Active &&
-                                    (currentTimer.totalMillis / 60000L).toInt() == minutes
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    when (minutes) {
-                                        0 -> onEvent(PlayerUiEvent.CancelSleepTimer)
-                                        -1 -> onEvent(PlayerUiEvent.SetSleepTimerEndOfSermon)
-                                        else -> onEvent(PlayerUiEvent.SetSleepTimerMinutes(minutes))
-                                    }
-                                }
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = isSelected,
-                                onClick = {
-                                    when (minutes) {
-                                        0 -> onEvent(PlayerUiEvent.CancelSleepTimer)
-                                        -1 -> onEvent(PlayerUiEvent.SetSleepTimerEndOfSermon)
-                                        else -> onEvent(PlayerUiEvent.SetSleepTimerMinutes(minutes))
-                                    }
-                                }
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = label, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { onEvent(PlayerUiEvent.SetSleepTimerDialogVisible(false)) }) {
-                    Text(stringResource(R.string.cancel))
-                }
-            }
+            onSetMinutes = { onEvent(PlayerUiEvent.SetSleepTimerMinutes(it)) },
+            onSetEndOfSermon = { onEvent(PlayerUiEvent.SetSleepTimerEndOfSermon) },
+            onCancelTimer = { onEvent(PlayerUiEvent.CancelSleepTimer) }
         )
     }
 
@@ -793,60 +746,6 @@ private fun TranscriptSection(transcriptHtml: String, transcriptText: String) {
     }
 }
 
-@Composable
-private fun TranscriptCueItem(
-    cue: com.example.sermonindex.domain.model.TranscriptCue,
-    isActive: Boolean,
-    isMatch: Boolean,
-    highlightQuery: String?,
-    onSeekToCue: (Long) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val targetColor = if (isActive) {
-        MaterialTheme.colorScheme.primary
-    } else if (isMatch) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-    }
-    val animatedColor by animateColorAsState(targetValue = targetColor, label = "cueTextColor")
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onSeekToCue(cue.startMs) }
-            .padding(vertical = 8.dp, horizontal = 4.dp)
-    ) {
-        if (highlightQuery.isNullOrBlank()) {
-            Text(
-                text = cue.text,
-                fontSize = 22.sp,
-                lineHeight = 30.sp,
-                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                color = animatedColor,
-                textAlign = TextAlign.Start
-            )
-        } else {
-            val annotated = remember(cue.text, highlightQuery) {
-                com.example.sermonindex.ui.search.components.TextHighlightUtils.buildHighlightedText(
-                    text = cue.text,
-                    query = highlightQuery,
-                    highlightColor = androidx.compose.ui.graphics.Color(0x66FFC107)
-                )
-            }
-            Text(
-                text = annotated,
-                fontSize = 22.sp,
-                lineHeight = 30.sp,
-                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Medium,
-                color = animatedColor,
-                textAlign = TextAlign.Start
-            )
-        }
-    }
-}
-
 internal fun formatDuration(ms: Long): String {
     val totalSeconds = (ms / 1000).coerceAtLeast(0)
     val seconds = totalSeconds % 60
@@ -856,5 +755,26 @@ internal fun formatDuration(ms: Long): String {
         String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
     } else {
         String.format(Locale.US, "%02d:%02d", minutes, seconds)
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun PlayerContentPreview() {
+    SermonIndexTheme {
+        Surface {
+            PlayerContent(
+                state = PlayerUiState(
+                    sermon = PreviewFixtures.previewAudioSermon,
+                    sermonDetail = PreviewFixtures.previewSermonDetail,
+                    isPlaying = true,
+                    currentPositionMs = 15 * 60 * 1000L,
+                    durationMs = 42 * 60 * 1000L
+                ),
+                player = null,
+                onEvent = {},
+                onBack = {}
+            )
+        }
     }
 }

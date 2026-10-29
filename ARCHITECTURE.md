@@ -117,22 +117,28 @@ com.example.sermonindex
 │
 ├── theme/
 │   ├── Color.kt, Theme.kt, Type.kt # Material 3 Design System
+│   └── ThemePreviews.kt          # Multipreview annotation (Dual Light + Dark mode)
 │
 └── ui/
     ├── bible/                    # BibleScreen.kt, BibleViewModel.kt, BibleUiState.kt, components/
-    ├── components/
-    │   ├── CommonComponents.kt   # TopBar, LoadingView, EmptyStateView, ErrorView
-    │   ├── MiniPlayer.kt         # Persistent floating audio bar
-    │   ├── OfflineBanner.kt      # Animated real-time offline warning banner
-    │   └── SermonListItem.kt     # Standard list item with avatar, title, duration
-    ├── home/                     # HomeScreen.kt, HomeViewModel.kt
-    ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt
-    ├── player/                   # FullscreenPlayerScreen.kt, FullscreenVideoScreen.kt, PlayerViewModel.kt, components/VideoPlayerSurface.kt
+    ├── components/               # Core design system components
+    │   ├── EmptyStateView.kt     # Stateless empty state view [+ Preview]
+    │   ├── ErrorView.kt          # Error view with retry action [+ Preview]
+    │   ├── LoadingView.kt        # Loading spinner view [+ Preview]
+    │   ├── MiniPlayer.kt         # Persistent floating audio bar [+ Preview]
+    │   ├── OfflineBanner.kt      # Animated real-time offline warning banner [+ Preview]
+    │   ├── PreviewFixtures.kt    # Centralized preview mock models
+    │   ├── SearchTextField.kt    # Clean search input field [+ Preview]
+    │   └── SermonListItem.kt     # Standard list item with avatar, title, duration [+ Preview]
+    ├── home/                     # HomeScreen.kt, HomeViewModel.kt, components/ (HeroCarousel, Shelves, Cards)
+    ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt, components/ (Tab contents)
+    ├── player/                   # FullscreenPlayerScreen.kt, FullscreenVideoScreen.kt, components/ (SleepTimerDialog, TranscriptCueItem, VideoPlayerSurface)
+    ├── reader/                   # TextSermonScreen.kt, TextSermonViewModel.kt
     ├── scripture/                # ScriptureScreen.kt, ScriptureViewModel.kt, ScriptureChapterViewModel.kt, ScriptureVerseComponents.kt
     ├── search/                   # SearchScreen.kt, SearchViewModel.kt, SearchUiState.kt, components/
-    ├── sermon/                   # SermonDetailScreen.kt, SermonDetailViewModel.kt
-    ├── speakers/                 # SpeakersScreen.kt, SpeakerDetailScreen.kt, ViewModels
-    └── topics/                   # TopicsScreen.kt, TopicDetailScreen.kt, ViewModels
+    ├── sermon/                   # SermonDetailScreen.kt, SermonDetailViewModel.kt, components/ (Overview, Outline, Notes)
+    ├── speakers/                 # SpeakersScreen.kt, SpeakerDetailScreen.kt, components/ (SpeakerRow)
+    └── topics/                   # TopicsScreen.kt, TopicDetailScreen.kt, components/ (TopicRow)
 ```
 
 ---
@@ -149,6 +155,7 @@ com.example.sermonindex
 5. **No Direct I/O in UI**: No repository queries, network calls, or database operations directly inside `LaunchedEffect` in Composables. Everything flows through the ViewModel.
 6. **Assisted Injection**: For screens requiring route arguments (e.g. `sermonId`, `slug`), use `@HiltViewModel(assistedFactory = ...)` and `@AssistedInject`.
 7. **Paging 3 Integration**: When paginating large collections, bridge pure domain UseCases into `Flow<PagingData<T>>` via a dedicated `PagingSource` without polluting the domain layer. Collect via `collectAsLazyPagingItems()` and render append/refresh `LoadState` (loading spinners and error retry actions).
+8. **Composable Modularization & Previews**: All standalone stateless components and screen content composables must include private `@ThemePreviews` rendering in both Light and Dark modes. Core components live in `ui/components/`, while feature-specific subcomponents reside in `ui/<feature>/components/`. Mock models are centralized in `ui/components/PreviewFixtures.kt` to avoid test fixture duplication.
 
 ### 4.2 Domain Layer
 1. **Zero External Dependencies**: `domain/model/Models.kt` and `domain/usecase/UseCases.kt` must remain pure Kotlin. Never import Room, Retrofit, Android SDK, or Compose in Domain.

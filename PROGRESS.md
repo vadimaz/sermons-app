@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.13.8` | **Version Code:** `31`
+> **Current Version:** `1.13.9` | **Version Code:** `32`
 
 ---
 
@@ -53,6 +53,11 @@
 - Pure domain models (`domain/model/Models.kt`), UseCases (`domain/usecase/UseCases.kt`), and pure repository interface (`SermonRepository`).
 - Full Dagger Hilt DI with modules for Database, Network, Media, Dispatchers, and Repositories.
 - Complete string extraction in `res/values/strings.xml` for internationalization and accessibility.
+- **Composable Architecture & Multipreview Support (`@ThemePreviews`)**:
+  - Established two-tier component package structure: Core Design System in `ui/components/` and feature-scoped subcomponents in `ui/<feature>/components/` (`ui/home/components/`, `ui/library/components/`, `ui/sermon/components/`, `ui/player/components/`, `ui/speakers/components/`, `ui/topics/components/`).
+  - Decomposed bloated monolithic screen files: `HomeScreen.kt` (880 $\rightarrow$ 264 lines), `LibraryScreen.kt` (755 $\rightarrow$ 232 lines), `SermonDetailScreen.kt` (659 $\rightarrow$ 390 lines), and `CommonComponents.kt` into isolated Single Responsibility files (`LoadingView.kt`, `ErrorView.kt`, `EmptyStateView.kt`, `SearchTextField.kt`).
+  - Created centralized `@ThemePreviews` annotation in `theme/ThemePreviews.kt` providing dual Light & Dark Material 3 preview rendering.
+  - Introduced `PreviewFixtures.kt` supplying shared mock data across all component previews without test or production clutter.
 - Shared JVM unit testing infrastructure in `com.example.sermonindex.testing` (`MainDispatcherRule`, `FakeSermonRepository`, `FakeUserPreferencesRepository`, `FakePlaybackManager`) with `kotlinx-coroutines-test` and `CashApp Turbine`, governed by hierarchical AI guidelines (`GEMINI.md` and `app/src/test/GEMINI.md`).
 
 ### 1.6 Pagination & Catalog Streaming (Paging 3)

@@ -56,8 +56,11 @@ import coil3.compose.AsyncImage
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.QuoteItem
 import com.example.sermonindex.domain.model.SermonDetail
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
+import com.example.sermonindex.ui.components.PreviewFixtures
 
 /**
  * Stateful entry point for TextSermonScreen.
@@ -424,5 +427,29 @@ fun TextSermonContent(
         }
     }
 }
+}
+
+@ThemePreviews
+@Composable
+private fun TextSermonContentPreview() {
+    SermonIndexTheme {
+        Surface {
+            TextSermonContent(
+                state = TextSermonUiState(
+                    isLoading = false,
+                    detail = PreviewFixtures.previewSermonDetail.copy(
+                        hasAudio = false,
+                        mp3Url = "",
+                        cdnMp3Url = "",
+                        transcript = "Faith is the eye by which we look to Jesus, the hand by which we lay hold on Him, and the foot by which we run to Him."
+                    ),
+                    isFavorite = false
+                ),
+                onEvent = {},
+                onBack = {},
+                onSpeakerClick = {}
+            )
+        }
+    }
 }
 

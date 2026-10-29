@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.search.components.TextHighlightUtils
 
 @Composable
@@ -259,6 +261,58 @@ fun SermonListItem(
                     )
                 }
             }
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SermonListItemAudioPreview() {
+    SermonIndexTheme {
+        Surface {
+            SermonListItem(
+                sermon = PreviewFixtures.previewAudioSermon,
+                onPlayClick = {},
+                onItemClick = {},
+                onFavoriteToggle = {},
+                isFavorite = false,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SermonListItemTextOnlyPreview() {
+    SermonIndexTheme {
+        Surface {
+            SermonListItem(
+                sermon = PreviewFixtures.previewTextSermon,
+                onPlayClick = {},
+                onItemClick = {},
+                onFavoriteToggle = {},
+                isFavorite = true,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SermonListItemSnippetHighlightPreview() {
+    SermonIndexTheme {
+        Surface {
+            SermonListItem(
+                sermon = PreviewFixtures.previewAudioSermon,
+                onPlayClick = {},
+                onItemClick = {},
+                onFavoriteToggle = {},
+                isFavorite = false,
+                highlightQuery = "prayer",
+                modifier = Modifier.padding(16.dp)
+            )
         }
     }
 }

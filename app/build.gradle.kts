@@ -13,8 +13,8 @@ android {
         applicationId = "com.example.sermonindex"
         minSdk = 26
         targetSdk = 36
-        versionCode = 31
-        versionName = "1.13.8"
+        versionCode = 32
+        versionName = "1.13.9"
     }
 
     buildTypes {

@@ -63,6 +63,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
 import androidx.core.content.FileProvider
 import androidx.core.graphics.createBitmap
 import com.example.sermonindex.R
@@ -492,4 +494,19 @@ private fun shareQuoteCardAsText(
         Intent.createChooser(shareIntent, context.getString(R.string.action_share_text))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     )
+}
+
+@ThemePreviews
+@Composable
+private fun QuoteCardViewPreview() {
+    SermonIndexTheme {
+        Box(modifier = Modifier.size(320.dp).padding(16.dp)) {
+            QuoteCardView(
+                verseText = "Господь — Пастырь мой; я ни в чем не буду нуждаться.",
+                reference = "Псалтирь 22:1",
+                translationName = "Синодальный",
+                theme = QuoteCardTheme.MINIMAL
+            )
+        }
+    }
 }
