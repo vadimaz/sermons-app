@@ -65,3 +65,17 @@ When the user gives a **direct command to commit** (e.g., *"Сделай ком�
   - Use `runTest` and `Turbine` (`flow.test {}`) for coroutines and StateFlow.
   - Use Robolectric + Compose testing APIs for headless UI verification on JVM.
 - **Live Device Checks (`android` CLI):** Inspect layout hierarchy (`android layout`) before capturing screenshots, and store temporary captures in `build/tmp/`.
+
+---
+
+## 5. Planning & Language Conventions
+- **Implementation Plans & Planning Artifacts**:
+  - All implementation plans, task breakdowns, architectural drafts, and technical specifications must be written **strictly in English** (ensuring technical clarity, precise symbol referencing, and standard engineering terminology).
+  - Store plans and persistent artifacts in the designated artifact directory or markdown documentation files.
+- **Chat Communication & Plan Summaries**:
+  - Conversational replies, discussions, and explanations in the chat must be conducted in the user's preferred language (Russian by default).
+  - When introducing or updating an implementation plan, provide a **concise summary in Russian in the chat** highlighting:
+    1. Key phases / milestones.
+    2. Critical architectural decisions or risks.
+    3. Decisions or open questions requiring user confirmation.
+    4. A direct reference/link to the full English implementation plan artifact.

@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.14.0` | **Version Code:** `33`
+> **Current Version:** `1.14.1` | **Version Code:** `34`
 
 ---
 
@@ -59,6 +59,7 @@
   - Created centralized `@ThemePreviews` annotation in `theme/ThemePreviews.kt` providing dual Light & Dark Material 3 preview rendering.
   - Introduced `PreviewFixtures.kt` supplying shared mock data across all component previews without test or production clutter.
 - Shared JVM unit testing infrastructure in `com.example.sermonindex.testing` (`MainDispatcherRule`, `FakeSermonRepository`, `FakeUserPreferencesRepository`, `FakePlaybackManager`) with `kotlinx-coroutines-test` and `CashApp Turbine`, governed by [`AGENTS.md`](../AGENTS.md) and [`docs/testing.md`](testing.md).
+- **Agent Guidelines & Planning Conventions (`AGENTS.md`)**: Formalized Section 5 establishing strict English language requirements for implementation plans, task lists, and architectural artifacts, paired with Russian chat summaries and excerpts.
 
 ### 1.6 Pagination & Catalog Streaming (Paging 3)
 - **`SpeakerSermonsPagingSource`**: PagingSource implementation connecting `androidx.paging:paging-runtime` and `androidx.paging:paging-compose` (version 3.5.3) with pure Kotlin domain UseCase `GetSpeakerSermonsPageUseCase`.
