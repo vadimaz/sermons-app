@@ -64,6 +64,11 @@ When the user gives a **direct command to commit** (e.g., *"Сделай ком�
   - Prefer shared state-backed Fakes in `com.example.sermonindex.testing` over mocks.
   - Use `runTest` and `Turbine` (`flow.test {}`) for coroutines and StateFlow.
   - Use Robolectric + Compose testing APIs for headless UI verification on JVM.
+- **UI Verification & Visual Delivery (Compose Previews):**
+  - When completing any task that creates or modifies UI screens or components:
+    1. Ensure stateless composables have a private `@ThemePreviews` preview function using `PreviewFixtures`.
+    2. Render previews via Android CLI (`android preview render` or Compose Preview sidecar).
+    3. Present the rendered visual snapshots (Light & Dark themes via chat carousel or image embeds) to the user upon plan completion for visual review and potential follow-up adjustments before committing.
 - **Live Device Checks (`android` CLI):** Inspect layout hierarchy (`android layout`) before capturing screenshots, and store temporary captures in `build/tmp/`.
 
 ---
@@ -71,6 +76,7 @@ When the user gives a **direct command to commit** (e.g., *"Сделай ком�
 ## 5. Planning & Language Conventions
 - **Implementation Plans & Planning Artifacts**:
   - All implementation plans, task breakdowns, architectural drafts, and technical specifications must be written **strictly in English** (ensuring technical clarity, precise symbol referencing, and standard engineering terminology).
+  - For any task affecting UI screens or components, always include a dedicated final verification step: *"Visual Verification: Render Compose Previews (Light/Dark mode) & present snapshots to user"*.
   - Store plans and persistent artifacts in the designated artifact directory or markdown documentation files.
 - **Chat Communication & Plan Summaries**:
   - Conversational replies, discussions, and explanations in the chat must be conducted in the user's preferred language (Russian by default).

@@ -1,5 +1,6 @@
 package com.example.sermonindex.testing
 
+import com.example.sermonindex.domain.model.AppThemeMode
 import com.example.sermonindex.domain.model.BibleReadingPreferences
 import com.example.sermonindex.domain.repository.UserPreferencesRepository
 import kotlinx.coroutines.flow.Flow
@@ -15,8 +16,9 @@ class FakeUserPreferencesRepository(
     initialSecondTranslation: String = "rus_syn",
     initialCatalogBannerDismissed: Boolean = false,
     initialReadingPreferences: BibleReadingPreferences = BibleReadingPreferences(),
-    initialAutoUpdateCheckEnabled: Boolean = true,
-    initialLastUpdateCheckTimestamp: Long = 0L
+    initialAutoUpdateCheckEnabled: Boolean = false,
+    initialLastUpdateCheckTimestamp: Long = 0L,
+    initialThemeMode: AppThemeMode = AppThemeMode.SYSTEM
 ) : UserPreferencesRepository {
 
     val firstTranslationFlow = MutableStateFlow(initialFirstTranslation)
@@ -25,6 +27,7 @@ class FakeUserPreferencesRepository(
     val readingPreferencesFlow = MutableStateFlow(initialReadingPreferences)
     val autoUpdateCheckEnabledFlow = MutableStateFlow(initialAutoUpdateCheckEnabled)
     val lastUpdateCheckTimestampFlow = MutableStateFlow(initialLastUpdateCheckTimestamp)
+    val themeModeFlow = MutableStateFlow(initialThemeMode)
 
     override val firstTranslationId: Flow<String> = firstTranslationFlow.asStateFlow()
     override val secondTranslationId: Flow<String> = secondTranslationFlow.asStateFlow()
@@ -91,5 +94,11 @@ class FakeUserPreferencesRepository(
 
     override suspend fun setLastCatalogUpdateCheckTimestamp(timestamp: Long) {
         lastUpdateCheckTimestampFlow.value = timestamp
+    }
+
+    override val themeMode: Flow<AppThemeMode> = themeModeFlow.asStateFlow()
+
+    override suspend fun setThemeMode(mode: AppThemeMode) {
+        themeModeFlow.value = mode
     }
 }

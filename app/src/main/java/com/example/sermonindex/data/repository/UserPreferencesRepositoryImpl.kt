@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.example.sermonindex.di.IoDispatcher
+import com.example.sermonindex.domain.model.AppThemeMode
 import com.example.sermonindex.domain.model.BibleReadingPreferences
 import com.example.sermonindex.domain.model.BibleTranslationDefaults
 import com.example.sermonindex.domain.repository.UserPreferencesRepository
@@ -45,6 +46,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val BIBLE_POSITION_UPDATED_AT = longPreferencesKey("bible_reading_position_updated_at")
         val AUTO_CATALOG_UPDATE_CHECK_ENABLED = booleanPreferencesKey("auto_catalog_update_check_enabled")
         val LAST_CATALOG_UPDATE_CHECK_TIMESTAMP = longPreferencesKey("last_catalog_update_check_timestamp")
+        val THEME_MODE = stringPreferencesKey("app_theme_mode")
     }
 
     private val safePreferencesFlow: Flow<Preferences> = dataStore.data
@@ -163,7 +165,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
 
     override val isAutoCatalogUpdateCheckEnabled: Flow<Boolean> = safePreferencesFlow
         .map { preferences ->
-            preferences[PreferencesKeys.AUTO_CATALOG_UPDATE_CHECK_ENABLED] ?: true
+            preferences[PreferencesKeys.AUTO_CATALOG_UPDATE_CHECK_ENABLED] ?: false
         }
         .flowOn(ioDispatcher)
 
@@ -185,6 +187,25 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         withContext(ioDispatcher) {
             dataStore.edit { preferences ->
                 preferences[PreferencesKeys.LAST_CATALOG_UPDATE_CHECK_TIMESTAMP] = timestamp
+            }
+        }
+    }
+
+    override val themeMode: Flow<AppThemeMode> = safePreferencesFlow
+        .map { preferences ->
+            val modeName = preferences[PreferencesKeys.THEME_MODE]
+            if (modeName != null) {
+                runCatching { AppThemeMode.valueOf(modeName) }.getOrDefault(AppThemeMode.SYSTEM)
+            } else {
+                AppThemeMode.SYSTEM
+            }
+        }
+        .flowOn(ioDispatcher)
+
+    override suspend fun setThemeMode(mode: AppThemeMode) {
+        withContext(ioDispatcher) {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.THEME_MODE] = mode.name
             }
         }
     }

@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.14.1` | **Version Code:** `34`
+> **Current Version:** `1.15.1` | **Version Code:** `36`
 
 ---
 
@@ -34,7 +34,12 @@
 | **Topic Detail** | `TopicDetailViewModel` | Thematic description, Berean Standard Bible scripture correlations (`topScriptures`), related sermons. |
 | **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, reactive Play/Pause state synced with `PlaybackManager` (displays `Pause` icon when active), 3-in-a-row action layout (Favorite heart, Play pill capsule, Download with progress), 3 tabs for Overview, Outline, and Study Notes. Text-only sermons automatically hide the download button and display "Read Sermon" action. Tapping Play on a newly selected sermon automatically navigates to Fullscreen Player, while tapping Play/Pause on an already active sermon (playing or paused) toggles playback in-place. |
 | **Text Sermon Reader** | `TextSermonViewModel` | Dedicated distraction-free reader screen for text-only sermons (e.g., C.H. Spurgeon's written articles). Fullscreen layout mirroring player dimensions without playback controls; top app bar with favorite toggle, 220dp shadow artwork, title, speaker, "Text Sermon" badge, selectable body typography (18sp / 28sp line height), quotes, and application points. |
-| **Library** | `LibraryViewModel` | 4 primary tabs with count badges (Favorites, Downloads, History, Bookmarks), storage size indicator, "Clear Downloads" action with confirmation dialog removing local files and database records, "Clear History" action, and Bookmarks tab with pastel color indicators, verse quote preview, share dialog, delete action, and one-tap jump & auto-scroll to verse in Bible Reader. |
+| **Media Library Hub** | `LibraryViewModel` | Apple Music-inspired media library hub featuring Material 3 flexible `MediumTopAppBar` with collapse on scroll and zero redundant insets; vertical navigation menu with Favorites, Downloads, Scripture Bookmarks (History menu row removed); lower section converted into "History" grid displaying recent sermons viewed, read, listened to, or watched, with instant "Clear History" button; gear icon top action opening Settings Center. |
+| **Favorites** | `LibraryViewModel` | Dedicated sub-screen (`FavoritesRoute`) displaying favorite sermons list with immediate playback, removal, and detail navigation. App bar and Scaffold configured with zero top inset duplicate. |
+| **Downloads** | `LibraryViewModel` | Dedicated sub-screen (`DownloadsRoute`) displaying offline downloaded sermons, storage usage badge, individual deletion, and clear all confirmation dialog. App bar and Scaffold configured with zero top inset duplicate. |
+| **History** | `LibraryViewModel` | Dedicated sub-screen (`HistoryRoute`) displaying playback history with progress bars, resume playback at exact timestamp, and clear history action. App bar and Scaffold configured with zero top inset duplicate. |
+| **Scripture Bookmarks** | `LibraryViewModel` | Dedicated sub-screen (`BibleBookmarksRoute`) with color-coded highlights, verse quotes, 1:1 quote card sharing generator, and 1-tap jump to Bible reader. App bar and Scaffold configured with zero top inset duplicate. |
+| **Settings Center** | `SettingsViewModel` | Comprehensive settings screen (`SettingsRoute`): Appearance section with System Default Theme switch (title and description) which disables manual Light/Dark chips when enabled; Dynamic Colors removed; Storage & Cache section with live cache calculation and 1-tap clear, with redundant "Downloaded Audio" row removed to avoid duplication with Library; Offline Catalog section with 3-state adaptive action button (Download Primary Button / Update Filled Tonal Button / Delete Destructive Outlined Button with confirmation dialog); auto-update check disabled by default (`isAutoCatalogUpdateCheckEnabled = false`) with runtime notification permission request on toggle; app version `1.15.1 (36)` and SermonIndex.net attribution. |
 | **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, synchronized WebVTT karaoke transcript reading mode. |
 | **Offline Banner** | N/A (Global) | Animated non-intrusive banner indicating offline mode when internet connection is lost. |
 
@@ -279,6 +284,23 @@
   - HTML and XML report generation with surgical exclusion rules filtering out compiler-generated metadata, Dagger/Hilt components, Room DAO implementations, and Android framework classes.
 - **Total Test Suite**: 145 tests passing cleanly across JVM in under 15 seconds.
 
+### 1.20 Media Library Hub (Apple Music Style) & Comprehensive Settings Center (v1.15.0)
+- **Apple Music-Inspired Media Library Hub (`LibraryScreen.kt`)**:
+  - Replaced horizontal tabs with a vertical navigation menu featuring accent-tinted icons (Favorites: Rose, Downloads: Sage Teal, History: Amber, Bookmarks: Indigo), live count badges, and chevron links.
+  - Added "Recently Added" (`recently_added`) section featuring a 2-column adaptive card grid combining listening history and downloads with square artwork, tap-to-play buttons, playback progress bars, and detail navigation.
+  - Added Settings action icon in the top app bar for instant access to the Settings Center.
+- **Dedicated Sub-Screens with Navigation 3 Transitions**:
+  - Created standalone destinations with `TopAppBar` and shared X-axis transitions: `FavoritesScreen` (`FavoritesRoute`), `DownloadsScreen` (`DownloadsRoute`), `HistoryScreen` (`HistoryRoute`), `BibleBookmarksScreen` (`BibleBookmarksRoute`), and `SettingsScreen` (`SettingsRoute`).
+  - Automatic bottom navigation bar hiding on all sub-screens with seamless Predictive Back support.
+- **Comprehensive Settings Center (`SettingsScreen.kt` & `SettingsViewModel.kt`)**:
+  - **Appearance Section**: User-selectable theme mode (System Default, Light, Dark) and dynamic Material You Monet palette extraction on Android 12+ (API 31+).
+  - **Storage & Cache Section**: Live temporary cache size calculation via `@Singleton CacheManager` with 1-tap clear, plus offline downloads storage stats with direct navigation.
+  - **Catalog Section**: FTS4 offline catalog indexing status, auto-update check toggle, and manual catalog sync trigger.
+  - **About Section**: App version `1.15.0 (35)`, SermonIndex.net attribution, and open-source ministry statement.
+- **Global Reactive Theming (`MainActivity.kt` & `Theme.kt`)**:
+  - Connected `themeMode` and `useDynamicColor` preferences directly from `UserPreferencesRepository` into `SermonIndexTheme`, switching themes instantaneously across the entire Compose tree without app restarts.
+- **Expanded Test Suite**: Added `SettingsViewModelTest`, updated `LibraryViewModelTest`, `LibraryScreenTest`, and `UserPreferencesRepositoryTest`, expanding the test suite to 157 passing tests.
+
 ---
 
 ## 2. API Contracts & Interfaces
@@ -336,11 +358,13 @@ interface SermonRepository {
     suspend fun downloadOrUpdateCatalog()
     suspend fun cancelCatalogDownload()
     suspend fun checkForCatalogUpdate(): Result<Boolean>
+    suspend fun deleteCatalog()
     val recentSearchQueries: Flow<List<String>>
     suspend fun addRecentSearchQuery(query: String)
     suspend fun clearRecentSearchQueries()
 
     suspend fun clearHistory()
+    suspend fun recordSermonView(sermonId: String, title: String, speaker: String, speakerImage: String)
 }
 ```
 
@@ -368,6 +392,8 @@ interface UserPreferencesRepository {
     suspend fun setAutoCatalogUpdateCheckEnabled(enabled: Boolean)
     val lastCatalogUpdateCheckTimestamp: Flow<Long>
     suspend fun setLastCatalogUpdateCheckTimestamp(timestamp: Long)
+    val themeMode: Flow<AppThemeMode>
+    suspend fun setThemeMode(mode: AppThemeMode)
 }
 ```
 

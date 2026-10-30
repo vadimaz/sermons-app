@@ -15,6 +15,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import android.graphics.Color as AndroidColor
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -27,8 +28,12 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.data.sync.CatalogUpdateCheckWorker
+import com.example.sermonindex.domain.model.AppThemeMode
+import com.example.sermonindex.domain.repository.NetworkMonitor
+import com.example.sermonindex.domain.repository.UserPreferencesRepository
 import com.example.sermonindex.playback.PlaybackManager
 import com.example.sermonindex.theme.SermonIndexTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -43,7 +48,10 @@ class MainActivity : ComponentActivity() {
   lateinit var playbackManager: PlaybackManager
 
   @Inject
-  lateinit var networkMonitor: com.example.sermonindex.domain.repository.NetworkMonitor
+  lateinit var networkMonitor: NetworkMonitor
+
+  @Inject
+  lateinit var userPreferencesRepository: UserPreferencesRepository
 
   private var isPipMode by mutableStateOf(false)
   private var externalRoute by mutableStateOf<NavKey?>(null)
@@ -68,29 +76,29 @@ class MainActivity : ComponentActivity() {
       window.isNavigationBarContrastEnforced = false
     }
     setContent {
-      // Runtime notification permission on Android 13+ (API 33+)
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val context = LocalContext.current
-        val permissionLauncher = rememberLauncherForActivityResult(
-          contract = ActivityResultContracts.RequestPermission()
-        ) { /* permission result handled */ }
-
-        LaunchedEffect(Unit) {
-          if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-          }
-        }
+      val themeMode by userPreferencesRepository.themeMode.collectAsStateWithLifecycle(initialValue = AppThemeMode.SYSTEM)
+      val systemInDark = isSystemInDarkTheme()
+      val isDarkTheme = when (themeMode) {
+        AppThemeMode.SYSTEM -> systemInDark
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
       }
 
       CompositionLocalProvider(LocalPictureInPictureMode provides isPipMode) {
-        SermonIndexTheme {
+        SermonIndexTheme(darkTheme = isDarkTheme) {
           Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             val isFromSearchNotification = intent.getBooleanExtra(CatalogUpdateCheckWorker.EXTRA_NAVIGATE_TO_SEARCH, false)
+            val isFromSettingsNotification = intent.getBooleanExtra(CatalogUpdateCheckWorker.EXTRA_NAVIGATE_TO_SETTINGS, false)
+            val startRoute = when {
+              isFromSettingsNotification -> SettingsRoute
+              isFromSearchNotification -> SearchRoute
+              else -> HomeRoute
+            }
             MainNavigation(
               playbackManager = playbackManager,
               networkMonitor = networkMonitor,
-              initialRoute = if (isFromSearchNotification) SearchRoute else HomeRoute,
-              navigateToRoute = externalRoute
+              initialRoute = if (startRoute is HomeRoute || startRoute is SearchRoute) startRoute else HomeRoute,
+              navigateToRoute = if (startRoute !is HomeRoute && startRoute !is SearchRoute) startRoute else externalRoute
             )
           }
         }

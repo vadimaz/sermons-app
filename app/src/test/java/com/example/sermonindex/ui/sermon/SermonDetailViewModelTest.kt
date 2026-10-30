@@ -8,6 +8,7 @@ import com.example.sermonindex.domain.usecase.GetDownloadProgressUseCase
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
 import com.example.sermonindex.domain.usecase.IsDownloadedUseCase
 import com.example.sermonindex.domain.usecase.IsFavoriteUseCase
+import com.example.sermonindex.domain.usecase.RecordSermonViewUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.playback.PlaybackState
 import com.example.sermonindex.testing.FakePlaybackManager
@@ -60,7 +61,8 @@ class SermonDetailViewModelTest {
             getDownloadProgressUseCase = GetDownloadProgressUseCase(fakeRepository),
             downloadSermonUseCase = DownloadSermonUseCase(fakeRepository),
             deleteDownloadUseCase = DeleteDownloadUseCase(fakeRepository),
-            playbackManager = fakePlaybackManager
+            playbackManager = fakePlaybackManager,
+            recordSermonViewUseCase = RecordSermonViewUseCase(fakeRepository)
         )
     }
 
@@ -71,6 +73,7 @@ class SermonDetailViewModelTest {
         assertEquals("sermon-1", state.detail?.id)
         assertFalse(state.isActiveInPlayer)
         assertFalse(state.isPlaying)
+        assertTrue(fakeRepository.recordSermonViewCalled)
     }
 
     @Test

@@ -43,6 +43,12 @@ interface SermonRepository {
         positionMs: Long,
         durationMs: Long
     )
+    suspend fun recordSermonView(
+        sermonId: String,
+        title: String,
+        speaker: String,
+        speakerImage: String
+    )
 
     suspend fun getPopularSermons(): Result<List<Sermon>>
     suspend fun getRandomSermons(shard: Int? = null): Result<List<Sermon>>
@@ -77,6 +83,7 @@ interface SermonRepository {
     fun search(query: String, category: com.example.sermonindex.domain.model.SearchCategory): Flow<com.example.sermonindex.domain.model.SearchAggregateResult>
     val catalogSyncState: Flow<com.example.sermonindex.domain.model.CatalogSyncState>
     suspend fun downloadOrUpdateCatalog()
+    suspend fun deleteCatalog()
     suspend fun checkForCatalogUpdate(): Boolean
     val recentSearchQueries: Flow<List<String>>
     suspend fun addRecentSearchQuery(query: String)

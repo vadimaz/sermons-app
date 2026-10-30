@@ -11,6 +11,7 @@ import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
 import com.example.sermonindex.domain.usecase.IsDownloadedUseCase
 import com.example.sermonindex.domain.usecase.IsFavoriteUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
+import com.example.sermonindex.domain.usecase.RecordSermonViewUseCase
 import com.example.sermonindex.playback.PlaybackManager
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -54,7 +55,8 @@ class SermonDetailViewModel @AssistedInject constructor(
     private val getDownloadProgressUseCase: GetDownloadProgressUseCase,
     private val downloadSermonUseCase: DownloadSermonUseCase,
     private val deleteDownloadUseCase: DeleteDownloadUseCase,
-    private val playbackManager: PlaybackManager
+    private val playbackManager: PlaybackManager,
+    private val recordSermonViewUseCase: RecordSermonViewUseCase
 ) : ViewModel() {
 
     @AssistedFactory
@@ -145,6 +147,12 @@ class SermonDetailViewModel @AssistedInject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             getSermonDetailsUseCase(sermonId)
                 .onSuccess { detail ->
+                    recordSermonViewUseCase(
+                        sermonId = detail.id,
+                        title = detail.title,
+                        speaker = detail.speaker,
+                        speakerImage = detail.speakerImage
+                    )
                     _uiState.update {
                         it.copy(
                             detail = detail,

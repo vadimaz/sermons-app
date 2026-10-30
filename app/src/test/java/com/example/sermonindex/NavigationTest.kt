@@ -100,6 +100,39 @@ class NavigationTest {
     }
 
     @Test
+    fun librarySubRoutes_pushAndPopCorrectly() {
+        val topLevelState = mutableStateOf<NavKey>(LibraryRoute)
+        val homeStack = NavBackStack<NavKey>(HomeRoute)
+        val libraryStack = NavBackStack<NavKey>(LibraryRoute)
+
+        val navState = NavigationState(
+            startRoute = HomeRoute,
+            topLevelRoute = topLevelState,
+            backStacks = mapOf(
+                HomeRoute to homeStack,
+                LibraryRoute to libraryStack
+            )
+        )
+        val navigator = Navigator(navState)
+
+        navigator.navigate(FavoritesRoute)
+        assertEquals(2, libraryStack.size)
+        assertEquals(FavoritesRoute, navState.currentRoute)
+
+        navigator.navigate(SettingsRoute)
+        assertEquals(3, libraryStack.size)
+        assertEquals(SettingsRoute, navState.currentRoute)
+
+        navigator.goBack()
+        assertEquals(2, libraryStack.size)
+        assertEquals(FavoritesRoute, navState.currentRoute)
+
+        navigator.goBack()
+        assertEquals(1, libraryStack.size)
+        assertEquals(LibraryRoute, navState.currentRoute)
+    }
+
+    @Test
     fun navigatePushesPlayerRouteFromSermonDetailAndPopsCleanly() {
         val topLevelState = mutableStateOf<NavKey>(HomeRoute)
         val homeStack = NavBackStack<NavKey>(HomeRoute).apply {

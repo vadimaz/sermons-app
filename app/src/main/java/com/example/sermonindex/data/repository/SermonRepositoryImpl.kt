@@ -219,6 +219,28 @@ class SermonRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun recordSermonView(
+        sermonId: String,
+        title: String,
+        speaker: String,
+        speakerImage: String
+    ): Unit = withContext(ioDispatcher) {
+        if (sermonId.startsWith("bible_")) return@withContext
+        val existing = historyDao.getHistory(sermonId)
+        historyDao.upsertHistory(
+            HistoryEntity(
+                sermonId = sermonId,
+                title = title,
+                speaker = speaker,
+                speakerImage = speakerImage,
+                lastPositionMs = existing?.lastPositionMs ?: 0L,
+                durationMs = existing?.durationMs ?: 0L,
+                updatedAt = System.currentTimeMillis(),
+                completed = existing?.completed ?: false
+            )
+        )
+    }
+
     override suspend fun getPopularSermons(): Result<List<Sermon>> = withContext(ioDispatcher) {
         cachedPopularSermons?.let { return@withContext Result.success(it) }
         runCatching {
@@ -485,6 +507,12 @@ class SermonRepositoryImpl @Inject constructor(
             workRequest
         )
         Unit
+    }
+
+    override suspend fun deleteCatalog(): Unit = withContext(ioDispatcher) {
+        searchDao.clearSermonsFts()
+        searchDao.clearCatalogMetadata()
+        hasCatalogUpdateState.value = false
     }
 
     override suspend fun checkForCatalogUpdate(): Boolean = withContext(ioDispatcher) {

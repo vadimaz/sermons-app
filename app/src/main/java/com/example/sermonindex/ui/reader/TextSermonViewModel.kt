@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
 import com.example.sermonindex.domain.usecase.IsFavoriteUseCase
+import com.example.sermonindex.domain.usecase.RecordSermonViewUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
@@ -39,7 +40,8 @@ class TextSermonViewModel @AssistedInject constructor(
     @Assisted("highlightQuery") private val initialHighlightQuery: String?,
     private val getSermonDetailsUseCase: GetSermonDetailsUseCase,
     private val isFavoriteUseCase: IsFavoriteUseCase,
-    private val toggleFavoriteUseCase: ToggleFavoriteUseCase
+    private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
+    private val recordSermonViewUseCase: RecordSermonViewUseCase
 ) : ViewModel() {
 
     @AssistedFactory
@@ -87,6 +89,12 @@ class TextSermonViewModel @AssistedInject constructor(
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             getSermonDetailsUseCase(sermonId)
                 .onSuccess { detail ->
+                    recordSermonViewUseCase(
+                        sermonId = detail.id,
+                        title = detail.title,
+                        speaker = detail.speaker,
+                        speakerImage = detail.speakerImage
+                    )
                     val cleanText = when {
                         detail.transcript.isNotBlank() -> detail.transcript
                         detail.transcriptHtml.isNotBlank() -> detail.transcriptHtml.replace(Regex("<[^>]*>"), "")

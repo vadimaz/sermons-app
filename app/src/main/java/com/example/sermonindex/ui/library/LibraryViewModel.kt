@@ -7,6 +7,7 @@ import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.DownloadedSermon
 import com.example.sermonindex.domain.model.FavoriteSermon
 import com.example.sermonindex.domain.model.ListeningHistory
+import com.example.sermonindex.domain.model.RecentMediaItem
 import com.example.sermonindex.domain.usecase.ClearHistoryUseCase
 import com.example.sermonindex.domain.usecase.DeleteAllDownloadsUseCase
 import com.example.sermonindex.domain.usecase.DeleteBibleBookmarkUseCase
@@ -34,7 +35,8 @@ data class LibraryUiState(
     val downloads: List<DownloadedSermon> = emptyList(),
     val totalDownloadsSizeFormatted: String = "0 MB",
     val history: List<ListeningHistory> = emptyList(),
-    val bookmarks: List<BibleBookmark> = emptyList()
+    val bookmarks: List<BibleBookmark> = emptyList(),
+    val recentItems: List<RecentMediaItem> = emptyList()
 )
 
 sealed interface LibraryUiEvent {
@@ -49,6 +51,7 @@ sealed interface LibraryUiEvent {
     data class SelectSermon(val sermonId: String) : LibraryUiEvent
     data class DeleteBookmark(val id: String) : LibraryUiEvent
     data class OpenBookmarkInBible(val bookmark: BibleBookmark) : LibraryUiEvent
+    data class PlayRecent(val item: RecentMediaItem) : LibraryUiEvent
 }
 
 @HiltViewModel
@@ -85,12 +88,23 @@ class LibraryViewModel @Inject constructor(
                 val totalBytes = dls.sumOf { it.fileSizeBytes }
                 val mb = totalBytes.toDouble() / (1024.0 * 1024.0)
                 val formatted = if (mb >= 1.0) "${(mb * 10).toLong() / 10.0} MB" else "${totalBytes / 1024} KB"
-                _uiState.update { it.copy(downloads = dls, totalDownloadsSizeFormatted = formatted) }
+                _uiState.update { current ->
+                    current.copy(
+                        downloads = dls,
+                        totalDownloadsSizeFormatted = formatted,
+                        recentItems = buildRecentItems(current.history, dls)
+                    )
+                }
             }
         }
         viewModelScope.launch {
             getHistoryUseCase().collect { hist ->
-                _uiState.update { it.copy(history = hist) }
+                _uiState.update { current ->
+                    current.copy(
+                        history = hist,
+                        recentItems = buildRecentItems(hist, current.downloads)
+                    )
+                }
             }
         }
         viewModelScope.launch {
@@ -98,6 +112,34 @@ class LibraryViewModel @Inject constructor(
                 _uiState.update { it.copy(bookmarks = bms) }
             }
         }
+    }
+
+    private fun buildRecentItems(
+        history: List<ListeningHistory>,
+        downloads: List<DownloadedSermon>
+    ): List<RecentMediaItem> {
+        val downloadedIds = downloads.map { it.id }.toSet()
+        val items = mutableListOf<RecentMediaItem>()
+        val seenIds = mutableSetOf<String>()
+
+        for (hist in history) {
+            if (seenIds.add(hist.sermonId)) {
+                items.add(
+                    RecentMediaItem(
+                        id = hist.sermonId,
+                        title = hist.title,
+                        speaker = hist.speaker,
+                        speakerImage = hist.speakerImage,
+                        isDownloaded = downloadedIds.contains(hist.sermonId),
+                        lastPositionMs = hist.lastPositionMs,
+                        durationMs = hist.durationMs
+                    )
+                )
+            }
+            if (items.size >= 12) break
+        }
+
+        return items
     }
 
     fun onEvent(event: LibraryUiEvent) {
@@ -153,6 +195,18 @@ class LibraryViewModel @Inject constructor(
                         chapter = event.bookmark.chapter,
                         verse = event.bookmark.verse
                     )
+                }
+            }
+            is LibraryUiEvent.PlayRecent -> {
+                viewModelScope.launch {
+                    val downloaded = _uiState.value.downloads.find { it.id == event.item.id }
+                    if (downloaded != null) {
+                        playbackManager.playSermon(downloaded.toSermon(), startPositionMs = event.item.lastPositionMs)
+                    } else {
+                        getSermonDetailsUseCase(event.item.id).onSuccess { detail ->
+                            playbackManager.playSermon(detail.toSermon(), startPositionMs = event.item.lastPositionMs)
+                        }
+                    }
                 }
             }
             is LibraryUiEvent.SelectSermon -> Unit

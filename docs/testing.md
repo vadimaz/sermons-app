@@ -49,6 +49,7 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
 | **Run All Unit Tests** | `./gradlew testDebugUnitTest` | Executes all local JVM tests, ViewModels, DAOs, and headless Compose tests. |
 | **Run Targeted Test Class** | `./gradlew testDebugUnitTest --tests "com.example.sermonindex.ui.search.SearchViewModelTest"` | Runs a single test suite for rapid iteration. |
 | **Run Targeted Test Method** | `./gradlew testDebugUnitTest --tests "*.SearchViewModelTest.searchQuery_updatesResults"` | Runs a specific test method. |
+| **Render Compose Preview (CLI)** | `android preview render gradle://.?:app@debug --fqn <FQN>` | Generates visual snapshots and component semantics via daemon for post-implementation UI verification. |
 | **Record Screenshots (Roborazzi)** | `./gradlew recordRoborazziDebug` | Generates golden visual references in `src/test/snapshots/`. |
 | **Verify Screenshots (Roborazzi)** | `./gradlew verifyRoborazziDebug` | Compares current rendering against golden references; fails build on visual delta. |
 | **Code Coverage Report (JaCoCo)** | `./gradlew testDebugUnitTest jacocoTestReport` | Generates HTML coverage report at `app/build/reports/jacoco/jacocoTestReport/html/index.html`. |
@@ -238,6 +239,27 @@ class ComponentScreenshotTest {
         }
     }
 }
+```
+
+### Recipe 5: Compose Preview for Post-Implementation Visual Verification
+```kotlin
+@ThemePreviews
+@Composable
+private fun ExampleComponentPreview() {
+    SermonIndexTheme {
+        Surface {
+            ExampleComponent(
+                state = PreviewFixtures.previewExampleModel,
+                onAction = {}
+            )
+        }
+    }
+}
+```
+Rendered immediately after plan implementation via:
+```powershell
+$env:ANDROID_CLI_PREVIEW="1"
+android preview render gradle://.?:app@debug --fqn com.example.sermonindex.ui.components.ExampleComponentKt.ExampleComponentPreview
 ```
 
 ---

@@ -3,6 +3,7 @@ package com.example.sermonindex.ui.reader
 import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
 import com.example.sermonindex.domain.usecase.IsFavoriteUseCase
+import com.example.sermonindex.domain.usecase.RecordSermonViewUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.testing.FakeSermonRepository
 import com.example.sermonindex.testing.MainDispatcherRule
@@ -40,11 +41,14 @@ class TextSermonViewModelTest {
             initialHighlightQuery = "faith",
             getSermonDetailsUseCase = GetSermonDetailsUseCase(fakeRepo),
             isFavoriteUseCase = IsFavoriteUseCase(fakeRepo),
-            toggleFavoriteUseCase = ToggleFavoriteUseCase(fakeRepo)
+            toggleFavoriteUseCase = ToggleFavoriteUseCase(fakeRepo),
+            recordSermonViewUseCase = RecordSermonViewUseCase(fakeRepo)
         )
 
         advanceUntilIdle()
         val state = viewModel.uiState.value
+
+        org.junit.Assert.assertTrue(fakeRepo.recordSermonViewCalled)
 
         assertEquals(3, state.paragraphs.size)
         assertEquals("faith", state.highlightQuery)

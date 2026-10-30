@@ -47,6 +47,21 @@ data object TopicsRoute : NavKey
 data object LibraryRoute : NavKey
 
 @Serializable
+data object FavoritesRoute : NavKey
+
+@Serializable
+data object DownloadsRoute : NavKey
+
+@Serializable
+data object HistoryRoute : NavKey
+
+@Serializable
+data object BibleBookmarksRoute : NavKey
+
+@Serializable
+data object SettingsRoute : NavKey
+
+@Serializable
 data class SpeakerDetailRoute(val slug: String) : NavKey
 
 @Serializable

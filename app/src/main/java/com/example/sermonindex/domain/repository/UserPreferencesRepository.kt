@@ -1,5 +1,6 @@
 package com.example.sermonindex.domain.repository
 
+import com.example.sermonindex.domain.model.AppThemeMode
 import com.example.sermonindex.domain.model.BibleReadingPreferences
 import kotlinx.coroutines.flow.Flow
 
@@ -61,4 +62,11 @@ interface UserPreferencesRepository {
     val lastCatalogUpdateCheckTimestamp: Flow<Long>
 
     suspend fun setLastCatalogUpdateCheckTimestamp(timestamp: Long)
+
+    /**
+     * App visual theme mode (System Default, Light, Dark).
+     */
+    val themeMode: Flow<AppThemeMode>
+
+    suspend fun setThemeMode(mode: AppThemeMode)
 }

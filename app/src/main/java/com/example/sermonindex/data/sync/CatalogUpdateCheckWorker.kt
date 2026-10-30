@@ -117,6 +117,7 @@ class CatalogUpdateCheckWorker(
         const val CHANNEL_ID = "catalog_updates_channel"
         const val NOTIFICATION_ID = 3001
         const val EXTRA_NAVIGATE_TO_SEARCH = "extra_navigate_to_search"
+        const val EXTRA_NAVIGATE_TO_SETTINGS = "extra_navigate_to_settings"
 
         fun createNotificationChannel(context: Context) {
             val channel = NotificationChannel(
@@ -147,14 +148,14 @@ class CatalogUpdateCheckWorker(
 
             createNotificationChannel(context)
 
-            val openSearchIntent = Intent(context, MainActivity::class.java).apply {
+            val openSettingsIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                putExtra(EXTRA_NAVIGATE_TO_SEARCH, true)
+                putExtra(EXTRA_NAVIGATE_TO_SETTINGS, true)
             }
-            val pendingOpenSearch = PendingIntent.getActivity(
+            val pendingOpenSettings = PendingIntent.getActivity(
                 context,
                 0,
-                openSearchIntent,
+                openSettingsIntent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
 
@@ -176,7 +177,7 @@ class CatalogUpdateCheckWorker(
                 .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setAutoCancel(true)
-                .setContentIntent(pendingOpenSearch)
+                .setContentIntent(pendingOpenSettings)
                 .addAction(
                     android.R.drawable.ic_popup_sync,
                     context.getString(R.string.catalog_update_notification_action_update),

@@ -2,6 +2,7 @@ package com.example.sermonindex.data.repository
 
 import java.io.File
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.example.sermonindex.domain.model.AppThemeMode
 import com.example.sermonindex.domain.model.BibleTranslationDefaults
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -50,7 +51,7 @@ class UserPreferencesRepositoryTest {
         assertTrue(readingPrefs.isSerif)
         assertEquals(1.5f, readingPrefs.lineSpacingMultiplier)
         assertNull(readingPrefs.selectedNarrator)
-        assertTrue(repository.isAutoCatalogUpdateCheckEnabled.first())
+        assertFalse(repository.isAutoCatalogUpdateCheckEnabled.first())
         assertEquals(0L, repository.lastCatalogUpdateCheckTimestamp.first())
     }
 
@@ -136,5 +137,14 @@ class UserPreferencesRepositoryTest {
         val timestamp = 1729958400000L
         repository.setLastCatalogUpdateCheckTimestamp(timestamp)
         assertEquals(timestamp, repository.lastCatalogUpdateCheckTimestamp.first())
+    }
+
+    @Test
+    fun setThemeMode_persistsCorrectly() = runTest {
+        val repository = createRepository(this)
+
+        assertEquals(AppThemeMode.SYSTEM, repository.themeMode.first())
+        repository.setThemeMode(AppThemeMode.DARK)
+        assertEquals(AppThemeMode.DARK, repository.themeMode.first())
     }
 }

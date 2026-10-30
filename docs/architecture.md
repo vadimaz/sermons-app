@@ -68,6 +68,7 @@ com.example.sermonindex
 ├── data/
 │   ├── local/
 │   │   ├── AppDatabase.kt        # Room @Database + FTS4 virtual table + downloads/favorites/history/search/bookmarks
+│   │   ├── CacheManager.kt       # Live app cache size calculation & deletion
 │   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao, SearchDao, BibleBookmarksDao
 │   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, SermonFtsEntity, SearchHistoryEntity, CatalogMetadataEntity, BibleBookmarkEntity
 │   ├── mapper/
@@ -132,12 +133,13 @@ com.example.sermonindex
     │   ├── SearchTextField.kt    # Clean search input field [+ Preview]
     │   └── SermonListItem.kt     # Standard list item with avatar, title, duration [+ Preview]
     ├── home/                     # HomeScreen.kt, HomeViewModel.kt, components/ (HeroCarousel, Shelves, Cards)
-    ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt, components/ (Tab contents)
+    ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt, FavoritesScreen.kt, DownloadsScreen.kt, HistoryScreen.kt, BibleBookmarksScreen.kt, components/
     ├── player/                   # FullscreenPlayerScreen.kt, FullscreenVideoScreen.kt, components/ (SleepTimerDialog, TranscriptCueItem, VideoPlayerSurface)
     ├── reader/                   # TextSermonScreen.kt, TextSermonViewModel.kt
     ├── scripture/                # ScriptureScreen.kt, ScriptureViewModel.kt, ScriptureChapterViewModel.kt, ScriptureVerseComponents.kt
     ├── search/                   # SearchScreen.kt, SearchViewModel.kt, SearchUiState.kt, components/
     ├── sermon/                   # SermonDetailScreen.kt, SermonDetailViewModel.kt, components/ (Overview, Outline, Notes)
+    ├── settings/                 # SettingsScreen.kt, SettingsViewModel.kt
     ├── speakers/                 # SpeakersScreen.kt, SpeakerDetailScreen.kt, components/ (SpeakerRow)
     └── topics/                   # TopicsScreen.kt, TopicDetailScreen.kt, components/ (TopicRow)
 ```
@@ -156,7 +158,7 @@ com.example.sermonindex
 5. **No Direct I/O in UI**: No repository queries, network calls, or database operations directly inside `LaunchedEffect` in Composables. Everything flows through the ViewModel.
 6. **Assisted Injection**: For screens requiring route arguments (e.g. `sermonId`, `slug`), use `@HiltViewModel(assistedFactory = ...)` and `@AssistedInject`.
 7. **Paging 3 Integration**: When paginating large collections, bridge pure domain UseCases into `Flow<PagingData<T>>` via a dedicated `PagingSource` without polluting the domain layer. Collect via `collectAsLazyPagingItems()` and render append/refresh `LoadState` (loading spinners and error retry actions).
-8. **Composable Modularization & Previews**: All standalone stateless components and screen content composables must include private `@ThemePreviews` rendering in both Light and Dark modes. Core components live in `ui/components/`, while feature-specific subcomponents reside in `ui/<feature>/components/`. Mock models are centralized in `ui/components/PreviewFixtures.kt` to avoid test fixture duplication.
+8. **Compose Previews Standards & Verification**: All standalone stateless components and screen content composables must include a private `@ThemePreviews` preview function rendering in both Light and Dark modes. Core components live in `ui/components/`, while feature-specific subcomponents reside in `ui/<feature>/components/`. Mock models are centralized in `ui/components/PreviewFixtures.kt` to avoid test fixture duplication. Previews must be wrapped in `SermonIndexTheme { Surface { ... } }`, contain zero side-effects, and be verifiable post-implementation via Android CLI (`android preview render`).
 
 ### 4.2 Domain Layer
 1. **Zero External Dependencies**: `domain/model/Models.kt` and `domain/usecase/UseCases.kt` must remain pure Kotlin. Never import Room, Retrofit, Android SDK, or Compose in Domain.

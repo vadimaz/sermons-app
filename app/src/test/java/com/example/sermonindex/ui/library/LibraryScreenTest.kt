@@ -7,8 +7,9 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.core.app.ApplicationProvider
 import com.example.sermonindex.R
+import com.example.sermonindex.domain.model.RecentMediaItem
 import com.example.sermonindex.theme.SermonIndexTheme
-import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -24,38 +25,79 @@ class LibraryScreenTest {
         get() = ApplicationProvider.getApplicationContext()
 
     @Test
-    fun libraryContent_showsTabsAndEmptyState() {
-        var selectedTab = 0
+    fun libraryContent_showsMenuRowsAndEmptyRecentState() {
+        var favoritesClicked = false
 
         val state = LibraryUiState(
-            selectedTab = 0,
-            favorites = emptyList()
+            favorites = emptyList(),
+            downloads = emptyList(),
+            history = emptyList(),
+            bookmarks = emptyList(),
+            recentItems = emptyList()
         )
 
         composeTestRule.setContent {
             SermonIndexTheme {
                 LibraryContent(
                     state = state,
-                    onEvent = { event ->
-                        if (event is LibraryUiEvent.SelectTab) {
-                            selectedTab = event.tab
-                        }
-                    }
+                    onEvent = {},
+                    onSermonSelect = {},
+                    onNavigateToFavorites = { favoritesClicked = true },
+                    onNavigateToDownloads = {},
+                    onNavigateToHistory = {},
+                    onNavigateToBookmarks = {},
+                    onNavigateToSettings = {}
                 )
             }
         }
 
-        // All 4 tabs are visible
-        composeTestRule.onNodeWithText(context.getString(R.string.tab_favorites)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(context.getString(R.string.tab_downloads)).assertIsDisplayed()
+        // 3 primary menu items are visible (Favorites, Downloads, Bookmarks)
+        composeTestRule.onNodeWithText(context.getString(R.string.library_menu_favorites)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.library_menu_downloads)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.library_menu_bookmarks)).assertIsDisplayed()
+
+        // "History" section header & empty placeholder
         composeTestRule.onNodeWithText(context.getString(R.string.tab_history)).assertIsDisplayed()
-        composeTestRule.onNodeWithText(context.getString(R.string.tab_bookmarks)).assertIsDisplayed()
+        composeTestRule.onNodeWithText(context.getString(R.string.library_history_empty)).assertIsDisplayed()
 
-        // Empty state for favorites tab
-        composeTestRule.onNodeWithText(context.getString(R.string.no_favorites_title)).assertIsDisplayed()
+        // Clicking Favorites triggers callback
+        composeTestRule.onNodeWithText(context.getString(R.string.library_menu_favorites)).performClick()
+        assertTrue(favoritesClicked)
+    }
 
-        // Clicking Downloads tab triggers SelectTab(1)
-        composeTestRule.onNodeWithText(context.getString(R.string.tab_downloads)).performClick()
-        assertEquals(1, selectedTab)
+    @Test
+    fun libraryContent_showsRecentSermonsCards() {
+        var selectedSermonId: String? = null
+
+        val state = LibraryUiState(
+            recentItems = listOf(
+                RecentMediaItem(
+                    id = "recent-1",
+                    title = "Revival Praying",
+                    speaker = "Leonard Ravenhill"
+                )
+            )
+        )
+
+        composeTestRule.setContent {
+            SermonIndexTheme {
+                LibraryContent(
+                    state = state,
+                    onEvent = {},
+                    onSermonSelect = { selectedSermonId = it },
+                    onNavigateToFavorites = {},
+                    onNavigateToDownloads = {},
+                    onNavigateToHistory = {},
+                    onNavigateToBookmarks = {},
+                    onNavigateToSettings = {}
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Revival Praying").assertIsDisplayed()
+        composeTestRule.onNodeWithText("Leonard Ravenhill").assertIsDisplayed()
+
+        composeTestRule.onNodeWithText("Revival Praying").performClick()
+        org.junit.Assert.assertEquals("recent-1", selectedSermonId)
     }
 }

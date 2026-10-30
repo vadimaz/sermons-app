@@ -76,10 +76,15 @@ import com.example.sermonindex.ui.bible.sermons.BibleVerseSermonsScreen
 import com.example.sermonindex.ui.components.MiniPlayer
 import com.example.sermonindex.ui.components.OfflineBanner
 import com.example.sermonindex.ui.home.HomeScreen
+import com.example.sermonindex.ui.library.BibleBookmarksScreen
+import com.example.sermonindex.ui.library.DownloadsScreen
+import com.example.sermonindex.ui.library.FavoritesScreen
+import com.example.sermonindex.ui.library.HistoryScreen
 import com.example.sermonindex.ui.library.LibraryScreen
 import com.example.sermonindex.ui.player.FullscreenPlayerScreen
 import com.example.sermonindex.ui.reader.TextSermonScreen
 import com.example.sermonindex.ui.search.SearchScreen
+import com.example.sermonindex.ui.settings.SettingsScreen
 import com.example.sermonindex.ui.scripture.ScriptureChaptersScreen
 import com.example.sermonindex.ui.scripture.ScriptureScreen
 import com.example.sermonindex.ui.scripture.ScriptureVerseHeatMapScreen
@@ -679,10 +684,67 @@ fun MainNavigation(
                                 onSermonSelect = { sermonId ->
                                     navigator.navigate(SermonDetailRoute(sermonId))
                                 },
-                                onNavigateToBible = {
-                                    navigator.navigate(BibleRoute)
+                                onNavigateToFavorites = {
+                                    navigator.navigate(FavoritesRoute)
+                                },
+                                onNavigateToDownloads = {
+                                    navigator.navigate(DownloadsRoute)
+                                },
+                                onNavigateToHistory = {
+                                    navigator.navigate(HistoryRoute)
+                                },
+                                onNavigateToBookmarks = {
+                                    navigator.navigate(BibleBookmarksRoute)
+                                },
+                                onNavigateToSettings = {
+                                    navigator.navigate(SettingsRoute)
                                 },
                                 reselectEvents = navigator.reselectEvents
+                            )
+                        }
+
+                        entry<FavoritesRoute> {
+                            FavoritesScreen(
+                                onBack = { navigator.goBack() },
+                                onSermonSelect = { sermonId ->
+                                    navigator.navigate(SermonDetailRoute(sermonId))
+                                }
+                            )
+                        }
+
+                        entry<DownloadsRoute> {
+                            DownloadsScreen(
+                                onBack = { navigator.goBack() },
+                                onSermonSelect = { sermonId ->
+                                    navigator.navigate(SermonDetailRoute(sermonId))
+                                }
+                            )
+                        }
+
+                        entry<HistoryRoute> {
+                            HistoryScreen(
+                                onBack = { navigator.goBack() },
+                                onSermonSelect = { sermonId ->
+                                    navigator.navigate(SermonDetailRoute(sermonId))
+                                }
+                            )
+                        }
+
+                        entry<BibleBookmarksRoute> {
+                            BibleBookmarksScreen(
+                                onBack = { navigator.goBack() },
+                                onNavigateToBible = {
+                                    navigator.navigate(BibleRoute)
+                                }
+                            )
+                        }
+
+                        entry<SettingsRoute> {
+                            SettingsScreen(
+                                onBack = { navigator.goBack() },
+                                onNavigateToDownloads = {
+                                    navigator.navigate(DownloadsRoute)
+                                }
                             )
                         }
 

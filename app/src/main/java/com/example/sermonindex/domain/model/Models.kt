@@ -336,6 +336,31 @@ data class DownloadedSermon(
 }
 
 /**
+ * Item displayed in the "Recently Added" section of the Media Library Hub.
+ */
+data class RecentMediaItem(
+    val id: String,
+    val title: String,
+    val speaker: String,
+    val speakerImage: String = "",
+    val duration: String = "",
+    val isDownloaded: Boolean = false,
+    val lastPositionMs: Long = 0L,
+    val durationMs: Long = 0L
+) {
+    val progressFraction: Float
+        get() = if (durationMs > 0) (lastPositionMs.toFloat() / durationMs.toFloat()).coerceIn(0f, 1f) else 0f
+
+    fun toSermon(): Sermon = Sermon(
+        id = id,
+        title = title,
+        speaker = speaker,
+        speakerImage = speakerImage,
+        duration = duration
+    )
+}
+
+/**
  * Domain representation of sleep timer status.
  */
 sealed interface SleepTimerState {
@@ -352,6 +377,15 @@ enum class SearchCategory {
     SERMONS,
     SPEAKERS,
     TOPICS
+}
+
+/**
+ * Application visual theme mode preference.
+ */
+enum class AppThemeMode {
+    SYSTEM,
+    LIGHT,
+    DARK
 }
 
 /**

@@ -23,13 +23,13 @@ class CatalogPreferencesUseCasesTest {
         val getUseCase = GetAutoCatalogUpdateCheckEnabledUseCase(fakeRepository)
         val setUseCase = SetAutoCatalogUpdateCheckEnabledUseCase(fakeRepository)
 
-        assertTrue(getUseCase().first())
-
-        setUseCase(false)
         assertFalse(getUseCase().first())
 
         setUseCase(true)
         assertTrue(getUseCase().first())
+
+        setUseCase(false)
+        assertFalse(getUseCase().first())
     }
 
     @Test

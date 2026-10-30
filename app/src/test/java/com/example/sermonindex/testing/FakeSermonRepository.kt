@@ -52,6 +52,8 @@ open class FakeSermonRepository : SermonRepository {
     var deleteAllDownloadsCalled: Boolean = false
     var clearHistoryCalled: Boolean = false
     var downloadCatalogCalled: Boolean = false
+    var deleteCatalogCalled: Boolean = false
+    var recordSermonViewCalled: Boolean = false
     var checkCatalogUpdateCalled: Boolean = false
     var checkForCatalogUpdateResult: Boolean = false
     var requestedRandomShard: Int? = null
@@ -160,6 +162,27 @@ open class FakeSermonRepository : SermonRepository {
             completed = durationMs > 0 && positionMs >= durationMs
         )
         historyFlow.value = historyFlow.value.filterNot { it.sermonId == sermonId } + entry
+    }
+
+    override suspend fun recordSermonView(
+        sermonId: String,
+        title: String,
+        speaker: String,
+        speakerImage: String
+    ) {
+        recordSermonViewCalled = true
+        val existing = historyFlow.value.firstOrNull { it.sermonId == sermonId }
+        val entry = ListeningHistory(
+            sermonId = sermonId,
+            title = title,
+            speaker = speaker,
+            speakerImage = speakerImage,
+            lastPositionMs = existing?.lastPositionMs ?: 0L,
+            durationMs = existing?.durationMs ?: 0L,
+            updatedAt = System.currentTimeMillis(),
+            completed = existing?.completed ?: false
+        )
+        historyFlow.value = listOf(entry) + historyFlow.value.filterNot { it.sermonId == sermonId }
     }
 
     override suspend fun clearHistory() {
@@ -296,6 +319,11 @@ open class FakeSermonRepository : SermonRepository {
 
     override suspend fun downloadOrUpdateCatalog() {
         downloadCatalogCalled = true
+    }
+
+    override suspend fun deleteCatalog() {
+        deleteCatalogCalled = true
+        catalogSyncStateFlow.value = CatalogSyncState.NotDownloaded
     }
 
     override suspend fun checkForCatalogUpdate(): Boolean {
