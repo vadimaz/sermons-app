@@ -16,7 +16,9 @@ import androidx.core.content.ContextCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
@@ -69,14 +71,7 @@ class CatalogUpdateCheckWorker(
 
         return withContext(ioDispatcher) {
             try {
-                // 1. Verify user hasn't disabled periodic catalog checks
-                val isCheckEnabled = userPreferencesRepository.isAutoCatalogUpdateCheckEnabled.first()
-                if (!isCheckEnabled) {
-                    Log.d(TAG, "Periodic catalog update check is disabled in user preferences.")
-                    return@withContext Result.success()
-                }
-
-                // 2. Check if local catalog exists; skip if user hasn't downloaded it yet
+                // 1. Check if local catalog exists; skip if user hasn't downloaded it yet
                 val localMeta = searchDao.getCatalogMetadata()
                 val ftsCount = searchDao.getFtsSermonCount()
                 if (localMeta == null || localMeta.sermonCount == 0 || ftsCount == 0) {
@@ -84,7 +79,7 @@ class CatalogUpdateCheckWorker(
                     return@withContext Result.success()
                 }
 
-                // 3. Fetch latest stats from SermonIndex API
+                // 2. Fetch latest stats from SermonIndex API
                 val stats = runCatching { apiService.getStats() }.getOrNull()
                 if (stats == null) {
                     Log.w(TAG, "Failed to connect to /v2/stats API. Retrying later.")
@@ -94,10 +89,18 @@ class CatalogUpdateCheckWorker(
                 // Record check timestamp
                 userPreferencesRepository.setLastCatalogUpdateCheckTimestamp(System.currentTimeMillis())
 
-                // 4. Compare timestamps
+                // 3. Compare timestamps and auto-trigger sync if newer dataset exists
                 val hasUpdate = stats.generated.isNotBlank() && stats.generated != localMeta.generatedAt
                 if (hasUpdate) {
-                    Log.i(TAG, "New catalog detected! Server generated: ${stats.generated}, local: ${localMeta.generatedAt}. Showing notification.")
+                    Log.i(TAG, "New catalog detected! Server generated: ${stats.generated}, local: ${localMeta.generatedAt}. Automatically kicking off background sync.")
+                    val syncWorkRequest = OneTimeWorkRequestBuilder<CatalogSyncWorker>()
+                        .addTag(CatalogSyncWorker.TAG)
+                        .build()
+                    WorkManager.getInstance(applicationContext).enqueueUniqueWork(
+                        CatalogSyncWorker.WORK_NAME,
+                        ExistingWorkPolicy.KEEP,
+                        syncWorkRequest
+                    )
                     postUpdateNotification(applicationContext, stats.sermons)
                 } else {
                     Log.d(TAG, "Catalog is up-to-date (generatedAt: ${localMeta.generatedAt}).")

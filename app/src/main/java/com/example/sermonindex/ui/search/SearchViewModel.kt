@@ -9,6 +9,7 @@ import com.example.sermonindex.domain.usecase.CheckCatalogUpdateUseCase
 import com.example.sermonindex.domain.usecase.ClearRecentSearchQueriesUseCase
 import com.example.sermonindex.domain.usecase.DeleteRecentSearchQueryUseCase
 import com.example.sermonindex.domain.usecase.DownloadOrUpdateCatalogUseCase
+import com.example.sermonindex.domain.usecase.GetCatalogPromptBannerDismissedUseCase
 import com.example.sermonindex.domain.usecase.GetCatalogReadyBannerDismissedUseCase
 import com.example.sermonindex.domain.usecase.GetCatalogSyncStateUseCase
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
@@ -17,6 +18,7 @@ import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
 import com.example.sermonindex.domain.usecase.GetSpeakersUseCase
 import com.example.sermonindex.domain.usecase.GetTopicsUseCase
 import com.example.sermonindex.domain.usecase.SearchUseCase
+import com.example.sermonindex.domain.usecase.SetCatalogPromptBannerDismissedUseCase
 import com.example.sermonindex.domain.usecase.SetCatalogReadyBannerDismissedUseCase
 import com.example.sermonindex.di.IoDispatcher
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
@@ -53,6 +55,8 @@ class SearchViewModel @Inject constructor(
     private val getTopicsUseCase: GetTopicsUseCase,
     private val getCatalogReadyBannerDismissedUseCase: GetCatalogReadyBannerDismissedUseCase,
     private val setCatalogReadyBannerDismissedUseCase: SetCatalogReadyBannerDismissedUseCase,
+    private val getCatalogPromptBannerDismissedUseCase: GetCatalogPromptBannerDismissedUseCase,
+    private val setCatalogPromptBannerDismissedUseCase: SetCatalogPromptBannerDismissedUseCase,
     private val getFavoritesUseCase: GetFavoritesUseCase,
     private val toggleFavoriteUseCase: ToggleFavoriteUseCase,
     private val playbackManager: PlaybackManager,
@@ -71,6 +75,11 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             getCatalogReadyBannerDismissedUseCase().collect { isDismissed ->
                 _uiState.update { it.copy(isCatalogReadyBannerDismissed = isDismissed) }
+            }
+        }
+        viewModelScope.launch {
+            getCatalogPromptBannerDismissedUseCase().collect { isDismissed ->
+                _uiState.update { it.copy(isCatalogPromptBannerDismissed = isDismissed) }
             }
         }
 
@@ -205,6 +214,12 @@ class SearchViewModel @Inject constructor(
             is SearchUiEvent.DismissCatalogReadyBanner -> {
                 viewModelScope.launch {
                     setCatalogReadyBannerDismissedUseCase(true)
+                }
+            }
+
+            is SearchUiEvent.DismissCatalogPromptBanner -> {
+                viewModelScope.launch {
+                    setCatalogPromptBannerDismissedUseCase(true)
                 }
             }
 

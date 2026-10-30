@@ -239,9 +239,12 @@ fun SearchContent(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // 1. Catalog Sync / Update Banner (if not dismissed or has update)
-                    val showCatalogBanner = !(state.isCatalogReadyBannerDismissed &&
-                        state.catalogState is CatalogSyncState.Ready &&
-                        !state.catalogState.hasUpdate)
+                    val showCatalogBanner = when (val catState = state.catalogState) {
+                        is CatalogSyncState.NotDownloaded -> !state.isCatalogPromptBannerDismissed
+                        is CatalogSyncState.Ready -> !state.isCatalogReadyBannerDismissed || catState.hasUpdate
+                        is CatalogSyncState.Downloading -> true
+                        is CatalogSyncState.Error -> true
+                    }
 
                     if (showCatalogBanner) {
                         item {
@@ -249,7 +252,13 @@ fun SearchContent(
                                 state = state.catalogState,
                                 onDownloadClick = { onEvent(SearchUiEvent.DownloadCatalog) },
                                 onUpdateClick = { onEvent(SearchUiEvent.DownloadCatalog) },
-                                onDismissClick = { onEvent(SearchUiEvent.DismissCatalogReadyBanner) }
+                                onDismissClick = {
+                                    if (state.catalogState is CatalogSyncState.NotDownloaded) {
+                                        onEvent(SearchUiEvent.DismissCatalogPromptBanner)
+                                    } else {
+                                        onEvent(SearchUiEvent.DismissCatalogReadyBanner)
+                                    }
+                                }
                             )
                         }
                     }

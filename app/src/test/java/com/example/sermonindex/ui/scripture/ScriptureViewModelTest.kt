@@ -50,28 +50,26 @@ class ScriptureViewModelTest {
         assertFalse(state.isLoadingBooks)
         assertNull(state.errorMessage)
         assertEquals(2, state.books.size)
-        assertEquals(2, state.filteredBooks.size)
+        // Default tab 0 is Old Testament
+        assertEquals(1, state.filteredBooks.size)
+        assertEquals("GEN", state.filteredBooks[0].id)
     }
 
     @Test
     fun testamentTabSelection_filtersBooks() = runTest {
         testDispatcher.scheduler.advanceUntilIdle()
 
-        // Tab 1: OT only
-        viewModel.onEvent(ScriptureUiEvent.SelectTestamentTab(1))
-        assertEquals(1, viewModel.uiState.value.testamentTabIndex)
+        // Tab 0: OT only
+        viewModel.onEvent(ScriptureUiEvent.SelectTestamentTab(0))
+        assertEquals(0, viewModel.uiState.value.testamentTabIndex)
         assertEquals(1, viewModel.uiState.value.filteredBooks.size)
         assertEquals("GEN", viewModel.uiState.value.filteredBooks[0].id)
 
-        // Tab 2: NT only
-        viewModel.onEvent(ScriptureUiEvent.SelectTestamentTab(2))
-        assertEquals(2, viewModel.uiState.value.testamentTabIndex)
+        // Tab 1: NT only
+        viewModel.onEvent(ScriptureUiEvent.SelectTestamentTab(1))
+        assertEquals(1, viewModel.uiState.value.testamentTabIndex)
         assertEquals(1, viewModel.uiState.value.filteredBooks.size)
         assertEquals("MAT", viewModel.uiState.value.filteredBooks[0].id)
-
-        // Tab 0: All
-        viewModel.onEvent(ScriptureUiEvent.SelectTestamentTab(0))
-        assertEquals(2, viewModel.uiState.value.filteredBooks.size)
     }
 
     @Test

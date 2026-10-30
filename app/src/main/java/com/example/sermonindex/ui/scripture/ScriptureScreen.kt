@@ -42,6 +42,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,6 +53,8 @@ import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.R
 import com.example.sermonindex.ScriptureRoute
 import com.example.sermonindex.domain.model.BibleBook
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.components.EmptyStateView
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
@@ -105,11 +108,6 @@ fun ScriptureContent(
     Column(
         modifier = modifier.fillMaxSize()
     ) {
-        ScriptureTopBar(
-            title = stringResource(R.string.scripture_explorer),
-            onBack = null
-        )
-
         if (state.isLoadingBooks) {
             LoadingView(text = stringResource(R.string.loading_bible_books))
             return@Column
@@ -125,21 +123,16 @@ fun ScriptureContent(
 
         PrimaryTabRow(
             selectedTabIndex = state.testamentTabIndex,
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = MaterialTheme.colorScheme.background
         ) {
             Tab(
                 selected = state.testamentTabIndex == 0,
                 onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(0)) },
-                text = { Text(stringResource(R.string.tab_all_books)) }
+                text = { Text(stringResource(R.string.tab_old_testament)) }
             )
             Tab(
                 selected = state.testamentTabIndex == 1,
                 onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(1)) },
-                text = { Text(stringResource(R.string.tab_old_testament)) }
-            )
-            Tab(
-                selected = state.testamentTabIndex == 2,
-                onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(2)) },
                 text = { Text(stringResource(R.string.tab_new_testament)) }
             )
         }
@@ -409,7 +402,7 @@ private fun ScriptureTopBar(
     onBack: (() -> Unit)?
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
@@ -487,6 +480,29 @@ private fun VerseHeatMapCell(
                     color = if (density > 0.5f) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun ScriptureScreenPreview() {
+    val sampleBooks = listOf(
+        BibleBook(id = "GEN", name = "Genesis", testament = "OT", chapterCount = 50),
+        BibleBook(id = "EXO", name = "Exodus", testament = "OT", chapterCount = 40),
+        BibleBook(id = "MAT", name = "Matthew", testament = "NT", chapterCount = 28),
+        BibleBook(id = "MRK", name = "Mark", testament = "NT", chapterCount = 16)
+    )
+    SermonIndexTheme {
+        Surface {
+            ScriptureContent(
+                state = ScriptureUiState(
+                    books = sampleBooks,
+                    testamentTabIndex = 0,
+                    isLoadingBooks = false
+                ),
+                onEvent = {}
+            )
         }
     }
 }

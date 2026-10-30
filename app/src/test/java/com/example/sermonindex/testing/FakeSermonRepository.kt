@@ -43,6 +43,7 @@ open class FakeSermonRepository : SermonRepository {
     val catalogSyncStateFlow = MutableStateFlow<CatalogSyncState>(CatalogSyncState.NotDownloaded)
     val recentSearchQueriesFlow = MutableStateFlow<List<String>>(emptyList())
     val catalogReadyBannerDismissedFlow = MutableStateFlow(false)
+    val catalogPromptBannerDismissedFlow = MutableStateFlow(false)
 
     // Recorded invocations for state/interaction verification
     var lastToggledFavorite: Sermon? = null
@@ -353,6 +354,13 @@ open class FakeSermonRepository : SermonRepository {
 
     override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {
         catalogReadyBannerDismissedFlow.value = dismissed
+    }
+
+    override val isCatalogPromptBannerDismissed: Flow<Boolean> =
+        catalogPromptBannerDismissedFlow.asStateFlow()
+
+    override suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean) {
+        catalogPromptBannerDismissedFlow.value = dismissed
     }
 
     fun setPopularSermons(list: List<Sermon>) {

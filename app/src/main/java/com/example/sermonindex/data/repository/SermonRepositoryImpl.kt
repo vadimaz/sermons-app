@@ -21,6 +21,7 @@ import com.example.sermonindex.data.mapper.toFavoriteEntity
 import com.example.sermonindex.data.network.SermonIndexApiService
 import com.example.sermonindex.data.sync.AudioDownloadWorker
 import com.example.sermonindex.data.sync.CatalogSyncWorker
+import com.example.sermonindex.data.sync.CatalogUpdateCheckWorker
 import com.example.sermonindex.domain.model.BibleBookmark
 import com.example.sermonindex.domain.model.BibleBook
 import com.example.sermonindex.domain.model.BibleTranslation
@@ -513,6 +514,7 @@ class SermonRepositoryImpl @Inject constructor(
         searchDao.clearSermonsFts()
         searchDao.clearCatalogMetadata()
         hasCatalogUpdateState.value = false
+        CatalogUpdateCheckWorker.cancelPeriodicCheck(context)
     }
 
     override suspend fun checkForCatalogUpdate(): Boolean = withContext(ioDispatcher) {
@@ -552,6 +554,13 @@ class SermonRepositoryImpl @Inject constructor(
 
     override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {
         userPreferencesRepository.setCatalogReadyBannerDismissed(dismissed)
+    }
+
+    override val isCatalogPromptBannerDismissed: Flow<Boolean> =
+        userPreferencesRepository.isCatalogPromptBannerDismissed
+
+    override suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean) {
+        userPreferencesRepository.setCatalogPromptBannerDismissed(dismissed)
     }
 
     override fun search(query: String, category: SearchCategory): Flow<SearchAggregateResult> = kotlinx.coroutines.flow.flow {

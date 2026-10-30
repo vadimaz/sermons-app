@@ -12,6 +12,7 @@ import com.example.sermonindex.domain.usecase.CheckCatalogUpdateUseCase
 import com.example.sermonindex.domain.usecase.ClearRecentSearchQueriesUseCase
 import com.example.sermonindex.domain.usecase.DeleteRecentSearchQueryUseCase
 import com.example.sermonindex.domain.usecase.DownloadOrUpdateCatalogUseCase
+import com.example.sermonindex.domain.usecase.GetCatalogPromptBannerDismissedUseCase
 import com.example.sermonindex.domain.usecase.GetCatalogReadyBannerDismissedUseCase
 import com.example.sermonindex.domain.usecase.GetCatalogSyncStateUseCase
 import com.example.sermonindex.domain.usecase.GetFavoritesUseCase
@@ -20,6 +21,7 @@ import com.example.sermonindex.domain.usecase.GetSermonDetailsUseCase
 import com.example.sermonindex.domain.usecase.GetSpeakersUseCase
 import com.example.sermonindex.domain.usecase.GetTopicsUseCase
 import com.example.sermonindex.domain.usecase.SearchUseCase
+import com.example.sermonindex.domain.usecase.SetCatalogPromptBannerDismissedUseCase
 import com.example.sermonindex.domain.usecase.SetCatalogReadyBannerDismissedUseCase
 import com.example.sermonindex.domain.usecase.ToggleFavoriteUseCase
 import com.example.sermonindex.testing.FakePlaybackManager
@@ -100,6 +102,8 @@ class SearchViewModelTest {
             getTopicsUseCase = GetTopicsUseCase(fakeRepository),
             getCatalogReadyBannerDismissedUseCase = GetCatalogReadyBannerDismissedUseCase(fakeRepository),
             setCatalogReadyBannerDismissedUseCase = SetCatalogReadyBannerDismissedUseCase(fakeRepository),
+            getCatalogPromptBannerDismissedUseCase = GetCatalogPromptBannerDismissedUseCase(fakeRepository),
+            setCatalogPromptBannerDismissedUseCase = SetCatalogPromptBannerDismissedUseCase(fakeRepository),
             getFavoritesUseCase = GetFavoritesUseCase(fakeRepository),
             toggleFavoriteUseCase = ToggleFavoriteUseCase(fakeRepository),
             playbackManager = fakePlaybackManager,
@@ -211,6 +215,18 @@ class SearchViewModelTest {
 
         assertTrue(fakeRepository.catalogReadyBannerDismissedFlow.value)
         assertTrue(viewModel.uiState.value.isCatalogReadyBannerDismissed)
+    }
+
+    @Test
+    fun dismissCatalogPromptBanner_updatesStateAndRepository() = runTest(testDispatcher) {
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isCatalogPromptBannerDismissed)
+
+        viewModel.onEvent(SearchUiEvent.DismissCatalogPromptBanner)
+        advanceUntilIdle()
+
+        assertTrue(fakeRepository.catalogPromptBannerDismissedFlow.value)
+        assertTrue(viewModel.uiState.value.isCatalogPromptBannerDismissed)
     }
 
     @Test

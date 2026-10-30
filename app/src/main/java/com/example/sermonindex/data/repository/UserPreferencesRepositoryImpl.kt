@@ -34,6 +34,7 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         val FIRST_TRANSLATION = stringPreferencesKey("first_translation_v2")
         val SECOND_TRANSLATION = stringPreferencesKey("second_translation_v2")
         val CATALOG_READY_DISMISSED = booleanPreferencesKey("catalog_ready_dismissed")
+        val CATALOG_PROMPT_DISMISSED = booleanPreferencesKey("catalog_prompt_dismissed")
 
         val BIBLE_TRANSLATION_ID = stringPreferencesKey("bible_reading_translation_id")
         val BIBLE_BOOK_ID = stringPreferencesKey("bible_reading_book_id")
@@ -97,6 +98,20 @@ class UserPreferencesRepositoryImpl @Inject constructor(
         withContext(ioDispatcher) {
             dataStore.edit { preferences ->
                 preferences[PreferencesKeys.CATALOG_READY_DISMISSED] = dismissed
+            }
+        }
+    }
+
+    override val isCatalogPromptBannerDismissed: Flow<Boolean> = safePreferencesFlow
+        .map { preferences ->
+            preferences[PreferencesKeys.CATALOG_PROMPT_DISMISSED] ?: false
+        }
+        .flowOn(ioDispatcher)
+
+    override suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean) {
+        withContext(ioDispatcher) {
+            dataStore.edit { preferences ->
+                preferences[PreferencesKeys.CATALOG_PROMPT_DISMISSED] = dismissed
             }
         }
     }

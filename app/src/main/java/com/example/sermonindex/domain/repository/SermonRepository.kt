@@ -91,4 +91,6 @@ interface SermonRepository {
     suspend fun clearRecentSearchQueries()
     val isCatalogReadyBannerDismissed: Flow<Boolean>
     suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean)
+    val isCatalogPromptBannerDismissed: Flow<Boolean>
+    suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean)
 }

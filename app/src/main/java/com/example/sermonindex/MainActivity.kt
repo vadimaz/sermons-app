@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +29,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.data.sync.CatalogUpdateCheckWorker
@@ -82,6 +84,25 @@ class MainActivity : ComponentActivity() {
         AppThemeMode.SYSTEM -> systemInDark
         AppThemeMode.LIGHT -> false
         AppThemeMode.DARK -> true
+      }
+
+      DisposableEffect(isDarkTheme) {
+        enableEdgeToEdge(
+          statusBarStyle = if (isDarkTheme) {
+            SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+          } else {
+            SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+          },
+          navigationBarStyle = if (isDarkTheme) {
+            SystemBarStyle.dark(AndroidColor.TRANSPARENT)
+          } else {
+            SystemBarStyle.light(AndroidColor.TRANSPARENT, AndroidColor.TRANSPARENT)
+          }
+        )
+        val insetsController = WindowCompat.getInsetsController(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = !isDarkTheme
+        insetsController.isAppearanceLightNavigationBars = !isDarkTheme
+        onDispose {}
       }
 
       CompositionLocalProvider(LocalPictureInPictureMode provides isPipMode) {

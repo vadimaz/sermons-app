@@ -9,10 +9,8 @@ import com.example.sermonindex.domain.model.CatalogSyncState
 import com.example.sermonindex.domain.usecase.DeleteCatalogUseCase
 import com.example.sermonindex.domain.usecase.DownloadOrUpdateCatalogUseCase
 import com.example.sermonindex.domain.usecase.GetAppThemeModeUseCase
-import com.example.sermonindex.domain.usecase.GetAutoCatalogUpdateCheckEnabledUseCase
 import com.example.sermonindex.domain.usecase.GetCatalogSyncStateUseCase
 import com.example.sermonindex.domain.usecase.SetAppThemeModeUseCase
-import com.example.sermonindex.domain.usecase.SetAutoCatalogUpdateCheckEnabledUseCase
 import com.example.sermonindex.testing.FakeSermonRepository
 import com.example.sermonindex.testing.FakeUserPreferencesRepository
 import com.example.sermonindex.testing.MainDispatcherRule
@@ -57,9 +55,7 @@ class SettingsViewModelTest {
             cacheManager = cacheManager,
             getCatalogSyncStateUseCase = GetCatalogSyncStateUseCase(fakeSermonRepository),
             downloadOrUpdateCatalogUseCase = DownloadOrUpdateCatalogUseCase(fakeSermonRepository),
-            deleteCatalogUseCase = DeleteCatalogUseCase(fakeSermonRepository),
-            getAutoCatalogUpdateCheckEnabledUseCase = GetAutoCatalogUpdateCheckEnabledUseCase(fakePreferencesRepository),
-            setAutoCatalogUpdateCheckEnabledUseCase = SetAutoCatalogUpdateCheckEnabledUseCase(fakePreferencesRepository)
+            deleteCatalogUseCase = DeleteCatalogUseCase(fakeSermonRepository)
         )
     }
 
@@ -68,7 +64,6 @@ class SettingsViewModelTest {
         val state = viewModel.uiState.value
         assertEquals(AppThemeMode.SYSTEM, state.themeMode)
         assertTrue(state.isSystemTheme)
-        assertFalse(state.isAutoCatalogUpdateCheckEnabled)
     }
 
     @Test
@@ -110,19 +105,6 @@ class SettingsViewModelTest {
 
         assertTrue(fakeSermonRepository.deleteCatalogCalled)
         assertEquals(CatalogSyncState.NotDownloaded, viewModel.uiState.value.catalogState)
-    }
-
-    @Test
-    fun setAutoCatalogUpdateCheck_updatesStateAndRepository() = runTest {
-        viewModel.onEvent(SettingsUiEvent.SetAutoCatalogUpdateCheck(true))
-        testDispatcher.scheduler.advanceUntilIdle()
-
-        viewModel.uiState.test {
-            val state = awaitItem()
-            assertTrue(state.isAutoCatalogUpdateCheckEnabled)
-            assertTrue(fakePreferencesRepository.autoUpdateCheckEnabledFlow.value)
-            cancelAndIgnoreRemainingEvents()
-        }
     }
 
     @Test

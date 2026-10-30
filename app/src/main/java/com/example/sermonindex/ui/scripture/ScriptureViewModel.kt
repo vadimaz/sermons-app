@@ -16,14 +16,14 @@ import javax.inject.Inject
 @Immutable
 data class ScriptureUiState(
     val books: List<BibleBook> = emptyList(),
-    val testamentTabIndex: Int = 0, // 0: All, 1: OT, 2: NT
+    val testamentTabIndex: Int = 0, // 0: OT, 1: NT
     val isLoadingBooks: Boolean = true,
     val errorMessage: String? = null
 ) {
     val filteredBooks: List<BibleBook>
         get() = when (testamentTabIndex) {
-            1 -> books.filter { it.testament.equals("OT", ignoreCase = true) || it.testament.contains("Old", ignoreCase = true) }
-            2 -> books.filter { it.testament.equals("NT", ignoreCase = true) || it.testament.contains("New", ignoreCase = true) }
+            0 -> books.filter { it.testament.equals("OT", ignoreCase = true) || it.testament.contains("Old", ignoreCase = true) }
+            1 -> books.filter { it.testament.equals("NT", ignoreCase = true) || it.testament.contains("New", ignoreCase = true) }
             else -> books
         }
 }

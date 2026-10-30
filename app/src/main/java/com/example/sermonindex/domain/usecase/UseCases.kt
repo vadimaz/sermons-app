@@ -199,4 +199,12 @@ class SetCatalogReadyBannerDismissedUseCase @Inject constructor(private val repo
     suspend operator fun invoke(dismissed: Boolean) = repository.setCatalogReadyBannerDismissed(dismissed)
 }
 
+class GetCatalogPromptBannerDismissedUseCase @Inject constructor(private val repository: SermonRepository) {
+    operator fun invoke(): Flow<Boolean> = repository.isCatalogPromptBannerDismissed
+}
+
+class SetCatalogPromptBannerDismissedUseCase @Inject constructor(private val repository: SermonRepository) {
+    suspend operator fun invoke(dismissed: Boolean) = repository.setCatalogPromptBannerDismissed(dismissed)
+}
+
 

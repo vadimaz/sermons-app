@@ -193,7 +193,7 @@ fun LibraryContent(
                         icon = Icons.Outlined.DownloadDone,
                         iconTint = Color(0xFF0D9488), // Sage Teal
                         title = stringResource(R.string.library_menu_downloads),
-                        badgeText = if (state.downloads.isNotEmpty()) "${state.downloads.size} • ${state.totalDownloadsSizeFormatted}" else null,
+                        badgeText = if (state.downloads.isNotEmpty()) state.downloads.size.toString() else null,
                         onClick = onNavigateToDownloads
                     )
                     HorizontalDivider(

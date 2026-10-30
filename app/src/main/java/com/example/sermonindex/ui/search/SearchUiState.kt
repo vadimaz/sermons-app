@@ -16,6 +16,7 @@ data class SearchUiState(
     val favoriteIds: Set<String> = emptySet(),
     val catalogState: CatalogSyncState = CatalogSyncState.NotDownloaded,
     val isCatalogReadyBannerDismissed: Boolean = false,
+    val isCatalogPromptBannerDismissed: Boolean = false,
     val recentQueries: List<String> = emptyList(),
     val popularSpeakers: List<Speaker> = emptyList(),
     val popularTopics: List<Topic> = emptyList()

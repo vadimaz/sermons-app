@@ -30,6 +30,13 @@ interface UserPreferencesRepository {
     suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean)
 
     /**
+     * Flag indicating whether the initial offline catalog download prompt recommendation banner has been dismissed.
+     */
+    val isCatalogPromptBannerDismissed: Flow<Boolean>
+
+    suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean)
+
+    /**
      * User's persistent Bible reading state and typography preferences.
      */
     val bibleReadingPreferences: Flow<BibleReadingPreferences>

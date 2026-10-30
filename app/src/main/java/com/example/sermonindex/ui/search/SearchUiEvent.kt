@@ -13,6 +13,7 @@ sealed interface SearchUiEvent {
     data object ClearRecentQueries : SearchUiEvent
     data class ExecuteSearch(val query: String) : SearchUiEvent
     data object DismissCatalogReadyBanner : SearchUiEvent
+    data object DismissCatalogPromptBanner : SearchUiEvent
     data class ToggleFavorite(val sermon: Sermon) : SearchUiEvent
     data class PlaySermon(val sermon: Sermon) : SearchUiEvent
 }

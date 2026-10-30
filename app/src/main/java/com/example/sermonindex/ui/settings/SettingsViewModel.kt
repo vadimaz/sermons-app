@@ -9,10 +9,8 @@ import com.example.sermonindex.domain.model.CatalogSyncState
 import com.example.sermonindex.domain.usecase.DeleteCatalogUseCase
 import com.example.sermonindex.domain.usecase.DownloadOrUpdateCatalogUseCase
 import com.example.sermonindex.domain.usecase.GetAppThemeModeUseCase
-import com.example.sermonindex.domain.usecase.GetAutoCatalogUpdateCheckEnabledUseCase
 import com.example.sermonindex.domain.usecase.GetCatalogSyncStateUseCase
 import com.example.sermonindex.domain.usecase.SetAppThemeModeUseCase
-import com.example.sermonindex.domain.usecase.SetAutoCatalogUpdateCheckEnabledUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +24,6 @@ data class SettingsUiState(
     val themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     val cacheSizeFormatted: String = "0 KB",
     val catalogState: CatalogSyncState = CatalogSyncState.NotDownloaded,
-    val isAutoCatalogUpdateCheckEnabled: Boolean = false,
     val isClearingCache: Boolean = false,
     val isDeletingCatalog: Boolean = false
 ) {
@@ -37,7 +34,6 @@ sealed interface SettingsUiEvent {
     data class SetThemeMode(val mode: AppThemeMode) : SettingsUiEvent
     data class SetSystemTheme(val enabled: Boolean) : SettingsUiEvent
     data object ClearCache : SettingsUiEvent
-    data class SetAutoCatalogUpdateCheck(val enabled: Boolean) : SettingsUiEvent
     data object TriggerCatalogSync : SettingsUiEvent
     data object DeleteCatalog : SettingsUiEvent
 }
@@ -49,9 +45,7 @@ class SettingsViewModel @Inject constructor(
     private val cacheManager: CacheManager,
     private val getCatalogSyncStateUseCase: GetCatalogSyncStateUseCase,
     private val downloadOrUpdateCatalogUseCase: DownloadOrUpdateCatalogUseCase,
-    private val deleteCatalogUseCase: DeleteCatalogUseCase,
-    private val getAutoCatalogUpdateCheckEnabledUseCase: GetAutoCatalogUpdateCheckEnabledUseCase,
-    private val setAutoCatalogUpdateCheckEnabledUseCase: SetAutoCatalogUpdateCheckEnabledUseCase
+    private val deleteCatalogUseCase: DeleteCatalogUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -71,11 +65,6 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             getCatalogSyncStateUseCase().collect { catState ->
                 _uiState.update { it.copy(catalogState = catState) }
-            }
-        }
-        viewModelScope.launch {
-            getAutoCatalogUpdateCheckEnabledUseCase().collect { enabled ->
-                _uiState.update { it.copy(isAutoCatalogUpdateCheckEnabled = enabled) }
             }
         }
     }
@@ -106,11 +95,6 @@ class SettingsViewModel @Inject constructor(
                     cacheManager.clearCache()
                     val newSize = cacheManager.getFormattedCacheSize()
                     _uiState.update { it.copy(isClearingCache = false, cacheSizeFormatted = newSize) }
-                }
-            }
-            is SettingsUiEvent.SetAutoCatalogUpdateCheck -> {
-                viewModelScope.launch {
-                    setAutoCatalogUpdateCheckEnabledUseCase(event.enabled)
                 }
             }
             is SettingsUiEvent.TriggerCatalogSync -> {

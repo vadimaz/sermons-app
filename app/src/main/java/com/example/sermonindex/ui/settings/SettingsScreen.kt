@@ -105,12 +105,6 @@ fun SettingsContent(
     val context = LocalContext.current
     var showDeleteCatalogDialog by remember { mutableStateOf(false) }
 
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
-        onEvent(SettingsUiEvent.SetAutoCatalogUpdateCheck(isGranted))
-    }
-
     if (showDeleteCatalogDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteCatalogDialog = false },
@@ -343,44 +337,9 @@ fun SettingsContent(
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Auto-update switch with notification permission check on enable
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = stringResource(R.string.settings_catalog_auto_update),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Switch(
-                                checked = state.isAutoCatalogUpdateCheckEnabled,
-                                onCheckedChange = { isChecked ->
-                                    if (isChecked) {
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                                            ContextCompat.checkSelfPermission(
-                                                context,
-                                                Manifest.permission.POST_NOTIFICATIONS
-                                            ) != PackageManager.PERMISSION_GRANTED
-                                        ) {
-                                            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                                        } else {
-                                            onEvent(SettingsUiEvent.SetAutoCatalogUpdateCheck(true))
-                                        }
-                                    } else {
-                                        onEvent(SettingsUiEvent.SetAutoCatalogUpdateCheck(false))
-                                    }
-                                }
-                            )
-                        }
-
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Adaptive 3-State Action Button
+                        // Action Button (Download or Delete)
                         when (val catState = state.catalogState) {
                             is CatalogSyncState.Downloading -> {
                                 OutlinedButton(
@@ -398,48 +357,31 @@ fun SettingsContent(
                                 }
                             }
                             is CatalogSyncState.Ready -> {
-                                if (catState.hasUpdate) {
-                                    // State: Update available -> Accent filled tonal button
-                                    FilledTonalButton(
-                                        onClick = { onEvent(SettingsUiEvent.TriggerCatalogSync) },
-                                        shape = RoundedCornerShape(10.dp),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
+                                // State: Downloaded -> Destructive outlined delete button
+                                OutlinedButton(
+                                    onClick = { showDeleteCatalogDialog = true },
+                                    enabled = !state.isDeletingCatalog,
+                                    shape = RoundedCornerShape(10.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    ),
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    if (state.isDeletingCatalog) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(18.dp),
+                                            strokeWidth = 2.dp,
+                                            color = MaterialTheme.colorScheme.error
+                                        )
+                                    } else {
                                         Icon(
-                                            imageVector = Icons.Outlined.CloudSync,
+                                            imageVector = Icons.Outlined.Delete,
                                             contentDescription = null,
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        Text(stringResource(R.string.settings_catalog_update))
-                                    }
-                                } else {
-                                    // State: Downloaded and up to date -> Destructive outlined delete button
-                                    OutlinedButton(
-                                        onClick = { showDeleteCatalogDialog = true },
-                                        enabled = !state.isDeletingCatalog,
-                                        shape = RoundedCornerShape(10.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            contentColor = MaterialTheme.colorScheme.error
-                                        ),
-                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f)),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        if (state.isDeletingCatalog) {
-                                            CircularProgressIndicator(
-                                                modifier = Modifier.size(18.dp),
-                                                strokeWidth = 2.dp,
-                                                color = MaterialTheme.colorScheme.error
-                                            )
-                                        } else {
-                                            Icon(
-                                                imageVector = Icons.Outlined.Delete,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(8.dp))
-                                            Text(stringResource(R.string.settings_catalog_delete))
-                                        }
+                                        Text(stringResource(R.string.settings_catalog_delete))
                                     }
                                 }
                             }
@@ -562,8 +504,7 @@ private fun SettingsScreenPreview() {
                         sermonCount = 70542,
                         generatedAt = "2026-10-30",
                         hasUpdate = false
-                    ),
-                    isAutoCatalogUpdateCheckEnabled = false
+                    )
                 ),
                 onEvent = {},
                 onBack = {},

@@ -41,8 +41,8 @@ fun BibleTopBar(
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
+        color = MaterialTheme.colorScheme.background,
+        tonalElevation = 0.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(

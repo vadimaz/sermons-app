@@ -31,8 +31,13 @@ class SermonApp : Application() {
         CatalogUpdateCheckWorker.createNotificationChannel(this)
 
         CoroutineScope(SupervisorJob() + ioDispatcher).launch {
-            if (userPreferencesRepository.isAutoCatalogUpdateCheckEnabled.first()) {
-                CatalogUpdateCheckWorker.enqueuePeriodicCheck(this@SermonApp)
+            try {
+                val hasCatalog = database.searchDao().getCatalogMetadata() != null
+                if (hasCatalog) {
+                    CatalogUpdateCheckWorker.enqueuePeriodicCheck(this@SermonApp)
+                }
+            } catch (_: Exception) {
+                // Ignore failure during catalog check on startup
             }
             try {
                 database.openHelper.writableDatabase

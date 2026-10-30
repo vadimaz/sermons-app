@@ -24,6 +24,7 @@ class FakeUserPreferencesRepository(
     val firstTranslationFlow = MutableStateFlow(initialFirstTranslation)
     val secondTranslationFlow = MutableStateFlow(initialSecondTranslation)
     val catalogBannerDismissedFlow = MutableStateFlow(initialCatalogBannerDismissed)
+    val catalogPromptBannerDismissedFlow = MutableStateFlow(false)
     val readingPreferencesFlow = MutableStateFlow(initialReadingPreferences)
     val autoUpdateCheckEnabledFlow = MutableStateFlow(initialAutoUpdateCheckEnabled)
     val lastUpdateCheckTimestampFlow = MutableStateFlow(initialLastUpdateCheckTimestamp)
@@ -44,6 +45,12 @@ class FakeUserPreferencesRepository(
 
     override suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean) {
         catalogBannerDismissedFlow.value = dismissed
+    }
+
+    override val isCatalogPromptBannerDismissed: Flow<Boolean> = catalogPromptBannerDismissedFlow.asStateFlow()
+
+    override suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean) {
+        catalogPromptBannerDismissedFlow.value = dismissed
     }
 
     override val bibleReadingPreferences: Flow<BibleReadingPreferences> = readingPreferencesFlow.asStateFlow()

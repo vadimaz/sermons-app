@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.15.1` | **Version Code:** `36`
+> **Current Version:** `1.15.2` | **Version Code:** `37`
 
 ---
 
@@ -25,21 +25,21 @@
 | Screen | ViewModel | Key Functionality |
 |---|---|---|
 | **Home** | `HomeViewModel` | Popular sermons hero carousel, "Voices of Revival" speakers shelf, "Key Themes" topics shelf, Apple Music-style chevron headers (`Title >`) navigating to full directories, "Continue Listening" history shelf, refresh support, scroll-to-top on reselect. |
-| **Search** | `SearchViewModel` | Global search across speakers, topics, and 70k+ offline sermon catalog with debounced FTS4 queries; dynamic category filter chips (All, Sermons, Speakers, Topics); dismissible catalog sync status banner; recent search history; sermon cards with Play pill, Favorite toggle, quote snippet with query highlights, and differentiated navigation (card body -> Sermon Details, book icon -> Text Reader). |
+| **Search** | `SearchViewModel` | Global search across speakers, topics, and 70k+ offline sermon catalog with debounced FTS4 queries; dynamic category filter chips (All, Sermons, Speakers, Topics); dismissible catalog download recommendation banner with Close action; dismissible catalog sync status banner; recent search history; sermon cards with Play pill, Favorite toggle, quote snippet with query highlights, and differentiated navigation (card body -> Sermon Details, book icon -> Text Reader). |
 | **Bible Reader** | `BibleViewModel` | Distraction-free Holy Scripture reader with 1,250+ translations, localized book titles, chapter continuous text with headings, verse markers, poetic stanzas, Hebrew subtitles, footnotes popups, table of contents sheet with OT/NT tabs and book search, reading typography settings, BSB audio narration streaming via Media3, in-chapter search, single-verse selection mode via long-press, pastel highlights (Yellow, Green, Blue, Coral) with auto-save and removal, ModalBottomSheet anchored to bottom bar, 1:1 quote card sharing generator, clipboard integration, and scroll position preservation across navigation. |
-| **Scripture Explorer** | `ScriptureViewModel` / `ScriptureChapterViewModel` | Multi-route Navigation 3 flow (`ScriptureRoute` $\rightarrow$ `ScriptureChaptersRoute` $\rightarrow$ `ScriptureVerseHeatMapRoute` $\rightarrow$ shared `BibleVerseSermonsRoute`) with Material 3 Shared X-Axis transitions and native Predictive Back: 66 books (OT/NT), chapter picker grid, verse heat map based on sermon density with `@AssistedInject` `ScriptureChapterViewModel`, unified dual Scripture Verse quote card and verse sermons list via `BibleVerseSermonsScreen`, and scroll-to-top on reselect. |
+| **Scripture Explorer** | `ScriptureViewModel` / `ScriptureChapterViewModel` | Multi-route Navigation 3 flow (`ScriptureRoute` $\rightarrow$ `ScriptureChaptersRoute` $\rightarrow$ `ScriptureVerseHeatMapRoute` $\rightarrow$ shared `BibleVerseSermonsRoute`) with Material 3 Shared X-Axis transitions and native Predictive Back: streamlined 2-tab segmented control for 66 books (Old Testament [39] and New Testament [27]), redundant header removed, transparent app bars on sub-screens, chapter picker grid, verse heat map based on sermon density with `@AssistedInject` `ScriptureChapterViewModel`, unified dual Scripture Verse quote card and verse sermons list via `BibleVerseSermonsScreen`, and scroll-to-top on reselect. |
 | **Speakers Directory** | `SpeakersViewModel` | Searchable preachers list with live in-memory filtering, shortened search placeholder, sermon count badges, and back navigation when opened from Home. |
 | **Speaker Detail** | `SpeakerDetailViewModel` | Speaker portrait, biography, top topic tags, AndroidX Paging 3 paginated sermon catalog (`/v2/speakers/{slug}/page/{n}`) with `LazyPagingItems`, prefetching, loading indicator, and inline retry on failure. |
 | **Topics Directory** | `TopicsViewModel` | Filterable topic grid with sermon count badges, shortened search placeholder, and back navigation when opened from Home. |
 | **Topic Detail** | `TopicDetailViewModel` | Thematic description, Berean Standard Bible scripture correlations (`topScriptures`), related sermons. |
 | **Sermon Detail** | `SermonDetailViewModel` | Complete sermon metadata, reactive Play/Pause state synced with `PlaybackManager` (displays `Pause` icon when active), 3-in-a-row action layout (Favorite heart, Play pill capsule, Download with progress), 3 tabs for Overview, Outline, and Study Notes. Text-only sermons automatically hide the download button and display "Read Sermon" action. Tapping Play on a newly selected sermon automatically navigates to Fullscreen Player, while tapping Play/Pause on an already active sermon (playing or paused) toggles playback in-place. |
 | **Text Sermon Reader** | `TextSermonViewModel` | Dedicated distraction-free reader screen for text-only sermons (e.g., C.H. Spurgeon's written articles). Fullscreen layout mirroring player dimensions without playback controls; top app bar with favorite toggle, 220dp shadow artwork, title, speaker, "Text Sermon" badge, selectable body typography (18sp / 28sp line height), quotes, and application points. |
-| **Media Library Hub** | `LibraryViewModel` | Apple Music-inspired media library hub featuring Material 3 flexible `MediumTopAppBar` with collapse on scroll and zero redundant insets; vertical navigation menu with Favorites, Downloads, Scripture Bookmarks (History menu row removed); lower section converted into "History" grid displaying recent sermons viewed, read, listened to, or watched, with instant "Clear History" button; gear icon top action opening Settings Center. |
+| **Media Library Hub** | `LibraryViewModel` | Apple Music-inspired media library hub featuring Material 3 flexible `MediumTopAppBar` with collapse on scroll and zero redundant insets; vertical navigation menu with Favorites, Downloads (displaying sermon count badge only), Scripture Bookmarks (History menu row removed); lower section converted into "History" grid displaying recent sermons viewed, read, listened to, or watched, with instant "Clear History" button; gear icon top action opening Settings Center. |
 | **Favorites** | `LibraryViewModel` | Dedicated sub-screen (`FavoritesRoute`) displaying favorite sermons list with immediate playback, removal, and detail navigation. App bar and Scaffold configured with zero top inset duplicate. |
 | **Downloads** | `LibraryViewModel` | Dedicated sub-screen (`DownloadsRoute`) displaying offline downloaded sermons, storage usage badge, individual deletion, and clear all confirmation dialog. App bar and Scaffold configured with zero top inset duplicate. |
 | **History** | `LibraryViewModel` | Dedicated sub-screen (`HistoryRoute`) displaying playback history with progress bars, resume playback at exact timestamp, and clear history action. App bar and Scaffold configured with zero top inset duplicate. |
 | **Scripture Bookmarks** | `LibraryViewModel` | Dedicated sub-screen (`BibleBookmarksRoute`) with color-coded highlights, verse quotes, 1:1 quote card sharing generator, and 1-tap jump to Bible reader. App bar and Scaffold configured with zero top inset duplicate. |
-| **Settings Center** | `SettingsViewModel` | Comprehensive settings screen (`SettingsRoute`): Appearance section with System Default Theme switch (title and description) which disables manual Light/Dark chips when enabled; Dynamic Colors removed; Storage & Cache section with live cache calculation and 1-tap clear, with redundant "Downloaded Audio" row removed to avoid duplication with Library; Offline Catalog section with 3-state adaptive action button (Download Primary Button / Update Filled Tonal Button / Delete Destructive Outlined Button with confirmation dialog); auto-update check disabled by default (`isAutoCatalogUpdateCheckEnabled = false`) with runtime notification permission request on toggle; app version `1.15.1 (36)` and SermonIndex.net attribution. |
+| **Settings Center** | `SettingsViewModel` | Comprehensive settings screen (`SettingsRoute`): Appearance section with System Default Theme switch (title and description) which disables manual Light/Dark chips when enabled; dynamic system bar icon/clock color synchronization in Light & Dark modes; Dynamic Colors removed; Storage & Cache section with live cache calculation and 1-tap clear, with redundant "Downloaded Audio" row removed to avoid duplication with Library; Offline Catalog section with 2 clean action button states (Download Catalog Primary Button / Delete Catalog Destructive Outlined Button with confirmation dialog); autonomous background update synchronization via `CatalogUpdateCheckWorker`; app version `1.15.2 (37)` and SermonIndex.net attribution. |
 | **Fullscreen Player** | `PlayerViewModel` | Comprehensive audio control, sleep timer, download action, speed selection, synchronized WebVTT karaoke transcript reading mode. |
 | **Offline Banner** | N/A (Global) | Animated non-intrusive banner indicating offline mode when internet connection is lost. |
 
@@ -362,6 +362,12 @@ interface SermonRepository {
     val recentSearchQueries: Flow<List<String>>
     suspend fun addRecentSearchQuery(query: String)
     suspend fun clearRecentSearchQueries()
+    val isCatalogReadyBannerDismissed: Flow<Boolean>
+    suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean)
+    val isCatalogPromptBannerDismissed: Flow<Boolean>
+    suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean)
+    val isCatalogPromptBannerDismissed: Flow<Boolean>
+    suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean)
 
     suspend fun clearHistory()
     suspend fun recordSermonView(sermonId: String, title: String, speaker: String, speakerImage: String)
@@ -384,6 +390,8 @@ interface UserPreferencesRepository {
     suspend fun setSecondTranslation(id: String)
     val isCatalogReadyBannerDismissed: Flow<Boolean>
     suspend fun setCatalogReadyBannerDismissed(dismissed: Boolean)
+    val isCatalogPromptBannerDismissed: Flow<Boolean>
+    suspend fun setCatalogPromptBannerDismissed(dismissed: Boolean)
     val bibleReadingPreferences: Flow<BibleReadingPreferences>
     suspend fun saveBibleReadingPosition(translationId: String, bookId: String, chapter: Int, verse: Int)
     suspend fun saveBibleTypography(fontSizeSp: Float, isSerif: Boolean, lineSpacingMultiplier: Float)
