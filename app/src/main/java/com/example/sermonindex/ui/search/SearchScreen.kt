@@ -37,17 +37,19 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,7 +108,7 @@ fun SearchScreen(
     )
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SearchContent(
     state: SearchUiState,
@@ -159,7 +161,10 @@ fun SearchContent(
             },
             trailingIcon = {
                 if (state.query.isNotEmpty()) {
-                    IconButton(onClick = { onEvent(SearchUiEvent.ClearQuery) }) {
+                    IconButton(
+                        onClick = { onEvent(SearchUiEvent.ClearQuery) },
+                        shapes = IconButtonDefaults.shapes()
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = stringResource(R.string.clear_search)
@@ -168,12 +173,12 @@ fun SearchContent(
                 }
             },
             singleLine = true,
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(28.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
             keyboardActions = KeyboardActions(
@@ -184,7 +189,7 @@ fun SearchContent(
             )
         )
 
-        // Filter Category Chips (Visible only when search query is present)
+        // Filter Category ToggleButtons (Visible only when search query is present)
         AnimatedVisibility(
             visible = state.query.isNotBlank(),
             enter = fadeIn() + expandVertically(),
@@ -206,15 +211,18 @@ fun SearchContent(
                         SearchCategory.SPEAKERS -> stringResource(R.string.search_filter_speakers)
                         SearchCategory.TOPICS -> stringResource(R.string.search_filter_topics)
                     }
-                    FilterChip(
-                        selected = selected,
-                        onClick = { onEvent(SearchUiEvent.SelectCategory(category)) },
-                        label = { Text(label) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
-                            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    ToggleButton(
+                        checked = selected,
+                        onCheckedChange = { onEvent(SearchUiEvent.SelectCategory(category)) },
+                        colors = ToggleButtonDefaults.colors(
+                            checkedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                            checkedContentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    )
+                    ) {
+                        Text(label)
+                    }
                 }
             }
         }

@@ -13,13 +13,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -43,6 +43,7 @@ import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.components.PreviewFixtures
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HeroCard(
     sermon: Sermon,
@@ -52,11 +53,11 @@ fun HeroCard(
 ) {
     Card(
         modifier = modifier
-            .width(280.dp)
-            .height(180.dp)
+            .width(284.dp)
+            .height(196.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             val imageUrl = sermon.speakerImage.ifBlank { sermon.thumbnailUrl }
@@ -69,7 +70,7 @@ fun HeroCard(
                 )
             }
 
-            // Scrim overlay
+            // High-contrast Expressive gradient overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -77,8 +78,8 @@ fun HeroCard(
                         Brush.verticalGradient(
                             colors = listOf(
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.5f),
-                                Color.Black.copy(alpha = 0.9f)
+                                Color.Black.copy(alpha = 0.55f),
+                                Color.Black.copy(alpha = 0.92f)
                             )
                         )
                     )
@@ -88,18 +89,17 @@ fun HeroCard(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(14.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.Bottom
             ) {
                 Text(
                     text = sermon.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -109,8 +109,8 @@ fun HeroCard(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = sermon.speaker,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
+                            style = MaterialTheme.typography.labelLargeEmphasized,
+                            color = if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer else Color(0xFFFFB951),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -118,25 +118,28 @@ fun HeroCard(
                             Text(
                                 text = stringResource(R.string.badge_text_sermon),
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.tertiary,
+                                color = MaterialTheme.colorScheme.tertiaryContainer,
                                 fontWeight = FontWeight.Bold
                             )
                         } else if (sermon.duration.isNotBlank()) {
                             Text(
                                 text = sermon.duration,
                                 style = MaterialTheme.typography.labelSmall,
-                                color = Color.LightGray
+                                color = Color.White.copy(alpha = 0.8f)
                             )
                         }
                     }
 
                     FilledIconButton(
                         onClick = onPlayClick,
-                        shape = CircleShape,
+                        shapes = IconButtonDefaults.shapes(
+                            shape = if (isTextOnly) IconButtonDefaults.smallSquareShape else IconButtonDefaults.smallRoundShape,
+                            pressedShape = IconButtonDefaults.smallPressedShape
+                        ),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                         ),
-                        modifier = Modifier.size(38.dp)
+                        modifier = Modifier.size(42.dp)
                     ) {
                         Icon(
                             imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,

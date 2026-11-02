@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -25,6 +24,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -52,6 +52,7 @@ import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.search.components.TextHighlightUtils
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SermonListItem(
     sermon: Sermon,
@@ -75,23 +76,23 @@ fun SermonListItem(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onItemClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
         )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
+                    .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Speaker / Sermon Portrait or Type Placeholder
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(RoundedCornerShape(12.dp))
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(16.dp))
                 ) {
                     val imageUrl = sermon.speakerImage.ifBlank { sermon.thumbnailUrl }
                     if (imageUrl.isNotBlank()) {
@@ -99,13 +100,16 @@ fun SermonListItem(
                             model = imageUrl,
                             contentDescription = sermon.speaker,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(56.dp)
+                            modifier = Modifier.size(60.dp)
                         )
                     } else {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer),
+                                .background(
+                                    if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer
+                                    else MaterialTheme.colorScheme.primaryContainer
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -115,14 +119,15 @@ fun SermonListItem(
                                     Icons.Outlined.PlayCircle
                                 },
                                 contentDescription = null,
-                                tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(28.dp)
+                                tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer
+                                else MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(30.dp)
                             )
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
+                Spacer(modifier = Modifier.width(14.dp))
 
                 // Sermon details
                 Column(
@@ -141,8 +146,7 @@ fun SermonListItem(
                     }
                     Text(
                         text = annotatedTitle,
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface
@@ -151,18 +155,19 @@ fun SermonListItem(
                     Text(
                         text = sermon.speaker.ifBlank { stringResource(R.string.unknown_speaker) },
                         style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.SemiBold,
                         color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (isTextOnly) {
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RoundedCornerShape(8.dp),
                                 color = MaterialTheme.colorScheme.tertiaryContainer
                             ) {
                                 Text(
@@ -170,19 +175,20 @@ fun SermonListItem(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
                         } else if (sermon.duration.isNotBlank()) {
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest
                             ) {
                                 Text(
                                     text = sermon.duration,
                                     style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
                         }
@@ -198,8 +204,11 @@ fun SermonListItem(
                     }
                 }
 
-                // Actions: Favorite + Play/Read
-                IconButton(onClick = onFavoriteToggle) {
+                // Actions: Expressive Morphing Favorite + Play/Read
+                IconButton(
+                    onClick = onFavoriteToggle,
+                    shapes = IconButtonDefaults.shapes()
+                ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = stringResource(
@@ -211,12 +220,15 @@ fun SermonListItem(
 
                 FilledIconButton(
                     onClick = if (isTextOnly) onReadClick else onPlayClick,
-                    shape = CircleShape,
+                    shapes = IconButtonDefaults.shapes(
+                        shape = if (isTextOnly) IconButtonDefaults.smallSquareShape else IconButtonDefaults.smallRoundShape,
+                        pressedShape = IconButtonDefaults.smallPressedShape
+                    ),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                         contentColor = if (isTextOnly) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary
                     ),
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(42.dp)
                 ) {
                     Icon(
                         imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,
@@ -230,12 +242,12 @@ fun SermonListItem(
             if (matchSnippet != null && !cleanQuery.isNullOrBlank()) {
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp)
                 )
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(

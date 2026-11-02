@@ -1,14 +1,12 @@
 package com.example.sermonindex
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.core.FastOutLinearInEasing
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -16,36 +14,30 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Explore
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScaffoldDefaults
+import androidx.compose.material3.ShortNavigationBar
+import androidx.compose.material3.ShortNavigationBarItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -56,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -71,6 +64,8 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.example.sermonindex.domain.repository.NetworkMonitor
 import com.example.sermonindex.playback.PlaybackManager
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.bible.BibleScreen
 import com.example.sermonindex.ui.bible.sermons.BibleVerseSermonsScreen
 import com.example.sermonindex.ui.components.MiniPlayer
@@ -114,84 +109,57 @@ internal fun isTopLevelTransition(initialKey: Any?, targetKey: Any?): Boolean =
         targetKey in TOP_LEVEL_CONTENT_KEYS
 
 /**
- * Material 3 Fade Through transition for switching between peer top-level destinations.
+ * Material 3 Expressive Fade Through transition with spring physics for switching between peer top-level destinations.
  */
-private fun topLevelFadeThroughTransition(): ContentTransform =
-    (
-        fadeIn(
-            animationSpec = tween(
-                durationMillis = 210,
-                delayMillis = 90,
-                easing = LinearOutSlowInEasing
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun topLevelFadeThroughTransition(): ContentTransform {
+    val expressiveMotion = MotionScheme.expressive()
+    return (
+        fadeIn(animationSpec = expressiveMotion.defaultEffectsSpec()) +
+            scaleIn(
+                initialScale = 0.92f,
+                animationSpec = expressiveMotion.defaultSpatialSpec()
             )
-        ) + scaleIn(
-            initialScale = 0.94f,
-            animationSpec = tween(
-                durationMillis = 210,
-                delayMillis = 90,
-                easing = FastOutSlowInEasing
-            )
-        )
-        ) togetherWith fadeOut(
-        animationSpec = tween(
-            durationMillis = 90,
-            easing = FastOutLinearInEasing
-        )
-    )
+        ) togetherWith fadeOut(animationSpec = expressiveMotion.fastEffectsSpec())
+}
 
 /**
- * Material 3 Shared X-Axis forward transition for drilling down into sub-screens.
+ * Material 3 Expressive Shared X-Axis forward transition with spring physics for drilling down into sub-screens.
  */
-private fun hierarchicalForwardTransition(): ContentTransform =
-    (
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun hierarchicalForwardTransition(): ContentTransform {
+    val expressiveMotion = MotionScheme.expressive()
+    return (
         slideInHorizontally(
-            initialOffsetX = { fullWidth -> (fullWidth * 0.18f).toInt() },
-            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-        ) + fadeIn(
-            animationSpec = tween(
-                durationMillis = 210,
-                delayMillis = 90,
-                easing = LinearOutSlowInEasing
-            )
-        )
+            initialOffsetX = { fullWidth -> (fullWidth * 0.22f).toInt() },
+            animationSpec = expressiveMotion.defaultSpatialSpec()
+        ) + fadeIn(animationSpec = expressiveMotion.defaultEffectsSpec())
         ) togetherWith (
         slideOutHorizontally(
             targetOffsetX = { fullWidth -> -(fullWidth * 0.18f).toInt() },
-            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-        ) + fadeOut(
-            animationSpec = tween(
-                durationMillis = 90,
-                easing = FastOutLinearInEasing
-            )
+            animationSpec = expressiveMotion.defaultSpatialSpec()
+        ) + fadeOut(animationSpec = expressiveMotion.fastEffectsSpec())
         )
-        )
+}
 
 /**
- * Material 3 Shared X-Axis pop transition for returning from sub-screens.
+ * Material 3 Expressive Shared X-Axis pop transition with spring physics for returning from sub-screens.
  */
-private fun hierarchicalPopTransition(): ContentTransform =
-    (
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+private fun hierarchicalPopTransition(): ContentTransform {
+    val expressiveMotion = MotionScheme.expressive()
+    return (
         slideInHorizontally(
             initialOffsetX = { fullWidth -> -(fullWidth * 0.18f).toInt() },
-            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-        ) + fadeIn(
-            animationSpec = tween(
-                durationMillis = 210,
-                delayMillis = 90,
-                easing = LinearOutSlowInEasing
-            )
-        )
+            animationSpec = expressiveMotion.defaultSpatialSpec()
+        ) + fadeIn(animationSpec = expressiveMotion.defaultEffectsSpec())
         ) togetherWith (
         slideOutHorizontally(
-            targetOffsetX = { fullWidth -> (fullWidth * 0.18f).toInt() },
-            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing)
-        ) + fadeOut(
-            animationSpec = tween(
-                durationMillis = 90,
-                easing = FastOutLinearInEasing
-            )
+            targetOffsetX = { fullWidth -> (fullWidth * 0.22f).toInt() },
+            animationSpec = expressiveMotion.defaultSpatialSpec()
+        ) + fadeOut(animationSpec = expressiveMotion.fastEffectsSpec())
         )
-        )
+}
 
 /**
  * Handles navigation events (forward, back, and reselect) across multiple back stacks.
@@ -299,6 +267,7 @@ fun rememberNavigationState(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainNavigation(
     playbackManager: PlaybackManager,
@@ -334,19 +303,6 @@ fun MainNavigation(
     val showBottomBar = isAtTopLevel
     val showMiniPlayer = !isFullscreenPlayer && activeMediaInfo.hasActiveMedia && !isBibleTrack
 
-    val navBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val totalBottomBarHeight = 80.dp + navBarInset
-    val animatedHeight by animateDpAsState(
-        targetValue = if (effectivelyShowBottomBar) totalBottomBarHeight else 0.dp,
-        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-        label = "bottomBarHeight"
-    )
-    val animatedTranslationY by animateDpAsState(
-        targetValue = if (effectivelyShowBottomBar) 0.dp else totalBottomBarHeight,
-        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
-        label = "bottomBarTranslationY"
-    )
-
     val isFullscreenVideo = currentRoute is FullscreenVideoRoute
 
     Scaffold(
@@ -369,127 +325,23 @@ fun MainNavigation(
                         )
                     }
 
-                    // Bottom Navigation Bar
-                    if (showBottomBar) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(animatedHeight)
-                                .clipToBounds()
-                        ) {
-                            NavigationBar(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                tonalElevation = 8.dp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(totalBottomBarHeight)
-                                    .graphicsLayer {
-                                        translationY = animatedTranslationY.toPx()
-                                    }
-                            ) {
-                            val isHome = navigationState.topLevelRoute == HomeRoute
-                            val isSearch = navigationState.topLevelRoute == SearchRoute
-                            val isBible = navigationState.topLevelRoute == BibleRoute
-                            val isScripture = navigationState.topLevelRoute == ScriptureRoute
-                            val isLibrary = navigationState.topLevelRoute == LibraryRoute
-
-                            val homeLabel = stringResource(R.string.nav_home)
-                            val searchLabel = stringResource(R.string.nav_search)
-                            val bibleLabel = stringResource(R.string.nav_bible)
-                            val scriptureLabel = stringResource(R.string.nav_scripture)
-                            val libraryLabel = stringResource(R.string.nav_library)
-
-                            NavigationBarItem(
-                                selected = isHome,
-                                onClick = {
-                                    if (isHome) {
-                                        navigator.onReselect(HomeRoute)
-                                    } else {
-                                        navigator.navigate(HomeRoute)
-                                    }
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = if (isHome) Icons.Filled.Home else Icons.Outlined.Home,
-                                        contentDescription = homeLabel
-                                    )
-                                },
-                                label = { Text(homeLabel) }
-                            )
-
-                            NavigationBarItem(
-                                selected = isSearch,
-                                onClick = {
-                                    if (isSearch) {
-                                        navigator.onReselect(SearchRoute)
-                                    } else {
-                                        navigator.navigate(SearchRoute)
-                                    }
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = if (isSearch) Icons.Filled.Search else Icons.Outlined.Search,
-                                        contentDescription = searchLabel
-                                    )
-                                },
-                                label = { Text(searchLabel) }
-                            )
-
-                            NavigationBarItem(
-                                selected = isBible,
-                                onClick = {
-                                    if (isBible) {
-                                        navigator.onReselect(BibleRoute)
-                                    } else {
-                                        navigator.navigate(BibleRoute)
-                                    }
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = if (isBible) Icons.AutoMirrored.Filled.MenuBook else Icons.AutoMirrored.Outlined.MenuBook,
-                                        contentDescription = bibleLabel
-                                    )
-                                },
-                                label = { Text(bibleLabel) }
-                            )
-
-                            NavigationBarItem(
-                                selected = isScripture,
-                                onClick = {
-                                    if (isScripture) {
-                                        navigator.onReselect(ScriptureRoute)
-                                    } else {
-                                        navigator.navigate(ScriptureRoute)
-                                    }
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = if (isScripture) Icons.Filled.Explore else Icons.Outlined.Explore,
-                                        contentDescription = scriptureLabel
-                                    )
-                                },
-                                label = { Text(scriptureLabel) }
-                            )
-
-                            NavigationBarItem(
-                                selected = isLibrary,
-                                onClick = {
-                                    if (isLibrary) {
-                                        navigator.onReselect(LibraryRoute)
-                                    } else {
-                                        navigator.navigate(LibraryRoute)
-                                    }
-                                },
-                                icon = {
-                                    Icon(
-                                        imageVector = if (isLibrary) Icons.Filled.Bookmarks else Icons.Outlined.Bookmarks,
-                                        contentDescription = libraryLabel
-                                    )
-                                },
-                                label = { Text(libraryLabel) }
-                            )
-                        }
-                        }
+                    // Expressive Short Navigation Bar
+                    AnimatedVisibility(
+                        visible = showBottomBar && effectivelyShowBottomBar,
+                        enter = expandVertically(
+                            animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                            expandFrom = Alignment.Top
+                        ) + fadeIn(animationSpec = MaterialTheme.motionScheme.defaultEffectsSpec()),
+                        exit = shrinkVertically(
+                            animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
+                            shrinkTowards = Alignment.Top
+                        ) + fadeOut(animationSpec = MaterialTheme.motionScheme.fastEffectsSpec())
+                    ) {
+                        SermonIndexBottomBar(
+                            topLevelRoute = navigationState.topLevelRoute,
+                            onNavigate = { route -> navigator.navigate(route) },
+                            onReselect = { route -> navigator.onReselect(route) }
+                        )
                     }
                 }
             }
@@ -823,6 +675,119 @@ fun MainNavigation(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+internal fun SermonIndexBottomBar(
+    topLevelRoute: NavKey,
+    onNavigate: (NavKey) -> Unit,
+    onReselect: (NavKey) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Note: Do NOT pass Modifier.fillMaxWidth() directly to ShortNavigationBar,
+    // because ShortNavigationBar's internal Surface propagates minWidth constraints
+    // to EqualWeightContentMeasurePolicy, which clamps each item's width to minWidth.
+    ShortNavigationBar(
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+        modifier = modifier
+    ) {
+        val isHome = topLevelRoute == HomeRoute
+        val isSearch = topLevelRoute == SearchRoute
+        val isBible = topLevelRoute == BibleRoute
+        val isScripture = topLevelRoute == ScriptureRoute
+        val isLibrary = topLevelRoute == LibraryRoute
+
+        val homeLabel = stringResource(R.string.nav_home)
+        val searchLabel = stringResource(R.string.nav_search)
+        val bibleLabel = stringResource(R.string.nav_bible)
+        val scriptureLabel = stringResource(R.string.nav_scripture)
+        val libraryLabel = stringResource(R.string.nav_library)
+
+        ShortNavigationBarItem(
+            selected = isHome,
+            onClick = {
+                if (isHome) onReselect(HomeRoute) else onNavigate(HomeRoute)
+            },
+            icon = {
+                Icon(
+                    imageVector = if (isHome) Icons.Filled.Home else Icons.Outlined.Home,
+                    contentDescription = homeLabel
+                )
+            },
+            label = { Text(homeLabel) }
+        )
+
+        ShortNavigationBarItem(
+            selected = isSearch,
+            onClick = {
+                if (isSearch) onReselect(SearchRoute) else onNavigate(SearchRoute)
+            },
+            icon = {
+                Icon(
+                    imageVector = if (isSearch) Icons.Filled.Search else Icons.Outlined.Search,
+                    contentDescription = searchLabel
+                )
+            },
+            label = { Text(searchLabel) }
+        )
+
+        ShortNavigationBarItem(
+            selected = isBible,
+            onClick = {
+                if (isBible) onReselect(BibleRoute) else onNavigate(BibleRoute)
+            },
+            icon = {
+                Icon(
+                    imageVector = if (isBible) Icons.AutoMirrored.Filled.MenuBook else Icons.AutoMirrored.Outlined.MenuBook,
+                    contentDescription = bibleLabel
+                )
+            },
+            label = { Text(bibleLabel) }
+        )
+
+        ShortNavigationBarItem(
+            selected = isScripture,
+            onClick = {
+                if (isScripture) onReselect(ScriptureRoute) else onNavigate(ScriptureRoute)
+            },
+            icon = {
+                Icon(
+                    imageVector = if (isScripture) Icons.Filled.Explore else Icons.Outlined.Explore,
+                    contentDescription = scriptureLabel
+                )
+            },
+            label = { Text(scriptureLabel) }
+        )
+
+        ShortNavigationBarItem(
+            selected = isLibrary,
+            onClick = {
+                if (isLibrary) onReselect(LibraryRoute) else onNavigate(LibraryRoute)
+            },
+            icon = {
+                Icon(
+                    imageVector = if (isLibrary) Icons.Filled.Bookmarks else Icons.Outlined.Bookmarks,
+                    contentDescription = libraryLabel
+                )
+            },
+            label = { Text(libraryLabel) }
+        )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun SermonIndexBottomBarPreview() {
+    SermonIndexTheme {
+        Surface {
+            SermonIndexBottomBar(
+                topLevelRoute = HomeRoute,
+                onNavigate = {},
+                onReselect = {}
+            )
         }
     }
 }

@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.FormatSize
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import com.example.sermonindex.R
 import com.example.sermonindex.ui.bible.BibleUiState
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BibleTopBar(
     state: BibleUiState,
@@ -53,17 +55,21 @@ fun BibleTopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.End
         ) {
-            // 1. Audio narration button (if audio is available in this chapter)
+            // 1. Audio narration button (with Expressive morphing shape)
             val hasAudio = state.currentChapter?.audioLinks?.isNotEmpty() == true
             if (hasAudio) {
                 FilledTonalIconButton(
                     onClick = onToggleAudio,
+                    shapes = IconButtonDefaults.shapes(
+                        shape = if (state.isAudioPlaying) IconButtonDefaults.smallSquareShape else IconButtonDefaults.smallRoundShape,
+                        pressedShape = IconButtonDefaults.smallPressedShape
+                    ),
                     modifier = Modifier.size(38.dp),
                     colors = IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = if (state.isAudioPlaying) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant
+                            MaterialTheme.colorScheme.surfaceContainerHigh
                         },
                         contentColor = if (state.isAudioPlaying) {
                             MaterialTheme.colorScheme.onPrimaryContainer
@@ -78,18 +84,21 @@ fun BibleTopBar(
                         modifier = Modifier.size(20.dp)
                     )
                 }
-                Spacer(modifier = Modifier.width(4.dp))
+                Spacer(modifier = Modifier.width(6.dp))
             }
 
             // 2. Reading typography settings icon
-            IconButton(onClick = onSettingsClick) {
+            IconButton(
+                onClick = onSettingsClick,
+                shapes = IconButtonDefaults.shapes()
+            ) {
                 Icon(
                     imageVector = Icons.Default.FormatSize,
                     contentDescription = stringResource(R.string.reading_settings)
                 )
             }
 
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(6.dp))
 
             // 3. Language / Translation picker capsule (chip)
             val translationLabel = state.currentTranslation?.shortName?.ifBlank {
@@ -97,19 +106,19 @@ fun BibleTopBar(
             } ?: state.preferences.translationId.uppercase()
 
             Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f),
+                shape = RoundedCornerShape(999.dp),
+                color = MaterialTheme.colorScheme.secondaryContainer,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(999.dp))
                     .clickable { onTranslationClick() }
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
                 ) {
                     Text(
                         text = translationLabel,
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelLargeEmphasized,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer
                     )
@@ -118,7 +127,7 @@ fun BibleTopBar(
                         imageVector = Icons.Default.ArrowDropDown,
                         contentDescription = stringResource(R.string.select_translation),
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
             }

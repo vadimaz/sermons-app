@@ -10,14 +10,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,26 +36,37 @@ import com.example.sermonindex.domain.model.Speaker
 import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.components.PreviewFixtures
+import kotlin.math.abs
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SpeakerCard(
     speaker: Speaker,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shapeIndex: Int = abs(speaker.slug.hashCode())
 ) {
+    val polygon = when (shapeIndex % 4) {
+        0 -> MaterialShapes.Cookie9Sided
+        1 -> MaterialShapes.Clover8Leaf
+        2 -> MaterialShapes.Sunny
+        else -> MaterialShapes.Arch
+    }
+    val portraitShape = polygon.toShape()
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier
-            .width(108.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .width(114.dp)
+            .clip(RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp)
+            .padding(vertical = 6.dp, horizontal = 4.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(88.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
+                .size(94.dp)
+                .clip(portraitShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             if (speaker.image.isNotBlank()) {
@@ -67,16 +80,15 @@ fun SpeakerCard(
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(40.dp)
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.size(42.dp)
                 )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = speaker.name,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.labelLargeEmphasized,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
@@ -87,7 +99,8 @@ fun SpeakerCard(
             Text(
                 text = stringResource(R.string.sermons_count, speaker.sermonCount),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
         }

@@ -1,6 +1,5 @@
 package com.example.sermonindex.ui.sermon
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -27,16 +25,18 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonGroupDefaults
+import androidx.compose.material3.CircularWavyProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -98,8 +98,9 @@ fun SermonDetailScreen(
 }
 
 /**
- * Stateless SermonDetailContent adhering to Clean Architecture.
+ * Stateless SermonDetailContent adhering to Clean Architecture and Material 3 Expressive.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SermonDetailContent(
     state: SermonDetailUiState,
@@ -142,14 +143,13 @@ fun SermonDetailContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = onBack) {
+                IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                 }
 
                 Text(
                     text = stringResource(R.string.sermon_details),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMediumEmphasized,
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
@@ -163,7 +163,7 @@ fun SermonDetailContent(
 
         LazyColumn(
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             // Sermon Header: Artwork & Titles
             item {
@@ -175,21 +175,21 @@ fun SermonDetailContent(
                             contentDescription = detail.speaker,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
-                                .size(80.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .size(88.dp)
+                                .clip(RoundedCornerShape(24.dp))
                         )
                     } else {
                         Surface(
                             color = if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primaryContainer,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.size(80.dp)
+                            shape = RoundedCornerShape(24.dp),
+                            modifier = Modifier.size(88.dp)
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,
                                     contentDescription = null,
-                                    tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(36.dp)
+                                    tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                                    modifier = Modifier.size(38.dp)
                                 )
                             }
                         }
@@ -198,21 +198,19 @@ fun SermonDetailContent(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = detail.title,
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.headlineSmallEmphasized,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = detail.speaker,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
+                            style = MaterialTheme.typography.titleMediumEmphasized,
                             color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
                         if (isTextOnly) {
                             Surface(
-                                shape = RoundedCornerShape(6.dp),
+                                shape = RoundedCornerShape(999.dp),
                                 color = MaterialTheme.colorScheme.tertiaryContainer
                             ) {
                                 Text(
@@ -220,7 +218,7 @@ fun SermonDetailContent(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onTertiaryContainer,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                 )
                             }
                         } else if (detail.duration.isNotBlank()) {
@@ -234,7 +232,7 @@ fun SermonDetailContent(
                 }
             }
 
-            // Action Buttons: Favorite (Heart), Play/Read (Pill Capsule), Download (audio only)
+            // Expressive Action Row: Favorite (Morphing Heart), Play/Read (Morphing Capsule), Download (Wavy Progress)
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -244,10 +242,13 @@ fun SermonDetailContent(
                     // 1. Favorite (Heart)
                     FilledTonalIconButton(
                         onClick = { onEvent(SermonDetailUiEvent.ToggleFavorite) },
-                        shape = CircleShape,
+                        shapes = IconButtonDefaults.shapes(
+                            shape = if (state.isFavorite) IconButtonDefaults.mediumSquareShape else IconButtonDefaults.mediumRoundShape,
+                            pressedShape = IconButtonDefaults.mediumPressedShape
+                        ),
                         modifier = Modifier.size(56.dp),
                         colors = IconButtonDefaults.filledTonalIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            containerColor = if (state.isFavorite) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
                             contentColor = if (state.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
@@ -260,11 +261,11 @@ fun SermonDetailContent(
                         )
                     }
 
-                    // 2. Play or Read Button (Pill / Capsule)
+                    // 2. Play or Read Button (Expressive Morphing Pill / Capsule)
                     if (isTextOnly) {
                         Button(
                             onClick = { onReadClick(detail.id) },
-                            shape = CircleShape,
+                            shapes = ButtonDefaults.shapes(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.tertiary,
                                 contentColor = MaterialTheme.colorScheme.onTertiary
@@ -281,8 +282,7 @@ fun SermonDetailContent(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = stringResource(R.string.read_full_sermon),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                style = MaterialTheme.typography.titleMediumEmphasized
                             )
                         }
                     } else {
@@ -294,7 +294,7 @@ fun SermonDetailContent(
                                     onPlayClick()
                                 }
                             },
-                            shape = CircleShape,
+                            shapes = ButtonDefaults.shapes(),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                                 contentColor = MaterialTheme.colorScheme.onPrimary
@@ -315,25 +315,27 @@ fun SermonDetailContent(
                     if (!isTextOnly) {
                         FilledTonalIconButton(
                             onClick = { onEvent(SermonDetailUiEvent.ToggleDownload) },
-                            shape = CircleShape,
+                            shapes = IconButtonDefaults.shapes(
+                                shape = if (state.isDownloaded) IconButtonDefaults.mediumSquareShape else IconButtonDefaults.mediumRoundShape,
+                                pressedShape = IconButtonDefaults.mediumPressedShape
+                            ),
                             modifier = Modifier.size(56.dp),
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                                containerColor = if (state.isDownloaded) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = if (state.isDownloaded) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         ) {
                             if (state.downloadProgress != null) {
-                                CircularProgressIndicator(
+                                CircularWavyProgressIndicator(
                                     progress = { (state.downloadProgress.toFloat() / 100f).coerceIn(0f, 1f) },
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.5.dp,
+                                    modifier = Modifier.size(28.dp),
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             } else if (state.isDownloaded) {
                                 Icon(
                                     imageVector = Icons.Default.DownloadDone,
                                     contentDescription = stringResource(R.string.downloaded),
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
                                     modifier = Modifier.size(26.dp)
                                 )
                             } else {
@@ -348,30 +350,42 @@ fun SermonDetailContent(
                 }
             }
 
-            // Tabs: Overview, Outline, Notes
+            // Connected ButtonGroup: Overview, Outline, Notes
             item {
-                PrimaryTabRow(
-                    selectedTabIndex = state.selectedTab,
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                val tabs = listOf(
+                    stringResource(R.string.tab_overview),
+                    stringResource(R.string.tab_outline),
+                    stringResource(R.string.tab_notes)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
                 ) {
-                    Tab(
-                        selected = state.selectedTab == 0,
-                        onClick = { onEvent(SermonDetailUiEvent.SelectTab(0)) },
-                        text = { Text(stringResource(R.string.tab_overview)) }
-                    )
-                    Tab(
-                        selected = state.selectedTab == 1,
-                        onClick = { onEvent(SermonDetailUiEvent.SelectTab(1)) },
-                        text = { Text(stringResource(R.string.tab_outline)) }
-                    )
-                    Tab(
-                        selected = state.selectedTab == 2,
-                        onClick = { onEvent(SermonDetailUiEvent.SelectTab(2)) },
-                        text = { Text(stringResource(R.string.tab_notes)) }
-                    )
+                    tabs.forEachIndexed { index, title ->
+                        val shapes = when (index) {
+                            0 -> ButtonGroupDefaults.connectedLeadingButtonShapes()
+                            tabs.lastIndex -> ButtonGroupDefaults.connectedTrailingButtonShapes()
+                            else -> ButtonGroupDefaults.connectedMiddleButtonShapes()
+                        }
+                        ToggleButton(
+                            checked = state.selectedTab == index,
+                            onCheckedChange = { onEvent(SermonDetailUiEvent.SelectTab(index)) },
+                            shapes = shapes,
+                            colors = ToggleButtonDefaults.colors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                checkedContainerColor = MaterialTheme.colorScheme.primary,
+                                checkedContentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = title,
+                                style = MaterialTheme.typography.labelLargeEmphasized,
+                                maxLines = 1
+                            )
+                        }
+                    }
                 }
             }
 

@@ -3,16 +3,39 @@ package com.example.sermonindex.ui.bible
 import android.content.ClipData
 import android.os.Build
 import android.widget.Toast
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -22,32 +45,36 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalClipboard
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.toClipEntry
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.toClipEntry
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.NavKey
 import com.example.sermonindex.BibleRoute
 import com.example.sermonindex.R
+import com.example.sermonindex.domain.model.BibleChapter
 import com.example.sermonindex.domain.model.BibleChapterItem
+import com.example.sermonindex.theme.SermonIndexTheme
+import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.bible.components.BibleFootnoteDialog
 import com.example.sermonindex.ui.bible.components.BibleReaderContent
-import com.example.sermonindex.ui.bible.components.BibleVerseBottomSheet
 import com.example.sermonindex.ui.bible.components.BibleSettingsSheet
 import com.example.sermonindex.ui.bible.components.BibleTableOfContentsSheet
 import com.example.sermonindex.ui.bible.components.BibleTopBar
 import com.example.sermonindex.ui.bible.components.BibleTranslationPickerSheet
+import com.example.sermonindex.ui.bible.components.BibleVerseBottomSheet
 import com.example.sermonindex.ui.bible.components.QuoteCardSheet
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
@@ -93,7 +120,7 @@ fun BibleScreen(
 /**
  * Stateless BibleContent.
  */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun BibleContent(
     state: BibleUiState,
@@ -111,12 +138,12 @@ fun BibleContent(
     val topBarHeight = 56.dp
     val animatedTopBarHeight by animateDpAsState(
         targetValue = if (isTopBarVisible) topBarHeight else 0.dp,
-        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
         label = "topBarHeight"
     )
     val animatedTopBarTranslationY by animateDpAsState(
         targetValue = if (isTopBarVisible) 0.dp else -topBarHeight,
-        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        animationSpec = MaterialTheme.motionScheme.defaultSpatialSpec(),
         label = "topBarTranslationY"
     )
 
@@ -345,5 +372,36 @@ fun BibleContent(
             footnote = footnote,
             onDismiss = { onEvent(BibleUiEvent.DismissFootnote) }
         )
+    }
+}
+
+@ThemePreviews
+@Composable
+private fun BibleContentPreview() {
+    SermonIndexTheme {
+        Surface {
+            BibleContent(
+                state = BibleUiState(
+                    isLoading = false,
+                    currentChapter = BibleChapter(
+                        translationId = "kjv",
+                        bookId = "JHN",
+                        bookName = "John",
+                        chapterNumber = 1,
+                        numberOfVerses = 3,
+                        items = listOf(
+                            BibleChapterItem.Heading("The Word Became Flesh"),
+                            BibleChapterItem.Verse(1, "In the beginning was the Word, and the Word was with God, and the Word was God."),
+                            BibleChapterItem.Verse(2, "The same was in the beginning with God."),
+                            BibleChapterItem.Verse(3, "All things were made by him; and without him was not any thing made that was made.")
+                        ),
+                        footnotes = emptyList(),
+                        hasNextChapter = true,
+                        hasPreviousChapter = false
+                    )
+                ),
+                onEvent = {}
+            )
+        }
     }
 }

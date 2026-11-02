@@ -26,6 +26,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -373,6 +375,7 @@ private fun VerseItemRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun BottomNavigationFooter(
     onPreviousChapter: () -> Unit,
@@ -382,13 +385,14 @@ private fun BottomNavigationFooter(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(bottom = 40.dp),
+            .padding(bottom = 84.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         OutlinedButton(
             onClick = onPreviousChapter,
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            shapes = ButtonDefaults.shapes(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
@@ -401,7 +405,8 @@ private fun BottomNavigationFooter(
 
         Button(
             onClick = onNextChapter,
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+            shapes = ButtonDefaults.shapes(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
         ) {
             Text(stringResource(R.string.next_chapter))
             Spacer(modifier = Modifier.width(6.dp))

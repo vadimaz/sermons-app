@@ -50,6 +50,9 @@ captures/
 *.jks
 *.keystore
 
+# Tooling
+.stitch/
+
 # Google Services (Firebase)
 google-services.json
 

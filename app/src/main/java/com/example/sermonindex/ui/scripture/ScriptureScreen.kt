@@ -26,15 +26,17 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleButton
+import androidx.compose.material3.ToggleButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -88,6 +90,7 @@ fun ScriptureScreen(
 /**
  * Level 1: Stateless ScriptureContent displaying 66 books of Old and New Testaments.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun ScriptureContent(
     state: ScriptureUiState,
@@ -121,20 +124,46 @@ fun ScriptureContent(
             return@Column
         }
 
-        PrimaryTabRow(
-            selectedTabIndex = state.testamentTabIndex,
-            containerColor = MaterialTheme.colorScheme.background
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween)
         ) {
-            Tab(
-                selected = state.testamentTabIndex == 0,
-                onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(0)) },
-                text = { Text(stringResource(R.string.tab_old_testament)) }
-            )
-            Tab(
-                selected = state.testamentTabIndex == 1,
-                onClick = { onEvent(ScriptureUiEvent.SelectTestamentTab(1)) },
-                text = { Text(stringResource(R.string.tab_new_testament)) }
-            )
+            ToggleButton(
+                checked = state.testamentTabIndex == 0,
+                onCheckedChange = { onEvent(ScriptureUiEvent.SelectTestamentTab(0)) },
+                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                colors = ToggleButtonDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    checkedContainerColor = MaterialTheme.colorScheme.primary,
+                    checkedContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = stringResource(R.string.tab_old_testament),
+                    style = MaterialTheme.typography.labelLargeEmphasized
+                )
+            }
+            ToggleButton(
+                checked = state.testamentTabIndex == 1,
+                onCheckedChange = { onEvent(ScriptureUiEvent.SelectTestamentTab(1)) },
+                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                colors = ToggleButtonDefaults.colors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    checkedContainerColor = MaterialTheme.colorScheme.primary,
+                    checkedContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = stringResource(R.string.tab_new_testament),
+                    style = MaterialTheme.typography.labelLargeEmphasized
+                )
+            }
         }
 
         val filteredBooks = state.filteredBooks

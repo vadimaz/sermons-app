@@ -29,9 +29,11 @@ import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -39,12 +41,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -105,7 +106,7 @@ fun LibraryScreen(
 /**
  * Stateless LibraryContent conforming to MAD and Clean Architecture.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun LibraryContent(
     state: LibraryUiState,
@@ -132,15 +133,18 @@ fun LibraryContent(
 
     Scaffold(
         topBar = {
-            MediumTopAppBar(
+            MediumFlexibleTopAppBar(
                 title = {
                     Text(
                         text = stringResource(R.string.media_library),
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmallEmphasized
                     )
                 },
                 actions = {
-                    IconButton(onClick = onNavigateToSettings) {
+                    IconButton(
+                        onClick = onNavigateToSettings,
+                        shapes = IconButtonDefaults.shapes()
+                    ) {
                         Icon(
                             imageVector = Icons.Outlined.Settings,
                             contentDescription = stringResource(R.string.settings_title),
@@ -175,8 +179,8 @@ fun LibraryContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
                     LibraryMenuRow(
                         icon = Icons.Outlined.Favorite,
@@ -223,17 +227,17 @@ fun LibraryContent(
                 ) {
                     Text(
                         text = stringResource(R.string.tab_history),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLargeEmphasized,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     if (state.recentItems.isNotEmpty()) {
                         TextButton(
-                            onClick = { onEvent(LibraryUiEvent.ClearHistory) }
+                            onClick = { onEvent(LibraryUiEvent.ClearHistory) },
+                            shapes = ButtonDefaults.shapes()
                         ) {
                             Text(
                                 text = stringResource(R.string.clear_history),
-                                style = MaterialTheme.typography.labelLarge,
+                                style = MaterialTheme.typography.labelLargeEmphasized,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -244,9 +248,9 @@ fun LibraryContent(
             if (state.recentItems.isEmpty()) {
                 item {
                     Card(
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -297,6 +301,7 @@ fun LibraryContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun LibraryMenuRow(
     icon: ImageVector,
@@ -327,8 +332,7 @@ private fun LibraryMenuRow(
             Spacer(modifier = Modifier.width(16.dp))
             Text(
                 text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyLargeEmphasized,
                 color = MaterialTheme.colorScheme.onSurface
             )
         }
@@ -352,6 +356,7 @@ private fun LibraryMenuRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun RecentMediaCard(
     item: RecentMediaItem,
@@ -361,15 +366,15 @@ private fun RecentMediaCard(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onSelect)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .clip(RoundedCornerShape(20.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
         ) {
             if (item.speakerImage.isNotBlank()) {
                 AsyncImage(
@@ -383,7 +388,7 @@ private fun RecentMediaCard(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Mic,
@@ -394,18 +399,21 @@ private fun RecentMediaCard(
                 }
             }
 
-            // Quick Play Button Overlay
+            // Quick Play Button Overlay with Expressive morphing shape
             FilledIconButton(
                 onClick = onPlay,
                 colors = IconButtonDefaults.filledIconButtonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 ),
-                shape = CircleShape,
+                shapes = IconButtonDefaults.shapes(
+                    shape = CircleShape,
+                    pressedShape = RoundedCornerShape(12.dp)
+                ),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(8.dp)
-                    .size(38.dp)
+                    .size(40.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
@@ -432,8 +440,7 @@ private fun RecentMediaCard(
 
         Text(
             text = item.title,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMediumEmphasized,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             color = MaterialTheme.colorScheme.onBackground

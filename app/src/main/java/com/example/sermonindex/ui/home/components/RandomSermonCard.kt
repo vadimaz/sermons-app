@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -21,6 +20,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -43,6 +43,7 @@ import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.components.PreviewFixtures
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RandomSermonCard(
     sermon: Sermon,
@@ -54,25 +55,28 @@ fun RandomSermonCard(
     val isTextOnly = sermon.isTextOnly
     Card(
         modifier = modifier
-            .width(260.dp)
-            .height(130.dp)
+            .width(268.dp)
+            .height(136.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(12.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(68.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .size(72.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer
+                        else MaterialTheme.colorScheme.primaryContainer
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 val imageUrl = sermon.speakerImage.ifBlank { sermon.thumbnailUrl }
@@ -87,8 +91,9 @@ fun RandomSermonCard(
                     Icon(
                         imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.Person,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(32.dp)
+                        tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer
+                        else MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(34.dp)
                     )
                 }
             }
@@ -105,7 +110,7 @@ fun RandomSermonCard(
                     Text(
                         text = sermon.speaker,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -113,8 +118,7 @@ fun RandomSermonCard(
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
                         text = sermon.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface
@@ -136,20 +140,20 @@ fun RandomSermonCard(
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onTertiaryContainer,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
                     } else if (sermon.duration.isNotBlank()) {
                         Surface(
                             shape = RoundedCornerShape(999.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest
                         ) {
                             Text(
                                 text = sermon.duration,
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                             )
                         }
                     } else {
@@ -158,11 +162,14 @@ fun RandomSermonCard(
 
                     FilledIconButton(
                         onClick = if (isTextOnly) onReadClick else onPlayClick,
-                        shape = CircleShape,
+                        shapes = IconButtonDefaults.shapes(
+                            shape = if (isTextOnly) IconButtonDefaults.smallSquareShape else IconButtonDefaults.smallRoundShape,
+                            pressedShape = IconButtonDefaults.smallPressedShape
+                        ),
                         colors = IconButtonDefaults.filledIconButtonColors(
                             containerColor = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                         ),
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(34.dp)
                     ) {
                         Icon(
                             imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,

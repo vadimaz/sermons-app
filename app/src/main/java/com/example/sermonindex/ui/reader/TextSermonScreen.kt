@@ -16,10 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
-import com.example.sermonindex.ui.search.components.TextHighlightUtils
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -28,12 +24,15 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FormatQuote
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -43,8 +42,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -54,13 +55,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import com.example.sermonindex.R
-import com.example.sermonindex.domain.model.QuoteItem
-import com.example.sermonindex.domain.model.SermonDetail
 import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.components.ErrorView
 import com.example.sermonindex.ui.components.LoadingView
 import com.example.sermonindex.ui.components.PreviewFixtures
+import com.example.sermonindex.ui.search.components.TextHighlightUtils
 
 /**
  * Stateful entry point for TextSermonScreen.
@@ -92,6 +92,7 @@ fun TextSermonScreen(
 /**
  * Stateless TextSermonContent adhering to Clean Architecture and MVI.
  */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun TextSermonContent(
     state: TextSermonUiState,
@@ -130,7 +131,7 @@ fun TextSermonContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = onBack, shapes = IconButtonDefaults.shapes()) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = stringResource(R.string.back)
@@ -139,13 +140,15 @@ fun TextSermonContent(
 
             Text(
                 text = stringResource(R.string.text_sermon_reader),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMediumEmphasized,
                 color = MaterialTheme.colorScheme.onBackground
             )
 
             // Favorite button
-            IconButton(onClick = { onEvent(TextSermonUiEvent.ToggleFavorite) }) {
+            IconButton(
+                onClick = { onEvent(TextSermonUiEvent.ToggleFavorite) },
+                shapes = IconButtonDefaults.shapes()
+            ) {
                 Icon(
                     imageVector = if (state.isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                     contentDescription = stringResource(R.string.favorite),
@@ -167,266 +170,263 @@ fun TextSermonContent(
                     .padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-            // Header: Artwork / Portrait, Titles, Badge
-            item(key = "text_reader_header") {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Artwork surface
-                    val imageUrl = detail.speakerImage.ifBlank { detail.thumbnailUrl }
-                    Surface(
-                        modifier = Modifier
-                            .size(220.dp)
-                            .shadow(16.dp, RoundedCornerShape(24.dp)),
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant
+                // Header: Artwork / Portrait, Titles, Badge
+                item(key = "text_reader_header") {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        if (imageUrl.isNotBlank()) {
-                            AsyncImage(
-                                model = imageUrl,
-                                contentDescription = detail.speaker,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Surface(
-                                color = MaterialTheme.colorScheme.tertiaryContainer,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                                        modifier = Modifier.size(64.dp)
-                                    )
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Artwork surface
+                        val imageUrl = detail.speakerImage.ifBlank { detail.thumbnailUrl }
+                        Surface(
+                            modifier = Modifier
+                                .size(220.dp)
+                                .shadow(16.dp, RoundedCornerShape(32.dp)),
+                            shape = RoundedCornerShape(32.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                        ) {
+                            if (imageUrl.isNotBlank()) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = detail.speaker,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Surface(
+                                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                                    modifier = Modifier.fillMaxSize()
+                                ) {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                            modifier = Modifier.size(64.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
 
-                    // Title
-                    Text(
-                        text = detail.title,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
+                        // Title
+                        Text(
+                            text = detail.title,
+                            style = MaterialTheme.typography.headlineSmallEmphasized,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
 
-                    // Preacher name
-                    Text(
-                        text = detail.speaker,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.clickable {
-                            if (detail.speakerSlug.isNotBlank()) {
-                                onSpeakerClick(detail.speakerSlug)
+                        // Preacher name
+                        Text(
+                            text = detail.speaker,
+                            style = MaterialTheme.typography.titleMediumEmphasized,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier.clickable {
+                                if (detail.speakerSlug.isNotBlank()) {
+                                    onSpeakerClick(detail.speakerSlug)
+                                }
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Text Sermon Badge
+                        Surface(
+                            shape = RoundedCornerShape(999.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = stringResource(R.string.text_only_sermon_badge),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                                )
                             }
                         }
-                    )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Text Sermon Badge
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = stringResource(R.string.text_only_sermon_badge),
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.surfaceVariant,
-                        thickness = 1.dp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
-            }
-
-            // Summary (if available)
-            if (detail.summary.isNotBlank()) {
-                item(key = "text_reader_summary") {
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 16.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        Spacer(modifier = Modifier.height(20.dp))
+                        HorizontalDivider(
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                            thickness = 1.dp
                         )
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                text = stringResource(R.string.summary),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = detail.summary,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
                 }
-            }
 
-            // Main Sermon Text Body (Rendered as structured paragraphs)
-            if (state.paragraphs.isEmpty()) {
-                item(key = "text_reader_empty_body") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.no_text_content_available),
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-            } else {
-                itemsIndexed(state.paragraphs, key = { idx, _ -> "para_$idx" }) { _, paragraph ->
-                    val annotatedText = remember(paragraph, state.highlightQuery) {
-                        if (state.highlightQuery.isNullOrBlank()) {
-                            AnnotatedString(paragraph)
-                        } else {
-                            TextHighlightUtils.buildHighlightedText(
-                                text = paragraph,
-                                query = state.highlightQuery,
-                                highlightColor = Color(0x66FFC107)
-                            )
-                        }
-                    }
-
-                    SelectionContainer {
-                        Text(
-                            text = annotatedText,
-                            fontSize = 18.sp,
-                            lineHeight = 28.sp,
-                            fontWeight = FontWeight.Normal,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            textAlign = TextAlign.Start,
+                // Summary (if available)
+                if (detail.summary.isNotBlank()) {
+                    item(key = "text_reader_summary") {
+                        Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                        )
-                    }
-                }
-            }
-
-            // Key Quotes Section (if present)
-            if (detail.quotes.isNotEmpty()) {
-                item(key = "text_reader_quotes_header") {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = stringResource(R.string.key_quotes),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 8.dp)
-                    )
-                }
-
-                items(detail.quotes.size, key = { "quote_$it" }) { idx ->
-                    val quoteItem = detail.quotes[idx]
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                        )
-                    ) {
-                        Row(modifier = Modifier.padding(12.dp)) {
-                            Icon(
-                                imageVector = Icons.Default.FormatQuote,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.tertiary
+                                .padding(bottom = 16.dp),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "\"${quoteItem.quote}\"",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontStyle = FontStyle.Italic
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Application points (if present)
-            if (detail.applicationPoints.isNotEmpty()) {
-                item(key = "text_reader_points") {
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                text = stringResource(R.string.application_points),
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.tertiary
-                            )
-                            Spacer(modifier = Modifier.height(6.dp))
-                            detail.applicationPoints.forEach { pt ->
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "✓ $pt",
+                                    text = stringResource(R.string.summary),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = detail.summary,
                                     style = MaterialTheme.typography.bodyMedium,
-                                    modifier = Modifier.padding(vertical = 2.dp)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
                         }
                     }
                 }
-            }
 
-            item(key = "text_reader_bottom_spacer") {
-                Spacer(modifier = Modifier.navigationBarsPadding().height(72.dp))
+                // Main Sermon Text Body (Rendered as structured paragraphs)
+                if (state.paragraphs.isEmpty()) {
+                    item(key = "text_reader_empty_body") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = stringResource(R.string.no_text_content_available),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    itemsIndexed(state.paragraphs, key = { idx, _ -> "para_$idx" }) { _, paragraph ->
+                        val annotatedText = remember(paragraph, state.highlightQuery) {
+                            if (state.highlightQuery.isNullOrBlank()) {
+                                AnnotatedString(paragraph)
+                            } else {
+                                TextHighlightUtils.buildHighlightedText(
+                                    text = paragraph,
+                                    query = state.highlightQuery,
+                                    highlightColor = Color(0x66FFC107)
+                                )
+                            }
+                        }
+
+                        SelectionContainer {
+                            Text(
+                                text = annotatedText,
+                                fontSize = 18.sp,
+                                lineHeight = 28.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onBackground,
+                                textAlign = TextAlign.Start,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                            )
+                        }
+                    }
+                }
+
+                // Key Quotes Section (if present)
+                if (detail.quotes.isNotEmpty()) {
+                    item(key = "text_reader_quotes_header") {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(R.string.key_quotes),
+                            style = MaterialTheme.typography.titleLargeEmphasized,
+                            color = MaterialTheme.colorScheme.tertiary,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                        )
+                    }
+
+                    items(detail.quotes.size, key = { "quote_$it" }) { idx ->
+                        val quoteItem = detail.quotes[idx]
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            )
+                        ) {
+                            Row(modifier = Modifier.padding(14.dp)) {
+                                Icon(
+                                    imageVector = Icons.Default.FormatQuote,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.tertiary
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "\"${quoteItem.quote}\"",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontStyle = FontStyle.Italic
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Application points (if present)
+                if (detail.applicationPoints.isNotEmpty()) {
+                    item(key = "text_reader_points") {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(24.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+                            )
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                Text(
+                                    text = stringResource(R.string.application_points),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.tertiary
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                detail.applicationPoints.forEach { pt ->
+                                    Text(
+                                        text = "✓ $pt",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        modifier = Modifier.padding(vertical = 2.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                item(key = "text_reader_bottom_spacer") {
+                    Spacer(modifier = Modifier.navigationBarsPadding().height(72.dp))
+                }
             }
         }
     }
-}
 }
 
 @ThemePreviews
@@ -452,4 +452,3 @@ private fun TextSermonContentPreview() {
         }
     }
 }
-

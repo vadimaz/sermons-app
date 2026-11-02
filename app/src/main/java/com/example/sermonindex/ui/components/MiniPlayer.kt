@@ -2,7 +2,6 @@ package com.example.sermonindex.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,18 +10,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.LinearWavyProgressIndicator
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -32,15 +31,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.example.sermonindex.R
 import com.example.sermonindex.playback.ActiveMediaInfo
 import com.example.sermonindex.playback.PlaybackState
 import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MiniPlayer(
     mediaInfo: ActiveMediaInfo,
@@ -55,28 +56,18 @@ fun MiniPlayer(
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-            .shadow(elevation = 8.dp, shape = RoundedCornerShape(16.dp))
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+            .shadow(elevation = 10.dp, shape = RoundedCornerShape(28.dp))
             .clickable(onClick = onExpandClick),
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-        tonalElevation = 6.dp
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 8.dp
     ) {
         Column {
-            // Linear progress indicator on top - evaluates progressProvider directly in Draw phase
-            LinearProgressIndicator(
-                progress = progressProvider,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp),
-                color = MaterialTheme.colorScheme.primary,
-                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-            )
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(start = 10.dp, end = 8.dp, top = 8.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Speaker portrait
@@ -86,8 +77,8 @@ fun MiniPlayer(
                     contentDescription = sermon.speaker,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(10.dp))
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(18.dp))
                         .background(MaterialTheme.colorScheme.primaryContainer)
                 )
 
@@ -99,8 +90,7 @@ fun MiniPlayer(
                 ) {
                     Text(
                         text = sermon.title,
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMediumEmphasized,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface
@@ -117,14 +107,14 @@ fun MiniPlayer(
                         if (mediaInfo.isUsingFailoverCdn) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.2f)
+                                shape = RoundedCornerShape(6.dp),
+                                color = MaterialTheme.colorScheme.secondaryContainer
                             ) {
                                 Text(
-                                    text = androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.cdn),
+                                    text = stringResource(R.string.cdn),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.secondary,
-                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                                 )
                             }
                         }
@@ -133,26 +123,29 @@ fun MiniPlayer(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Play / Pause / Buffering button
+                // Play / Pause / Buffering button with Expressive shape morphing
                 if (mediaInfo.isBuffering) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(36.dp),
-                        strokeWidth = 3.dp,
+                    LoadingIndicator(
+                        modifier = Modifier.size(38.dp),
                         color = MaterialTheme.colorScheme.primary
                     )
                 } else {
                     FilledIconButton(
                         onClick = onTogglePlayPause,
-                        shape = CircleShape,
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                        shapes = IconButtonDefaults.shapes(
+                            shape = if (mediaInfo.isPlaying) IconButtonDefaults.smallSquareShape else IconButtonDefaults.smallRoundShape,
+                            pressedShape = IconButtonDefaults.smallPressedShape
                         ),
-                        modifier = Modifier.size(40.dp)
+                        colors = IconButtonDefaults.filledIconButtonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        modifier = Modifier.size(42.dp)
                     ) {
                         Icon(
                             imageVector = if (mediaInfo.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                            contentDescription = androidx.compose.ui.res.stringResource(
-                                if (mediaInfo.isPlaying) com.example.sermonindex.R.string.pause else com.example.sermonindex.R.string.play
+                            contentDescription = stringResource(
+                                if (mediaInfo.isPlaying) R.string.pause else R.string.play
                             ),
                             tint = MaterialTheme.colorScheme.onPrimary
                         )
@@ -161,15 +154,31 @@ fun MiniPlayer(
 
                 IconButton(
                     onClick = onCloseClick,
+                    shapes = IconButtonDefaults.shapes(),
                     modifier = Modifier.size(36.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = androidx.compose.ui.res.stringResource(com.example.sermonindex.R.string.close_player),
+                        contentDescription = stringResource(R.string.close_player),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+
+            // Expressive Wavy Progress Indicator along bottom of capsule
+            LinearWavyProgressIndicator(
+                progress = progressProvider,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 18.dp)
+                    .padding(bottom = 6.dp)
+                    .height(6.dp),
+                color = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                amplitude = { progress ->
+                    if (mediaInfo.isPlaying && progress > 0.01f && progress < 0.99f) 1f else 0f
+                }
+            )
         }
     }
 }

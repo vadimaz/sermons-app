@@ -1,11 +1,21 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.15.3` | **Version Code:** `38`
+> **Current Version:** `1.16.0` | **Version Code:** `39`
 
 ---
 
 ## 1. Implemented Features & Modules
+
+### 1.0 Material 3 Expressive Design System Migration
+- **M3 Expressive Core Foundation**: Upgraded `androidx.compose.material3:material3` to `1.5.0-beta02`, configuring `MaterialExpressiveTheme` with Android 16/17 Expressive design tokens, spring physics (`MotionScheme.expressive()`), emphasized editorial typography scales, organic morphing `MaterialShapes`, and complete surface container hierarchy (`surfaceContainerLowest..Highest`).
+- **Primary Tab Navigation (`ShortNavigationBar`)**: Replaced standard navigation bar with `ShortNavigationBar` + `ShortNavigationBarItem`, optimizing vertical real estate and providing responsive touch target bounding.
+- **Home Discovery Carousel**: Migrated hero section to `HorizontalMultiBrowseCarousel` with rounded `extraLarge` masks and organic speaker card shapes.
+- **Wavy Progress & Floating MiniPlayer**: Upgraded `MiniPlayer` to an elevated `28.dp` capsule with `LinearWavyProgressIndicator` and a shape-morphing Play/Pause `FilledIconButton`.
+- **Fullscreen Player & Sticky Transport Controls**: Upgraded player with M3 Expressive slider, `CircularWavyProgressIndicator`, and restored `stickyHeader` transport controls pinned under the scrubber that stick to the top during transcript scroll.
+- **Connected ButtonGroups**: Implemented expressive connected button groups (`ToggleButton` + `ButtonGroupDefaults.connected*ButtonShapes()`) across Sermon Detail, Scripture Explorer, Bible Table of Contents, and Settings.
+- **Collapsing Top App Bars Standardized**: Standardized `MediumFlexibleTopAppBar` across all 8 screens (`LibraryScreen`, `FavoritesScreen`, `DownloadsScreen`, `HistoryScreen`, `BibleBookmarksScreen`, `SettingsScreen`, `SpeakersScreen`, `TopicsScreen`) with `scrolledContainerColor = MaterialTheme.colorScheme.background` for seamless background consistency on scroll without contrast changes.
+- **Distraction-Free Bible & Text Reading**: Eliminated bottom floating toolbars in `BibleScreen` and `TextSermonScreen`, preserving native in-content navigation and modal sheets.
 
 ### 1.1 Audio Engine & Playback (Media3)
 - **`PlaybackService`**: Background `MediaSessionService` using ExoPlayer, media notification with playback controls, lockscreen metadata, and audio attributes tuned for speech (`USAGE_MEDIA`, `CONTENT_TYPE_SPEECH`).

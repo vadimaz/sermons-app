@@ -13,7 +13,7 @@
 | **OS / Runtime** | Android SDK | `minSdk = 26` (Android 8.0), `compileSdk = 37`, `targetSdk = 36`, `<profileable>` shell enabled |
 | **JDK** | Java 17 | `jvmToolchain(17)`, Gradle 9.8.2, AGP 9.4.1 |
 | **Language** | Kotlin 2.3.21 | KSP 2.3.12, Kotlin Serialization 1.11.0 |
-| **UI Toolkit** | Jetpack Compose | BOM 2026.09.00, Material 3 (1.4.0), Material Icons Extended |
+| **UI Toolkit** | Jetpack Compose | BOM 2026.09.00, Material 3 Expressive (1.5.0-beta02), Material Icons Extended |
 | **Navigation** | Navigation 3 (`androidx.navigation3`) | Version 1.2.0 (`NavDisplay`, `NavKey`, multi-backstacks with `rememberSaveableStateHolderNavEntryDecorator` & `rememberViewModelStoreNavEntryDecorator`) |
 | **Dependency Injection** | Dagger Hilt 2.60.1 | `androidx.hilt:hilt-navigation-compose:1.4.0` (`androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`), `@AndroidEntryPoint`, `@HiltViewModel` |
 | **Async / Reactive** | Coroutines 1.11.0 & Flow | `StateFlow`, `SharedFlow`, `flowOn(ioDispatcher)` |

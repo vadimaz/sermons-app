@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,16 +23,17 @@ fun SpeakersShelf(
     LazyRow(
         modifier = modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        items(
+        itemsIndexed(
             items = speakers,
-            key = { it.slug },
-            contentType = { "speaker_card" }
-        ) { speaker ->
+            key = { _, speaker -> speaker.slug },
+            contentType = { _, _ -> "speaker_card" }
+        ) { index, speaker ->
             SpeakerCard(
                 speaker = speaker,
-                onClick = { onSpeakerClick(speaker) }
+                onClick = { onSpeakerClick(speaker) },
+                shapeIndex = index
             )
         }
     }

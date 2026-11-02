@@ -37,22 +37,25 @@ import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ButtonGroupDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.CircularWavyProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MediumFlexibleTopAppBar
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.ToggleButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -61,8 +64,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -93,7 +100,7 @@ fun SettingsScreen(
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsContent(
     state: SettingsUiState,
@@ -104,6 +111,7 @@ fun SettingsContent(
 ) {
     val context = LocalContext.current
     var showDeleteCatalogDialog by remember { mutableStateOf(false) }
+    val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     if (showDeleteCatalogDialog) {
         AlertDialog(
@@ -133,30 +141,35 @@ fun SettingsContent(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            MediumFlexibleTopAppBar(
                 title = {
                     Text(
                         text = stringResource(R.string.settings_title),
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.headlineSmallEmphasized
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        shapes = IconButtonDefaults.shapes()
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
+                scrollBehavior = scrollBehavior,
                 windowInsets = WindowInsets(0, 0, 0, 0),
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background
+                    containerColor = MaterialTheme.colorScheme.background,
+                    scrolledContainerColor = MaterialTheme.colorScheme.background
                 )
             )
         },
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         containerColor = MaterialTheme.colorScheme.background,
-        modifier = modifier
+        modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { innerPadding ->
         LazyColumn(
             contentPadding = PaddingValues(
@@ -176,8 +189,8 @@ fun SettingsContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -190,8 +203,7 @@ fun SettingsContent(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = stringResource(R.string.settings_theme_system_title),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
+                                    style = MaterialTheme.typography.bodyLargeEmphasized
                                 )
                                 Text(
                                     text = stringResource(R.string.settings_theme_system_desc),
@@ -210,7 +222,7 @@ fun SettingsContent(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Manual Light / Dark selector chips (disabled when system default is ON)
+                        // Manual Light / Dark selector Connected ButtonGroup (disabled when system default is ON)
                         Text(
                             text = stringResource(R.string.settings_theme_mode),
                             style = MaterialTheme.typography.titleSmall,
@@ -220,37 +232,43 @@ fun SettingsContent(
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(ButtonGroupDefaults.ConnectedSpaceBetween),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            FilterChip(
-                                selected = !state.isSystemTheme && state.themeMode == AppThemeMode.LIGHT,
+                            ToggleButton(
+                                checked = !state.isSystemTheme && state.themeMode == AppThemeMode.LIGHT,
                                 enabled = !state.isSystemTheme,
-                                onClick = { onEvent(SettingsUiEvent.SetThemeMode(AppThemeMode.LIGHT)) },
-                                label = { Text(stringResource(R.string.settings_theme_light)) },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.LightMode,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
-                            FilterChip(
-                                selected = !state.isSystemTheme && state.themeMode == AppThemeMode.DARK,
+                                onCheckedChange = { onEvent(SettingsUiEvent.SetThemeMode(AppThemeMode.LIGHT)) },
+                                shapes = ButtonGroupDefaults.connectedLeadingButtonShapes(),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.LightMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.settings_theme_light))
+                            }
+                            ToggleButton(
+                                checked = !state.isSystemTheme && state.themeMode == AppThemeMode.DARK,
                                 enabled = !state.isSystemTheme,
-                                onClick = { onEvent(SettingsUiEvent.SetThemeMode(AppThemeMode.DARK)) },
-                                label = { Text(stringResource(R.string.settings_theme_dark)) },
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Outlined.DarkMode,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                },
-                                modifier = Modifier.weight(1f)
-                            )
+                                onCheckedChange = { onEvent(SettingsUiEvent.SetThemeMode(AppThemeMode.DARK)) },
+                                shapes = ButtonGroupDefaults.connectedTrailingButtonShapes(),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .semantics { role = Role.RadioButton }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.DarkMode,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.settings_theme_dark))
+                            }
                         }
                     }
                 }
@@ -264,8 +282,8 @@ fun SettingsContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -288,8 +306,7 @@ fun SettingsContent(
                                 Column {
                                     Text(
                                         text = stringResource(R.string.settings_cache_size),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium
+                                        style = MaterialTheme.typography.bodyLargeEmphasized
                                     )
                                     Text(
                                         text = state.cacheSizeFormatted,
@@ -299,11 +316,11 @@ fun SettingsContent(
                                 }
                             }
                             if (state.isClearingCache) {
-                                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                                LoadingIndicator(modifier = Modifier.size(28.dp))
                             } else {
                                 OutlinedButton(
                                     onClick = { onEvent(SettingsUiEvent.ClearCache) },
-                                    shape = RoundedCornerShape(10.dp)
+                                    shapes = ButtonDefaults.shapes()
                                 ) {
                                     Text(stringResource(R.string.settings_clear_cache))
                                 }
@@ -321,8 +338,8 @@ fun SettingsContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
@@ -334,8 +351,7 @@ fun SettingsContent(
                         }
                         Text(
                             text = statusText,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
+                            style = MaterialTheme.typography.bodyLargeEmphasized
                         )
                         Spacer(modifier = Modifier.height(14.dp))
 
@@ -345,12 +361,12 @@ fun SettingsContent(
                                 OutlinedButton(
                                     onClick = {},
                                     enabled = false,
-                                    shape = RoundedCornerShape(10.dp),
+                                    shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp
+                                    CircularWavyProgressIndicator(
+                                        progress = { catState.progress.coerceIn(0f, 1f) },
+                                        modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(stringResource(R.string.search_catalog_downloading, (catState.progress * 100).toInt()))
@@ -361,7 +377,7 @@ fun SettingsContent(
                                 OutlinedButton(
                                     onClick = { showDeleteCatalogDialog = true },
                                     enabled = !state.isDeletingCatalog,
-                                    shape = RoundedCornerShape(10.dp),
+                                    shapes = ButtonDefaults.shapes(),
                                     colors = ButtonDefaults.outlinedButtonColors(
                                         contentColor = MaterialTheme.colorScheme.error
                                     ),
@@ -369,9 +385,8 @@ fun SettingsContent(
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     if (state.isDeletingCatalog) {
-                                        CircularProgressIndicator(
-                                            modifier = Modifier.size(18.dp),
-                                            strokeWidth = 2.dp,
+                                        LoadingIndicator(
+                                            modifier = Modifier.size(20.dp),
                                             color = MaterialTheme.colorScheme.error
                                         )
                                     } else {
@@ -389,7 +404,7 @@ fun SettingsContent(
                                 // State: Not downloaded -> Prominent primary filled button
                                 Button(
                                     onClick = { onEvent(SettingsUiEvent.TriggerCatalogSync) },
-                                    shape = RoundedCornerShape(10.dp),
+                                    shapes = ButtonDefaults.shapes(),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Icon(
@@ -414,15 +429,14 @@ fun SettingsContent(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = stringResource(R.string.app_name),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.titleMediumEmphasized,
                             color = MaterialTheme.colorScheme.primary
                         )
                         Spacer(modifier = Modifier.height(4.dp))
@@ -449,6 +463,7 @@ fun SettingsContent(
                                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.sermonindex.net"))
                                 context.startActivity(intent)
                             },
+                            shapes = ButtonDefaults.shapes(),
                             contentPadding = PaddingValues(0.dp)
                         ) {
                             Text(stringResource(R.string.settings_open_website))
@@ -466,6 +481,7 @@ fun SettingsContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun SettingsSectionHeader(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
@@ -485,8 +501,7 @@ private fun SettingsSectionHeader(
         Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.titleMediumEmphasized
         )
     }
 }
