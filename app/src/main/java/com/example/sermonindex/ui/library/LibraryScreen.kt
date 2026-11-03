@@ -366,7 +366,6 @@ private fun RecentMediaCard(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onSelect)
     ) {
         Box(
