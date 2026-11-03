@@ -2,28 +2,21 @@ package com.example.sermonindex.ui.home.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,54 +24,108 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Sermon
 import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
 import com.example.sermonindex.ui.components.PreviewFixtures
 
+/**
+ * Extracts clean, recognizable uppercase initials from a speaker's name.
+ * Examples:
+ * - "A.W. Tozer" -> "AT"
+ * - "Charles Spurgeon" -> "CS"
+ * - "Charles H. Spurgeon" -> "CS"
+ * - "Leonard Ravenhill" -> "LR"
+ */
+internal fun extractSpeakerInitials(speaker: String): String {
+    val clean = speaker.replace(".", " ").trim()
+    if (clean.isBlank()) return "SI"
+    val parts = clean.split("\\s+".toRegex()).filter { it.isNotBlank() }
+    return when {
+        parts.isEmpty() -> "SI"
+        parts.size == 1 -> parts[0].take(2).uppercase()
+        else -> "${parts.first().first()}${parts.last().first()}".uppercase()
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun PreacherMonogram(
+    speaker: String,
+    modifier: Modifier = Modifier
+) {
+    val initials = extractSpeakerInitials(speaker)
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(
+                        MaterialTheme.colorScheme.surfaceContainerHighest,
+                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Text(
+                    text = initials,
+                    style = MaterialTheme.typography.titleLargeEmphasized,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Modern Material 3 Expressive vertical poster card for "Vintage Treasures" discovery items.
+ * Features a 1:1 square full-bleed top cover, graceful monogram fallback for missing images,
+ * and clean sans-serif editorial typography.
+ */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun RandomSermonCard(
     sermon: Sermon,
-    onPlayClick: () -> Unit,
-    onReadClick: () -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val isTextOnly = sermon.isTextOnly
     Card(
         modifier = modifier
-            .width(268.dp)
-            .height(136.dp)
+            .width(156.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Full-bleed 1:1 square cover artwork
             Box(
                 modifier = Modifier
-                    .size(72.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        if (isTextOnly) MaterialTheme.colorScheme.tertiaryContainer
-                        else MaterialTheme.colorScheme.primaryContainer
-                    ),
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
                 contentAlignment = Alignment.Center
             ) {
+                // Tonal monogram background is always drawn as instant offline-ready fallback
+                PreacherMonogram(speaker = sermon.speaker)
+
                 val imageUrl = sermon.speakerImage.ifBlank { sermon.thumbnailUrl }
                 if (imageUrl.isNotBlank()) {
                     AsyncImage(
@@ -87,98 +134,33 @@ fun RandomSermonCard(
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
-                } else {
-                    Icon(
-                        imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.Person,
-                        contentDescription = null,
-                        tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiaryContainer
-                        else MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.size(34.dp)
-                    )
                 }
             }
 
-            Spacer(modifier = Modifier.width(12.dp))
-
+            // Minimalist content section
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .weight(1f),
-                verticalArrangement = Arrangement.SpaceBetween
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
-                Column {
-                    Text(
-                        text = sermon.speaker,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = sermon.title,
-                        style = MaterialTheme.typography.titleMediumEmphasized,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (isTextOnly) {
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = MaterialTheme.colorScheme.tertiaryContainer
-                        ) {
-                            Text(
-                                text = stringResource(R.string.badge_text_sermon),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    } else if (sermon.duration.isNotBlank()) {
-                        Surface(
-                            shape = RoundedCornerShape(999.dp),
-                            color = MaterialTheme.colorScheme.surfaceContainerHighest
-                        ) {
-                            Text(
-                                text = sermon.duration,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    } else {
-                        Spacer(modifier = Modifier.width(1.dp))
-                    }
-
-                    FilledIconButton(
-                        onClick = if (isTextOnly) onReadClick else onPlayClick,
-                        shapes = IconButtonDefaults.shapes(
-                            shape = if (isTextOnly) IconButtonDefaults.smallSquareShape else IconButtonDefaults.smallRoundShape,
-                            pressedShape = IconButtonDefaults.smallPressedShape
-                        ),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = if (isTextOnly) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
-                        ),
-                        modifier = Modifier.size(34.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isTextOnly) Icons.AutoMirrored.Filled.MenuBook else Icons.Default.PlayArrow,
-                            contentDescription = stringResource(if (isTextOnly) R.string.read_sermon else R.string.play),
-                            tint = if (isTextOnly) MaterialTheme.colorScheme.onTertiary else MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+                Text(
+                    text = sermon.speaker,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = sermon.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -186,13 +168,11 @@ fun RandomSermonCard(
 
 @ThemePreviews
 @Composable
-private fun RandomSermonCardAudioPreview() {
+private fun RandomSermonCardImagePreview() {
     SermonIndexTheme {
         Surface {
             RandomSermonCard(
                 sermon = PreviewFixtures.previewAudioSermon,
-                onPlayClick = {},
-                onReadClick = {},
                 onClick = {},
                 modifier = Modifier.padding(16.dp)
             )
@@ -202,13 +182,15 @@ private fun RandomSermonCardAudioPreview() {
 
 @ThemePreviews
 @Composable
-private fun RandomSermonCardTextPreview() {
+private fun RandomSermonCardMonogramPreview() {
     SermonIndexTheme {
         Surface {
             RandomSermonCard(
-                sermon = PreviewFixtures.previewTextSermon,
-                onPlayClick = {},
-                onReadClick = {},
+                sermon = PreviewFixtures.previewAudioSermon.copy(
+                    speaker = "A.W. Tozer",
+                    speakerImage = "",
+                    thumbnailUrl = ""
+                ),
                 onClick = {},
                 modifier = Modifier.padding(16.dp)
             )

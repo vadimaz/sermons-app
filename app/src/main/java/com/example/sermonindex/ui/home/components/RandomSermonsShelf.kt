@@ -44,10 +44,10 @@ fun RandomSermonsShelf(
     sermons: List<Sermon>,
     isLoading: Boolean,
     onShuffleClick: () -> Unit,
-    onPlayClick: (Sermon) -> Unit,
-    onReadClick: (Sermon) -> Unit,
     onSermonClick: (Sermon) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onPlayClick: (Sermon) -> Unit = {},
+    onReadClick: (Sermon) -> Unit = {}
 ) {
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -125,8 +125,6 @@ fun RandomSermonsShelf(
             ) { sermon ->
                 RandomSermonCard(
                     sermon = sermon,
-                    onPlayClick = { onPlayClick(sermon) },
-                    onReadClick = { onReadClick(sermon) },
                     onClick = { onSermonClick(sermon) }
                 )
             }
@@ -142,12 +140,17 @@ private fun RandomSermonsShelfPreview() {
             RandomSermonsShelf(
                 sermons = listOf(
                     PreviewFixtures.previewAudioSermon,
-                    PreviewFixtures.previewTextSermon
+                    PreviewFixtures.previewTextSermon,
+                    PreviewFixtures.previewAudioSermon.copy(
+                        id = "sermon_monogram",
+                        speaker = "A.W. Tozer",
+                        speakerImage = "",
+                        thumbnailUrl = "",
+                        title = "The Knowledge of the Holy: God's Incomprehensibility"
+                    )
                 ),
                 isLoading = false,
                 onShuffleClick = {},
-                onPlayClick = {},
-                onReadClick = {},
                 onSermonClick = {}
             )
         }

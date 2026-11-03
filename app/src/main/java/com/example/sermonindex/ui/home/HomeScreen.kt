@@ -197,8 +197,6 @@ fun HomeContent(
                     sermons = state.randomSermons,
                     isLoading = state.isRandomLoading,
                     onShuffleClick = { onEvent(HomeUiEvent.ShuffleRandomSermons) },
-                    onPlayClick = { onEvent(HomeUiEvent.PlaySermon(it)) },
-                    onReadClick = { onEvent(HomeUiEvent.ReadSermon(it)) },
                     onSermonClick = { onEvent(HomeUiEvent.SelectSermon(it)) }
                 )
             }

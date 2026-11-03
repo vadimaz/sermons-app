@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.16.1` | **Version Code:** `40`
+> **Current Version:** `1.16.2` | **Version Code:** `41`
 
 ---
 
@@ -193,7 +193,9 @@
 - **Presentation & UI (`HomeScreen`)**:
   - "Vintage Treasures" shelf positioned on `HomeScreen` between Topics and Most Listened Sermons with eyebrow header ("DISCOVERY") and one-tap Shuffle action.
   - Interactive Shuffle button with live `CircularProgressIndicator` during fetches, refreshing sermons from another random shard while preserving scroll and other shelves.
-  - Horizontally scrolling cards with speaker artwork, 2-line title, preacher name, duration/text badge, and instant Play/Read action.
+  - **Redesigned Editorial Mini-Poster Cards (`RandomSermonCard`)**: Redesigned into modern Material 3 Expressive vertical poster cards (`156dp` wide, ~`230dp` tall) with 1:1 square full-bleed top cover (`156x156dp`) clipped to top `20dp` rounded corners.
+  - **Preacher Monogram Fallback (`PreacherMonogram`)**: Intelligent initials extraction (`extractSpeakerInitials`) rendering a centered circular badge on a tonal warm gradient background whenever a photo is missing or offline.
+  - **Minimalist Editorial Typography**: Clean sans-serif hierarchy with bold `labelSmall` preacher name in `primary` color and 2-line sermon title (`titleSmall`, `minLines = 2` enforcing uniform card height). Distracting buttons and badges removed in favor of a cohesive tap target opening `SermonDetailScreen`.
 - **Automated Test Coverage**: Comprehensive deserialization and mapping test suite (`RandomSermonMappingTest`) and usecase test (`UseCasesTest`).
 
 ### 1.15 Bible Bookmarks, Pastel Highlights & 1:1 Quote Cards Generator
