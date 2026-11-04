@@ -25,13 +25,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.example.sermonindex.R
 import com.example.sermonindex.domain.model.Speaker
 import com.example.sermonindex.theme.SermonIndexTheme
 import com.example.sermonindex.theme.ThemePreviews
@@ -94,16 +91,6 @@ fun SpeakerCard(
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground
         )
-        if (speaker.sermonCount > 0) {
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = stringResource(R.string.sermons_count, speaker.sermonCount),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center
-            )
-        }
     }
 }
 

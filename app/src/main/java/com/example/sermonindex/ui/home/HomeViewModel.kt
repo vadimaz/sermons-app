@@ -28,6 +28,7 @@ import javax.inject.Inject
 @Immutable
 data class HomeUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isRandomLoading: Boolean = false,
     val popularSermons: List<Sermon> = emptyList(),
     val randomSermons: List<Sermon> = emptyList(),
@@ -87,7 +88,7 @@ class HomeViewModel @Inject constructor(
 
     fun onEvent(event: HomeUiEvent) {
         when (event) {
-            is HomeUiEvent.Refresh -> loadHomeData()
+            is HomeUiEvent.Refresh -> loadHomeData(isRefresh = true)
             is HomeUiEvent.ShuffleRandomSermons -> shuffleRandomSermons()
             is HomeUiEvent.PlaySermon -> playbackManager.playSermon(event.sermon)
             is HomeUiEvent.ReadSermon -> Unit
@@ -102,9 +103,13 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private fun loadHomeData() {
+    private fun loadHomeData(isRefresh: Boolean = false) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            if (isRefresh) {
+                _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+            } else {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            }
 
             val initialShard = kotlin.random.Random.nextInt(1, 81)
             val popularDeferred = async { getPopularSermonsUseCase() }
@@ -119,8 +124,15 @@ class HomeViewModel @Inject constructor(
 
             val sermons = popularResult.getOrDefault(emptyList())
             val randomSermons = randomResult.getOrDefault(emptyList())
-            val speakers = speakersResult.getOrDefault(emptyList())
-            val topics = topicsResult.getOrDefault(emptyList())
+            val rawSpeakers = speakersResult.getOrDefault(emptyList())
+            val rawTopics = topicsResult.getOrDefault(emptyList())
+
+            val eligibleSpeakers = rawSpeakers.filter { it.image.isNotBlank() }
+            val speakerPool = if (eligibleSpeakers.isNotEmpty()) eligibleSpeakers.take(40) else rawSpeakers.take(40)
+            val displaySpeakers = speakerPool.shuffled().take(12)
+
+            val topicPool = rawTopics.take(50)
+            val displayTopics = topicPool.shuffled().take(16)
 
             val hasError = popularResult.isFailure && speakersResult.isFailure
             val errorMsg = if (hasError) {
@@ -130,11 +142,12 @@ class HomeViewModel @Inject constructor(
             _uiState.update {
                 it.copy(
                     isLoading = false,
+                    isRefreshing = false,
                     popularSermons = sermons,
                     randomSermons = randomSermons,
                     currentRandomShard = initialShard,
-                    speakers = speakers,
-                    topics = topics,
+                    speakers = displaySpeakers,
+                    topics = displayTopics,
                     errorMessage = errorMsg
                 )
             }

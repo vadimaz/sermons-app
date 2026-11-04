@@ -126,4 +126,50 @@ class HomeViewModelTest {
 
         assertTrue(fakeRepository.isFavoriteSync("pop-1"))
     }
+
+    @Test
+    fun refresh_triggersRefreshingStateAndResetsOnCompletion() = runTest {
+        testDispatcher.scheduler.advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.isRefreshing)
+
+        viewModel.uiState.test {
+            val initial = awaitItem()
+            assertFalse(initial.isRefreshing)
+
+            viewModel.onEvent(HomeUiEvent.Refresh)
+            testDispatcher.scheduler.runCurrent()
+
+            val refreshing = awaitItem()
+            assertTrue(refreshing.isRefreshing)
+
+            testDispatcher.scheduler.advanceUntilIdle()
+            val completed = awaitItem()
+            assertFalse(completed.isRefreshing)
+        }
+    }
+
+    @Test
+    fun speakersAndTopics_capsDisplayLimitsAndPrioritizesSpeakersWithImages() = runTest {
+        val manySpeakers = (1..50).map { i ->
+            createTestSpeaker(
+                id = "spk-$i",
+                name = "Speaker $i",
+                image = if (i <= 20) "https://example.com/$i.jpg" else ""
+            )
+        }
+        val manyTopics = (1..60).map { i ->
+            createTestTopic(id = "top-$i", name = "Topic $i", count = 100 - i)
+        }
+        fakeRepository.setSpeakers(manySpeakers)
+        fakeRepository.setTopics(manyTopics)
+
+        viewModel.onEvent(HomeUiEvent.Refresh)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val state = viewModel.uiState.value
+        assertEquals(12, state.speakers.size)
+        // All selected speakers must come from the pool with images since 20 eligible speakers exist
+        assertTrue(state.speakers.all { it.image.isNotBlank() })
+        assertEquals(16, state.topics.size)
+    }
 }

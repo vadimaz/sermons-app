@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -82,7 +84,7 @@ fun HomeScreen(
  * Stateless UI content component adhering to Google MAD and Clean Architecture.
  * Allows pure Compose previews and easy instrumented UI testing.
  */
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeContent(
     state: HomeUiState,
@@ -118,11 +120,16 @@ fun HomeContent(
         return
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 24.dp)
+    PullToRefreshBox(
+        isRefreshing = state.isRefreshing,
+        onRefresh = { onEvent(HomeUiEvent.Refresh) },
+        modifier = modifier.fillMaxSize()
     ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 24.dp)
+        ) {
         // 1. Hero Carousel (Featured Sermons at the very top)
         if (state.popularSermons.isNotEmpty()) {
             item {
@@ -167,7 +174,7 @@ fun HomeContent(
                     onClick = onSeeAllSpeakers
                 )
                 SpeakersShelf(
-                    speakers = state.speakers.take(12),
+                    speakers = state.speakers,
                     onSpeakerClick = onSpeakerSelect
                 )
             }
@@ -183,7 +190,7 @@ fun HomeContent(
                     onClick = onSeeAllTopics
                 )
                 TopicsShelf(
-                    topics = state.topics.take(12),
+                    topics = state.topics,
                     onTopicClick = { onTopicSelect(it.slug) }
                 )
             }
@@ -229,6 +236,7 @@ fun HomeContent(
             )
         }
     }
+}
 }
 
 @ThemePreviews
