@@ -41,8 +41,6 @@ import com.example.sermonindex.theme.SermonIndexTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
-val LocalPictureInPictureMode = staticCompositionLocalOf { false }
-
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 

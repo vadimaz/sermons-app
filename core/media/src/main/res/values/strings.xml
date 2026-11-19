@@ -1,0 +1,5 @@
+<resources>
+    <string name="no_audio_stream_available">This sermon has no audio stream available.</string>
+    <string name="playback_channel_name">Sermon Playback</string>
+    <string name="playback_channel_description">Controls and media status for sermon audio playback</string>
+</resources>

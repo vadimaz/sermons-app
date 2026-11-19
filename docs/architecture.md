@@ -56,93 +56,32 @@ The application strictly adheres to **Clean Architecture** principles and Google
 
 ---
 
-## 3. Package Structure
+## 3. Multi-Module Project Structure (Google MAD / Now in Android Standard)
 
-```
-com.example.sermonindex
-├── MainActivity.kt               # @AndroidEntryPoint, loads MainNavigation
-├── Navigation.kt                 # NavDisplay, Scaffold, MiniPlayer, BottomBar, Multi-Backstack Navigator, Reselect Events
-├── NavigationKeys.kt             # @Serializable NavKey definitions
-├── SermonApp.kt                  # @HiltAndroidApp Application class
-│
-├── data/
-│   ├── local/
-│   │   ├── AppDatabase.kt        # Room @Database + FTS4 virtual table + downloads/favorites/history/search/bookmarks
-│   │   ├── CacheManager.kt       # Live app cache size calculation & deletion
-│   │   ├── dao/                  # FavoritesDao, HistoryDao, DownloadsDao, SearchDao, BibleBookmarksDao
-│   │   └── entities/             # FavoriteSermonEntity, HistoryEntity, DownloadedSermonEntity, SermonFtsEntity, SearchHistoryEntity, CatalogMetadataEntity, BibleBookmarkEntity
-│   ├── mapper/
-│   │   └── Mappers.kt            # DTO/Entity <-> Domain mapping extensions
-│   ├── model/
-│   │   ├── BibleDtos.kt          # @Serializable Bible network DTOs
-│   │   └── SermonDtos.kt         # @Serializable network DTOs
-│   ├── network/
-│   │   ├── ConnectivityNetworkMonitor.kt # Android ConnectivityManager network callback
-│   │   ├── Http404EmptyInterceptor.kt # Returns empty JSON for 404 verse lookups
-│   │   ├── NetworkClient.kt      # OkHttp with disk cache & logging, Retrofit
-│   │   └── SermonIndexApiService.kt # Endpoints under https://api.sermonindex.net/v2
-│   ├── repository/
-│   │   ├── SermonRepositoryImpl.kt # Concrete domain repository with injected CoroutineDispatcher
-│   │   └── UserPreferencesRepositoryImpl.kt # Jetpack DataStore preferences repository implementation
-│   └── sync/
-│       ├── AudioDownloadWorker.kt # WorkManager streaming worker for MP3 files
-│       ├── CatalogSyncWorker.kt  # WorkManager CoroutineWorker for streaming gzip catalog
-│       ├── CatalogUpdateBroadcastReceiver.kt # BroadcastReceiver for 1-tap notification update action
-│       └── CatalogUpdateCheckWorker.kt # WorkManager periodic worker checking catalog updates
-│
-├── di/
-│   ├── DataStoreModule.kt        # Provides DataStore<Preferences> as @Singleton
-│   ├── DatabaseModule.kt         # Provides AppDatabase, FavoritesDao, HistoryDao, DownloadsDao, BibleBookmarksDao
-│   ├── DispatchersModule.kt      # Qualifiers: @IoDispatcher, @DefaultDispatcher, @MainDispatcher
-│   ├── MediaModule.kt            # Provides PlaybackManager as @Singleton
-│   ├── NetworkModule.kt          # Provides OkHttpClient, Retrofit, SermonIndexApiService
-│   └── RepositoryModule.kt       # Binds SermonRepository, NetworkMonitor, UserPreferencesRepository
-│
-├── domain/
-│   ├── model/
-│   │   └── Models.kt             # Pure Kotlin domain data classes (no Android dependencies)
-│   ├── repository/
-│   │   ├── NetworkMonitor.kt     # Pure network connectivity contract
-│   │   ├── SermonRepository.kt   # Pure domain repository interface
-│   │   └── UserPreferencesRepository.kt # Pure domain preferences repository interface
-│   └── usecase/
-│       ├── BibleBookmarkUseCases.kt      # Bookmark CRUD & Chapter bookmarks Flow UseCases
-│       ├── CatalogPreferencesUseCases.kt # Auto-update check & timestamp UseCases
-│       ├── GetRandomSermonsUseCase.kt    # Random discovery shard UseCase
-│       ├── TranslationPreferencesUseCases.kt # First & second translation UseCases
-│       └── UseCases.kt           # Single-responsibility UseCase classes
-│
-├── playback/
-│   ├── PlaybackManager.kt        # MediaController wrapper, playbackState StateFlow, sleep timer
-│   ├── PlaybackService.kt        # @AndroidEntryPoint MediaSessionService + ExoPlayer + failover & local audio
-│   └── PlaybackState.kt          # Immutable playback state model
-│
-├── theme/
-│   ├── Color.kt, Theme.kt, Type.kt # Material 3 Design System
-│   └── ThemePreviews.kt          # Multipreview annotation (Dual Light + Dark mode)
-│
-└── ui/
-    ├── bible/                    # BibleScreen.kt, BibleViewModel.kt, BibleUiState.kt, components/
-    ├── components/               # Core design system components
-    │   ├── EmptyStateView.kt     # Stateless empty state view [+ Preview]
-    │   ├── ErrorView.kt          # Error view with retry action [+ Preview]
-    │   ├── LoadingView.kt        # Loading spinner view [+ Preview]
-    │   ├── MiniPlayer.kt         # Persistent floating audio bar [+ Preview]
-    │   ├── OfflineBanner.kt      # Animated real-time offline warning banner [+ Preview]
-    │   ├── PreviewFixtures.kt    # Centralized preview mock models
-    │   ├── SearchTextField.kt    # Clean search input field [+ Preview]
-    │   └── SermonListItem.kt     # Standard list item with avatar, title, duration [+ Preview]
-    ├── home/                     # HomeScreen.kt, HomeViewModel.kt, components/ (HeroCarousel, Shelves, Cards)
-    ├── library/                  # LibraryScreen.kt, LibraryViewModel.kt, FavoritesScreen.kt, DownloadsScreen.kt, HistoryScreen.kt, BibleBookmarksScreen.kt, components/
-    ├── player/                   # FullscreenPlayerScreen.kt, FullscreenVideoScreen.kt, components/ (SleepTimerDialog, TranscriptCueItem, VideoPlayerSurface)
-    ├── reader/                   # TextSermonScreen.kt, TextSermonViewModel.kt
-    ├── scripture/                # ScriptureScreen.kt, ScriptureViewModel.kt, ScriptureChapterViewModel.kt, ScriptureVerseComponents.kt
-    ├── search/                   # SearchScreen.kt, SearchViewModel.kt, SearchUiState.kt, components/
-    ├── sermon/                   # SermonDetailScreen.kt, SermonDetailViewModel.kt, components/ (Overview, Outline, Notes)
-    ├── settings/                 # SettingsScreen.kt, SettingsViewModel.kt
-    ├── speakers/                 # SpeakersScreen.kt, SpeakerDetailScreen.kt, components/ (SpeakerRow)
-    └── topics/                   # TopicsScreen.kt, TopicDetailScreen.kt, components/ (TopicRow)
-```
+The project is organized into **21 Gradle modules** governed by convention plugins in `build-logic/convention`:
+- **`:app`**: Thin application shell (`SermonApp`, `MainActivity`, root `Navigation.kt` with Navigation 3 `NavDisplay` & `ShortNavigationBar`).
+- **`:core:*` (11 modules)**: Horizontal foundation, domain, data, media, design system, navigation, and testing layers.
+  - `:core:model` *(Pure JVM)*: Domain models (`Models.kt`).
+  - `:core:common`: Coroutine dispatcher qualifiers (`DispatchersModule.kt`).
+  - `:core:navigation`: Navigation 3 `@Serializable NavKey` route contracts (`NavigationKeys.kt`).
+  - `:core:domain` *(Pure JVM)*: Repository interfaces (`SermonRepository`, `UserPreferencesRepository`, `NetworkMonitor`) and all UseCases.
+  - `:core:network`: Retrofit, OkHttp, `Http404EmptyInterceptor`, `ConnectivityNetworkMonitor`, network DTOs, `VttParser`, `NetworkModule`.
+  - `:core:database`: Room `AppDatabase`, FTS4 virtual table, 5 DAOs, entities, `DatabaseModule`, Room `schemas/`.
+  - `:core:datastore`: Jetpack DataStore preferences (`UserPreferencesRepositoryImpl`, `DataStoreModule`).
+  - `:core:data`: `SermonRepositoryImpl`, `Mappers.kt`, `CacheManager`, WorkManager sync/download workers (`AudioDownloadWorker`, `CatalogSyncWorker`, `CatalogUpdateCheckWorker`, `CatalogUpdateBroadcastReceiver`), `RepositoryModule`.
+  - `:core:media`: Media3 playback engine (`PlaybackManager`, `PlaybackService`, `PlaybackState`, `MediaModule`, `FakePlaybackManager`).
+  - `:core:ui`: Material 3 Expressive theme (`Color.kt`, `Theme.kt`, `Type.kt`, `ThemePreviews.kt`), core reusable UI components (`SermonListItem`, `MiniPlayer`, `OfflineBanner`, `LoadingView`, `ErrorView`, `EmptyStateView`, `SearchTextField`, `PreviewFixtures`, `TextHighlightUtils`, `QuoteCardSheet`), `LocalPictureInPictureMode`, and centralized UI resources (`strings.xml`).
+  - `:core:testing` *(Pure JVM)*: Shared test infrastructure (`MainDispatcherRule`, `FakeSermonRepository`, `FakeUserPreferencesRepository`, `TestFixtures`).
+- **`:feature:*` (9 independent modules)**: Vertical feature slices with zero cross-feature dependencies:
+  - `:feature:home` (`ui/home/*`)
+  - `:feature:search` (`ui/search/*`)
+  - `:feature:bible` (`ui/bible/*`)
+  - `:feature:scripture` (`ui/scripture/*` + `ui/bible/sermons/*`)
+  - `:feature:speakers` (`ui/speakers/*` + Paging 3 `SpeakerSermonsPagingSource`)
+  - `:feature:topics` (`ui/topics/*`)
+  - `:feature:sermon` (`ui/sermon/*` + `ui/reader/*`)
+  - `:feature:player` (`ui/player/*`)
+  - `:feature:library` (`ui/library/*` + `ui/settings/*`)
 
 ---
 

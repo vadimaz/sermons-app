@@ -46,10 +46,11 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
 
 | Task | Command | Description |
 |---|---|---|
-| **Run All Unit Tests** | `./gradlew testDebugUnitTest` | Executes all local JVM tests, ViewModels, DAOs, and headless Compose tests. |
-| **Run Targeted Test Class** | `./gradlew testDebugUnitTest --tests "com.example.sermonindex.ui.search.SearchViewModelTest"` | Runs a single test suite for rapid iteration. |
-| **Run Targeted Test Method** | `./gradlew testDebugUnitTest --tests "*.SearchViewModelTest.searchQuery_updatesResults"` | Runs a specific test method. |
-| **Render Compose Preview (CLI)** | `android preview render gradle://.?:app@debug --fqn <FQN>` | Generates visual snapshots and component semantics via daemon for post-implementation UI verification. |
+| **Run All Unit Tests** | `./gradlew testDebugUnitTest test` | Executes all local JVM tests across `:core:*`, `:feature:*`, and `:app` modules. |
+| **Run Targeted Module Tests** | `./gradlew :feature:search:testDebugUnitTest` | Runs a single module's test suite for rapid ~2s iteration. |
+| **Run Targeted Test Class** | `./gradlew :feature:search:testDebugUnitTest --tests "com.example.sermonindex.ui.search.SearchViewModelTest"` | Runs a single test suite for rapid iteration. |
+| **Run Targeted Test Method** | `./gradlew :feature:search:testDebugUnitTest --tests "*.SearchViewModelTest.searchQuery_updatesResults"` | Runs a specific test method. |
+| **Render Compose Preview (CLI)** | `android preview render gradle://.?:feature:home@debug --fqn <FQN>` | Generates visual snapshots and component semantics via daemon for post-implementation UI verification. |
 | **Record Screenshots (Roborazzi)** | `./gradlew recordRoborazziDebug` | Generates golden visual references in `src/test/snapshots/`. |
 | **Verify Screenshots (Roborazzi)** | `./gradlew verifyRoborazziDebug` | Compares current rendering against golden references; fails build on visual delta. |
 | **Code Coverage Report (JaCoCo)** | `./gradlew testDebugUnitTest jacocoTestReport` | Generates HTML coverage report at `app/build/reports/jacoco/jacocoTestReport/html/index.html`. |
@@ -74,9 +75,9 @@ $env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"
 
 ---
 
-## 4. Shared Test Infrastructure (`com.example.sermonindex.testing`)
+## 4. Shared Test Infrastructure (`:core:testing` & `:core:media`)
 
-Located in `app/src/test/java/com/example/sermonindex/testing/`:
+Located in `core/testing/src/main/java/com/example/sermonindex/testing/` (and `FakePlaybackManager` in `core/media/src/main/java/com/example/sermonindex/testing/`):
 
 | Component | Class | Purpose |
 |---|---|---|

@@ -14,8 +14,8 @@ android {
         applicationId = "com.example.sermonindex"
         minSdk = 26
         targetSdk = 36
-        versionCode = 42
-        versionName = "1.17.0"
+        versionCode = 43
+        versionName = "1.17.1"
     }
 
     buildTypes {
@@ -60,11 +60,30 @@ kotlin {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
-
 dependencies {
+  implementation(project(":core:model"))
+  implementation(project(":core:common"))
+  implementation(project(":core:navigation"))
+  implementation(project(":core:domain"))
+  implementation(project(":core:network"))
+  implementation(project(":core:database"))
+  implementation(project(":core:datastore"))
+  implementation(project(":core:data"))
+  implementation(project(":core:media"))
+  implementation(project(":core:ui"))
+
+  implementation(project(":feature:home"))
+  implementation(project(":feature:search"))
+  implementation(project(":feature:bible"))
+  implementation(project(":feature:scripture"))
+  implementation(project(":feature:speakers"))
+  implementation(project(":feature:topics"))
+  implementation(project(":feature:sermon"))
+  implementation(project(":feature:player"))
+  implementation(project(":feature:library"))
+
+  testImplementation(project(":core:testing"))
+
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
   androidTestImplementation(composeBom)
@@ -124,11 +143,6 @@ dependencies {
   // Image Loading (Coil 3)
   implementation(libs.coil.compose)
   implementation(libs.coil.network.okhttp)
-
-  // Room
-  implementation(libs.room.runtime)
-  implementation(libs.room.ktx)
-  ksp(libs.room.compiler)
 
   // WorkManager
   implementation(libs.androidx.work.runtime.ktx)

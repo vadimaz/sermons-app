@@ -1,4 +1,5 @@
 pluginManagement {
+    includeBuild("build-logic")
     repositories {
         google {
             content {
@@ -31,3 +32,25 @@ plugins {
 
 rootProject.name = "SermonIndex"
 include(":app")
+
+include(":core:model")
+include(":core:common")
+include(":core:navigation")
+include(":core:domain")
+include(":core:network")
+include(":core:database")
+include(":core:datastore")
+include(":core:data")
+include(":core:media")
+include(":core:testing")
+include(":core:ui")
+
+include(":feature:home")
+include(":feature:search")
+include(":feature:bible")
+include(":feature:scripture")
+include(":feature:speakers")
+include(":feature:topics")
+include(":feature:sermon")
+include(":feature:player")
+include(":feature:library")

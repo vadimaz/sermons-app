@@ -1,7 +1,7 @@
 # Project Progress & Roadmap
 
 > Current status, implemented features, API contracts, and roadmap for SermonIndex Android App.  
-> **Current Version:** `1.17.0` | **Version Code:** `42`
+> **Current Version:** `1.17.1` | **Version Code:** `43`
 
 ---
 
@@ -313,6 +313,17 @@
 - **Global Reactive Theming (`MainActivity.kt` & `Theme.kt`)**:
   - Connected `themeMode` and `useDynamicColor` preferences directly from `UserPreferencesRepository` into `SermonIndexTheme`, switching themes instantaneously across the entire Compose tree without app restarts.
 - **Expanded Test Suite**: Added `SettingsViewModelTest`, updated `LibraryViewModelTest`, `LibraryScreenTest`, and `UserPreferencesRepositoryTest`, expanding the test suite to 157 passing tests.
+
+### 1.21 Multi-Module Clean Architecture Migration (Google MAD / Now in Android Standard)
+- **Gradle Convention Plugins (`build-logic`)**:
+  - Created an included composite build (`build-logic/convention`) providing reusable convention plugins (`sermonindex.jvm.library`, `sermonindex.android.library`, `sermonindex.android.library.compose`, `sermonindex.android.hilt`, `sermonindex.android.feature`) enforcing unified `compileSdk = 37`, `minSdk = 26`, `jvmToolchain(17)`, and Robolectric `targetSdk = 34` configuration.
+- **Core Layer Modularization (`:core:*` — 11 Modules)**:
+  - **Pure JVM Domain Enforcement**: Extracted `:core:model` and `:core:domain` as pure JVM libraries (`org.jetbrains.kotlin.jvm`), guaranteeing zero Android framework, Room, Retrofit, or Compose leakage at compile time.
+  - **Data, Persistence & Media Isolation**: Extracted `:core:common`, `:core:navigation`, `:core:network`, `:core:database` (isolating Room KSP compilation and schema export), `:core:datastore`, `:core:data` (repositories, mappers, and WorkManager sync/download workers), `:core:media` (Media3 `PlaybackManager` and `PlaybackService`), `:core:ui` (Material 3 Expressive theme, shared design system components, and shared UI strings), and `:core:testing` (pure JVM shared test doubles and coroutine rules).
+- **Feature Layer Modularization (`:feature:*` — 9 Independent Modules)**:
+  - Extracted 9 decoupled feature modules with zero cross-feature dependencies: `:feature:home`, `:feature:search`, `:feature:bible`, `:feature:scripture`, `:feature:speakers`, `:feature:topics`, `:feature:sermon`, `:feature:player`, and `:feature:library`.
+  - Slimmed `:app` down to a 4-file application shell (`SermonApp.kt`, `MainActivity.kt`, `Navigation.kt`, and `NavigationTest.kt`).
+- **Complete Modular Test Suite**: 35 test suites (165 tests) executing and passing across all 21 modules.
 
 ---
 
